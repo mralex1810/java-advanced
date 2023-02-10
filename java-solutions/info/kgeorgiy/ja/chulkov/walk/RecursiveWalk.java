@@ -20,18 +20,20 @@ public class RecursiveWalk {
                 try {
                     Files.walkFileTree(Path.of(file), visitor);
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    // Unreachable
+                    System.err.println("Error on reading file " + file);
                 }
             });
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.err.println("Error on reading input file");
+            return;
         }
-        try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(args[1], StandardCharsets.UTF_8)))) {
+        try (PrintWriter out = new PrintWriter(args[1], StandardCharsets.UTF_8)) {
             for (var info : visitor.getResults()) {
-                out.print(HexFormat.of().formatHex(info.hash()) + " " + info.file());
+                out.println(HexFormat.of().formatHex(info.hash()) + " " + info.file());
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.err.println("Error on writing output file");
         }
     }
 }

@@ -10,4 +10,5 @@ _*
 # Store .git files
 !.git*
 
-/java-advanced.iml
+*.iml
+.gitmodules
