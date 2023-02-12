@@ -1,7 +1,6 @@
 package info.kgeorgiy.ja.chulkov.walk;
 
 import java.io.BufferedInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileVisitResult;
@@ -12,15 +11,26 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
-    private final List<HashFileInfo> results = new ArrayList<>();
-    private static final byte[] EMPTY_HASH = new byte[256];
+    private static final byte[] EMPTY_HASH = new byte[32];
 
-    private void addErrorPathToResult(T path) {
-        results.add(new HashFileInfo(EMPTY_HASH, path));
+    private final CheckedIOExceptionConsumer<HashFileInfo> resultsConsumer;
+
+    public HashFileVisitor(CheckedIOExceptionConsumer<HashFileInfo> resultsConsumer) {
+        this.resultsConsumer = resultsConsumer;
+    }
+
+    public void processError(String path) {
+        processResult(new HashFileInfo(EMPTY_HASH, path));
+    }
+
+    private void processResult(HashFileInfo info) {
+        try {
+            resultsConsumer.accept(info);
+        } catch (IOException e) {
+            System.err.println("Error on writing in output file");
+        }
     }
 
     @Override
@@ -30,14 +40,14 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
             try (InputStream is = Files.newInputStream(path);
                  DigestInputStream dis = new DigestInputStream(new BufferedInputStream(is), messageDigest)) {
                 while (dis.read() != -1) ;
-                results.add(new HashFileInfo(dis.getMessageDigest().digest(), path));
+                processResult(new HashFileInfo(dis.getMessageDigest().digest(), path.toString()));
             } catch (IOException e) {
                 System.err.println("Error on reading file " + path);
-                addErrorPathToResult(path);
+                processError(path.toString());
             }
         } catch (NoSuchAlgorithmException e) {
             System.err.println("SDK hasn't support of SHA-256");
-            throw new RuntimeException(e);
+            processError(path.toString());
         }
         return FileVisitResult.CONTINUE;
     }
@@ -45,11 +55,7 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
 
     @Override
     public FileVisitResult visitFileFailed(T path, IOException exc) {
-        addErrorPathToResult(path);
+        processError(path.toString());
         return FileVisitResult.CONTINUE;
-    }
-
-    public List<HashFileInfo> getResults() {
-        return results;
     }
 }
