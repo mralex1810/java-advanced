@@ -36,6 +36,9 @@ public class AdvancedWalk {
                 } catch (InvalidPathException e) {
                     System.err.println("Error on getting path of " + file);
                     handler.processError(file);
+                } catch (SecurityException e) {
+                    System.err.println("Security manager denies access to " + file);
+                    handler.processError(file);
                 }
             });
         } catch (IOException e) {

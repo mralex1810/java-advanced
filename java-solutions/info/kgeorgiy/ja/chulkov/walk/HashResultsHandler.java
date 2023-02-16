@@ -8,8 +8,8 @@ import java.nio.file.Path;
 import java.util.HexFormat;
 
 public class HashResultsHandler implements Closeable {
-    private final Writer writer;
     private static final String ERROR_HASH = "0".repeat(64);
+    private final Writer writer;
 
     public HashResultsHandler(Writer writer) {
         this.writer = writer;
