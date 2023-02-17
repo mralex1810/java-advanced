@@ -49,9 +49,13 @@ public class AdvancedWalk {
             try (BufferedReader in = new BufferedReader(new FileReader(args[0], StandardCharsets.UTF_8))) {
                 try (Writer out = new BufferedWriter(new FileWriter(outputFile.toFile(), StandardCharsets.UTF_8));
                      HashResultsHandler handler = new HashResultsHandler(out)) {
-                    FileVisitor<Path> visitor = new HashFileVisitor<>(handler);
-                    for (String file = in.readLine(); file != null; file = in.readLine()) {
-                        walkFromOneFile(file, depth, visitor, handler);
+                    try {
+                        FileVisitor<Path> visitor = new HashFileVisitor<>(handler);
+                        for (String file = in.readLine(); file != null; file = in.readLine()) {
+                            walkFromOneFile(file, depth, visitor, handler);
+                        }
+                    } catch (IOException e) {
+                        System.err.println("Error on reading input file");
                     }
                 } catch (IOException e) {
                     System.err.println("Error on open output file");
@@ -64,8 +68,7 @@ public class AdvancedWalk {
         }
     }
 
-    private static void walkFromOneFile(String file, int depth, FileVisitor<Path> visitor, HashResultsHandler
-            handler) {
+    private static void walkFromOneFile(String file, int depth, FileVisitor<Path> visitor, HashResultsHandler handler) {
         try {
             Files.walkFileTree(Path.of(file), EnumSet.noneOf(FileVisitOption.class), depth, visitor);
         } catch (IOException e) {
