@@ -31,7 +31,7 @@ public class AdvancedWalk {
             return;
         }
         if (!isPath(args[1])) {
-            System.err.println("Output file must be non null");
+            System.err.println("Output file isn't correct");
             return;
         }
         final Path outputFile = Path.of(args[1]);
@@ -69,7 +69,8 @@ public class AdvancedWalk {
     }
 
 
-    private static void walkFromOneFile(final String file, final int depth, final FileVisitor<Path> visitor, final HashResultsHandler handler) {
+    private static void walkFromOneFile(final String file, final int depth, final FileVisitor<Path> visitor,
+                                        final HashResultsHandler handler) {
         try {
             Files.walkFileTree(Path.of(file), EnumSet.noneOf(FileVisitOption.class), depth, visitor);
         } catch (final IOException e) {
@@ -91,6 +92,7 @@ public class AdvancedWalk {
         try {
             Path.of(file);
         } catch (InvalidPathException e) {
+            System.err.println("File isn't path " + e.getReason());
             return false;
         }
         return true;
