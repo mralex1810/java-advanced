@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.util.HexFormat;
 
 public class HashResultsHandler implements Closeable {
-    private static final String ERROR_HASH = "0".repeat(64);
+    private static final String ERROR_HASH_HEX = "0".repeat(64);
     private final Writer writer;
 
     public HashResultsHandler(Writer writer) {
@@ -20,7 +20,7 @@ public class HashResultsHandler implements Closeable {
     }
 
     public void processError(String path) {
-        processResult(ERROR_HASH, path);
+        processResult(ERROR_HASH_HEX, path);
     }
 
     private void processResult(String hexHash, String path) {
