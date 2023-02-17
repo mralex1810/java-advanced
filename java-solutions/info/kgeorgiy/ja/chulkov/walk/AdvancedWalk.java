@@ -26,15 +26,16 @@ public class AdvancedWalk {
             return;
         }
         // :NOTE: copy-paste
-        if (!isPath(args[0])) {
+        final Path inputFile = toPath(args[0]);
+        final Path outputFile = toPath(args[1]);
+        if (inputFile == null) {
             System.err.println("Input file isn't correct");
             return;
         }
-        if (!isPath(args[1])) {
+        if (outputFile == null) {
             System.err.println("Output file isn't correct");
             return;
         }
-        final Path outputFile = Path.of(args[1]);
         try {
             // :NOTE: outputFile.getParent()
             final Path parent = outputFile.getParent();
@@ -46,7 +47,7 @@ public class AdvancedWalk {
             // :NOTE: ??
         }
 
-        try (final BufferedReader in = Files.newBufferedReader(Path.of(args[0]))) {
+        try (final BufferedReader in = Files.newBufferedReader(inputFile)) {
             try (final Writer out = Files.newBufferedWriter(outputFile)) {
                 // :NOTE: double close
                 final HashResultsHandler handler = new HashResultsHandler(out);
@@ -85,16 +86,15 @@ public class AdvancedWalk {
         }
     }
 
-    private static boolean isPath(String file) {
+    private static Path toPath(String file) {
         if (file == null) {
-            return false;
+            return null;
         }
         try {
-            Path.of(file);
+            return Path.of(file);
         } catch (InvalidPathException e) {
-            System.err.println("File isn't path " + e.getReason());
-            return false;
+            System.err.println(file + " isn't path " + e.getReason());
+            return null;
         }
-        return true;
     }
 }
