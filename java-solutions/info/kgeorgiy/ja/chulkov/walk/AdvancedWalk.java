@@ -59,8 +59,6 @@ public class AdvancedWalk {
                     System.err.println("Error on reading input file " + e.getMessage());
                 } catch (final ErrorOnWriteException e) {
                     System.err.println("Can't write in output file " + e.getMessage());
-                } catch (final UncheckedNoSuchAlgorithmException e) {
-                    System.err.println("JVM hasn't hash algorithm " + e.getMessage());
                 }
             } catch (final IOException e) {
                 System.err.println("Error on open output file " + e.getMessage());
