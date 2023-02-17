@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.EnumSet;
 
 public class AdvancedWalk {
@@ -52,14 +54,15 @@ public class AdvancedWalk {
                 // :NOTE: double close
                 final HashResultsHandler handler = new HashResultsHandler(out);
                 try {
-                    final FileVisitor<Path> visitor = new HashFileVisitor<>(handler);
+                    final FileVisitor<Path> visitor = new HashFileVisitor<>(handler,
+                            MessageDigest.getInstance("SHA-256"));
                     for (String file = in.readLine(); file != null; file = in.readLine()) {
                         walkFromOneFile(file, depth, visitor, handler);
                     }
                 } catch (final IOException e) {
                     System.err.println("Error on reading input file " + e.getMessage());
-                } catch (final ErrorOnWriteException e) {
-                    System.err.println("Can't write in output file " + e.getMessage());
+                } catch (NoSuchAlgorithmException e) {
+                    System.err.println("Java must implements SHA-256 algorithm " + e.getMessage());
                 }
             } catch (final IOException e) {
                 System.err.println("Error on open output file " + e.getMessage());

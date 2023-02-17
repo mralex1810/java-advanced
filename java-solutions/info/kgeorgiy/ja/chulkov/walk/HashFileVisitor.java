@@ -18,17 +18,9 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
     private final byte[] buffer = new byte[1024];
     private final MessageDigest messageDigest;
 
-    public HashFileVisitor(HashResultsHandler resultsHandler) {
-        MessageDigest messageDigest1;
+    public HashFileVisitor(HashResultsHandler resultsHandler, MessageDigest messageDigest) {
         this.resultsHandler = resultsHandler;
-        try {
-            messageDigest1 = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            // Unreachable
-            messageDigest1 = null;
-            System.err.println("Java must support SHA-256");
-        }
-        messageDigest = messageDigest1;
+        this.messageDigest = messageDigest;
     }
 
 
