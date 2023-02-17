@@ -15,7 +15,7 @@ import java.security.NoSuchAlgorithmException;
 
 public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
     private final HashResultsHandler resultsHandler;
-    private final byte[] tmpBytesArray = new byte[1024];
+    private final byte[] buffer = new byte[1024];
 
     public HashFileVisitor(HashResultsHandler resultsHandler) {
         this.resultsHandler = resultsHandler;
@@ -25,10 +25,13 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
     @Override
     public FileVisitResult visitFile(T path, BasicFileAttributes attrs) {
         try {
+            // :NOTE: reuse
             MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-            try (InputStream is = Files.newInputStream(path);
-                 DigestInputStream dis = new DigestInputStream(new BufferedInputStream(is), messageDigest)) {
-                while (dis.read(tmpBytesArray) != -1) ;
+            try (
+                    InputStream is = new BufferedInputStream(Files.newInputStream(path));
+                    DigestInputStream dis = new DigestInputStream(is, messageDigest)
+            ) {
+                while (dis.read(buffer) != -1) ;
                 resultsHandler.processSuccess(dis.getMessageDigest().digest(), path);
             } catch (IOException e) {
                 System.err.println("Error on reading file " + path);

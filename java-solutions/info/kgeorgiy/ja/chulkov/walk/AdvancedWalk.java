@@ -25,6 +25,7 @@ public class AdvancedWalk {
             System.err.println("Program needs two arguments for work: input and output files");
             return;
         }
+        // :NOTE: copy-paste
         if (args[0] == null) {
             System.err.println("Input file must be non null");
             return;
@@ -36,15 +37,19 @@ public class AdvancedWalk {
         try {
             final Path outputFile = Path.of(args[1]);
             try {
+                // :NOTE: outputFile.getParent()
                 if (outputFile.getParent() != null && !Files.exists(outputFile.getParent())) {
                     Files.createDirectories(outputFile.getParent());
                 }
             } catch (final IOException e) {
                 System.err.println("Can't create parent dirs of output files " + e.getMessage());
+                // :NOTE: ??
                 return;
             }
+
             try (final BufferedReader in = Files.newBufferedReader(Path.of(args[0]))) {
                 try (final Writer out = Files.newBufferedWriter(outputFile);
+                     // :NOTE: double close
                      final HashResultsHandler handler = new HashResultsHandler(out)) {
                     try {
                         final FileVisitor<Path> visitor = new HashFileVisitor<>(handler);
