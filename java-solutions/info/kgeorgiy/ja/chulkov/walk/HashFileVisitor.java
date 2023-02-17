@@ -24,8 +24,9 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
         try {
             messageDigest1 = MessageDigest.getInstance("SHA-256");
         } catch (NoSuchAlgorithmException e) {
+            // Unreachable
             messageDigest1 = null;
-            System.err.println("SDK hasn't support of SHA-256");
+            System.err.println("Java must support SHA-256");
         }
         messageDigest = messageDigest1;
     }
