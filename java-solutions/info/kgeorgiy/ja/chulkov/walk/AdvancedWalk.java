@@ -1,7 +1,6 @@
 package info.kgeorgiy.ja.chulkov.walk;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.EnumSet;
 
@@ -33,38 +32,43 @@ public class AdvancedWalk {
             return;
         }
         try {
-            Path outputFile = Path.of(args[1]);
+            Path inputFile = Path.of(args[0]);
             try {
-                if (outputFile.getParent() == null) {
+                Path outputFile = Path.of(args[1]);
+                try {
+                    if (outputFile.getParent() == null) {
+                        System.err.println("Can't create parent dirs of output files");
+                        return;
+                    }
+                    if (!Files.exists(outputFile.getParent())) {
+                        Files.createDirectories(outputFile.getParent());
+                    }
+                } catch (IOException e) {
                     System.err.println("Can't create parent dirs of output files");
                     return;
                 }
-                if (!Files.exists(outputFile.getParent())) {
-                    Files.createDirectories(outputFile.getParent());
-                }
-            } catch (IOException e) {
-                System.err.println("Can't create parent dirs of output files");
-                return;
-            }
-            try (BufferedReader in = new BufferedReader(new FileReader(args[0], StandardCharsets.UTF_8))) {
-                try (Writer out = new BufferedWriter(new FileWriter(outputFile.toFile(), StandardCharsets.UTF_8));
-                     HashResultsHandler handler = new HashResultsHandler(out)) {
-                    try {
-                        FileVisitor<Path> visitor = new HashFileVisitor<>(handler);
-                        for (String file = in.readLine(); file != null; file = in.readLine()) {
-                            walkFromOneFile(file, depth, visitor, handler);
+                try (BufferedReader in = Files.newBufferedReader(inputFile)) {
+                    try (Writer out = Files.newBufferedWriter(outputFile);
+                         HashResultsHandler handler = new HashResultsHandler(out)) {
+                        try {
+                            FileVisitor<Path> visitor = new HashFileVisitor<>(handler);
+                            for (String file = in.readLine(); file != null; file = in.readLine()) {
+                                walkFromOneFile(file, depth, visitor, handler);
+                            }
+                        } catch (IOException e) {
+                            System.err.println("Error on reading input file");
                         }
                     } catch (IOException e) {
-                        System.err.println("Error on reading input file");
+                        System.err.println("Error on open output file");
                     }
                 } catch (IOException e) {
-                    System.err.println("Error on open output file");
+                    System.err.println("Error on open input file");
                 }
-            } catch (IOException e) {
-                System.err.println("Error on open input file");
+            } catch (InvalidPathException e) {
+                System.err.println("Output file string isn't path");
             }
         } catch (InvalidPathException e) {
-            System.err.println("Output file string isn't path");
+            System.err.println("Input file string isn't path");
         }
     }
 
