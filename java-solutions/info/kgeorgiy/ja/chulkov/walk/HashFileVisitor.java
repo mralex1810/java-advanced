@@ -16,29 +16,32 @@ import java.security.NoSuchAlgorithmException;
 public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
     private final HashResultsHandler resultsHandler;
     private final byte[] buffer = new byte[1024];
+    private final MessageDigest messageDigest;
 
     public HashFileVisitor(HashResultsHandler resultsHandler) {
         this.resultsHandler = resultsHandler;
+        try {
+            messageDigest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new UncheckedNoSuchAlgorithmException("SDK hasn't support of SHA-256");
+        }
     }
 
 
     @Override
     public FileVisitResult visitFile(T path, BasicFileAttributes attrs) {
-        try {
-            // :NOTE: reuse
-            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-            try (
-                    InputStream is = new BufferedInputStream(Files.newInputStream(path));
-                    DigestInputStream dis = new DigestInputStream(is, messageDigest)
-            ) {
-                while (dis.read(buffer) != -1) ;
-                resultsHandler.processSuccess(dis.getMessageDigest().digest(), path);
-            } catch (IOException e) {
-                System.err.println("Error on reading file " + path);
-                resultsHandler.processError(path.toString());
-            }
-        } catch (NoSuchAlgorithmException e) {
-            System.err.println("SDK hasn't support of SHA-256");
+        // :NOTE: reuse
+        try (
+                InputStream is = new BufferedInputStream(Files.newInputStream(path));
+                DigestInputStream dis = new DigestInputStream(is, messageDigest)
+        ) {
+            while (dis.read(buffer) != -1) ;
+            resultsHandler.processSuccess(dis.getMessageDigest().digest(), path);
+        } catch (IOException e) {
+            System.err.println("Error on reading file " + path + " : " + e.getMessage());
+            resultsHandler.processError(path.toString());
+        } catch (SecurityException e) {
+            System.err.println("Error on access to file " + path + " : " + e.getMessage());
             resultsHandler.processError(path.toString());
         }
         return FileVisitResult.CONTINUE;

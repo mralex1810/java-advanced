@@ -26,49 +26,47 @@ public class AdvancedWalk {
             return;
         }
         // :NOTE: copy-paste
-        if (args[0] == null) {
-            System.err.println("Input file must be non null");
+        if (!isPath(args[0])) {
+            System.err.println("Input file isn't correct");
             return;
         }
-        if (args[1] == null) {
+        if (!isPath(args[1])) {
             System.err.println("Output file must be non null");
             return;
         }
+        final Path outputFile = Path.of(args[1]);
         try {
-            final Path outputFile = Path.of(args[1]);
-            try {
-                // :NOTE: outputFile.getParent()
-                if (outputFile.getParent() != null && !Files.exists(outputFile.getParent())) {
-                    Files.createDirectories(outputFile.getParent());
-                }
-            } catch (final IOException e) {
-                System.err.println("Can't create parent dirs of output files " + e.getMessage());
-                // :NOTE: ??
-                return;
+            // :NOTE: outputFile.getParent()
+            final Path parent = outputFile.getParent();
+            if (parent != null && !Files.exists(parent)) {
+                Files.createDirectories(parent);
             }
+        } catch (final IOException e) {
+            System.err.println("Can't create parent dirs of output files " + e.getMessage());
+            // :NOTE: ??
+        }
 
-            try (final BufferedReader in = Files.newBufferedReader(Path.of(args[0]))) {
-                try (final Writer out = Files.newBufferedWriter(outputFile);
-                     // :NOTE: double close
-                     final HashResultsHandler handler = new HashResultsHandler(out)) {
-                    try {
-                        final FileVisitor<Path> visitor = new HashFileVisitor<>(handler);
-                        for (String file = in.readLine(); file != null; file = in.readLine()) {
-                            walkFromOneFile(file, depth, visitor, handler);
-                        }
-                    } catch (final IOException e) {
-                        System.err.println("Error on reading input file " + e.getMessage());
+        try (final BufferedReader in = Files.newBufferedReader(Path.of(args[0]))) {
+            try (final Writer out = Files.newBufferedWriter(outputFile)) {
+                // :NOTE: double close
+                final HashResultsHandler handler = new HashResultsHandler(out);
+                try {
+                    final FileVisitor<Path> visitor = new HashFileVisitor<>(handler);
+                    for (String file = in.readLine(); file != null; file = in.readLine()) {
+                        walkFromOneFile(file, depth, visitor, handler);
                     }
                 } catch (final IOException e) {
-                    System.err.println("Error on open output file " + e.getMessage());
+                    System.err.println("Error on reading input file " + e.getMessage());
+                } catch (final ErrorOnWriteException e) {
+                    System.err.println("Can't write in output file " + e.getMessage());
+                } catch (final UncheckedNoSuchAlgorithmException e) {
+                    System.err.println("JVM hasn't hash algorithm " + e.getMessage());
                 }
             } catch (final IOException e) {
-                System.err.println("Error on open input file " + e.getMessage());
-            } catch (final InvalidPathException e) {
-                System.err.println("Input file string isn't path " + e.getReason());
+                System.err.println("Error on open output file " + e.getMessage());
             }
-        } catch (final InvalidPathException e) {
-            System.err.println("Output file string isn't path: " + e.getReason());
+        } catch (final IOException e) {
+            System.err.println("Error on open input file " + e.getMessage());
         }
     }
 
@@ -80,12 +78,23 @@ public class AdvancedWalk {
             // Unreachable
             System.err.println("Error on processing file " + file + " : " + e.getMessage());
         } catch (final InvalidPathException e) {
-            System.err.println("Error on getting path of " + file  + " : " + e.getReason());
+            System.err.println("Error on getting path of " + file + " : " + e.getReason());
             handler.processError(file);
         } catch (final SecurityException e) {
-            System.err.println("Security manager denies access to " + file  + " : " + e.getMessage());
+            System.err.println("Security manager denies access to " + file + " : " + e.getMessage());
             handler.processError(file);
         }
+    }
 
+    private static boolean isPath(String file) {
+        if (file == null) {
+            return false;
+        }
+        try {
+            Path.of(file);
+        } catch (InvalidPathException e) {
+            return false;
+        }
+        return true;
     }
 }

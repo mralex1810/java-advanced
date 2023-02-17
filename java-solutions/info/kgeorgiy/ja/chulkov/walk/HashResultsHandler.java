@@ -28,7 +28,7 @@ public class HashResultsHandler implements Closeable {
             writer.write(hexHash + " " + path + System.lineSeparator());
         } catch (final IOException e) {
             // :NOTE: ??
-            System.err.println("Error on writing in output file");
+            throw new ErrorOnWriteException(e);
         }
     }
 
