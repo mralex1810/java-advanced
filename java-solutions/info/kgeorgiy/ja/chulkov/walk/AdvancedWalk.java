@@ -53,14 +53,14 @@ public class AdvancedWalk {
                         }
                     } catch (IOException e) {
                         System.err.println("Error on reading input file " + e.getMessage());
-                    } catch (InvalidPathException e) {
-                        System.err.println("Input file string isn't path " + e.getReason());
                     }
                 } catch (IOException e) {
                     System.err.println("Error on open output file " + e.getMessage());
                 }
             } catch (IOException e) {
                 System.err.println("Error on open input file " + e.getMessage());
+            } catch (InvalidPathException e) {
+                System.err.println("Input file string isn't path " + e.getReason());
             }
         } catch (InvalidPathException e) {
             System.err.println("Output file string isn't path: " + e.getReason());
