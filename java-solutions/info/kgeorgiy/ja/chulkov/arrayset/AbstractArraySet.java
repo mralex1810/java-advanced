@@ -4,14 +4,18 @@ import java.util.*;
 
 public class AbstractArraySet<E> extends AbstractAbstractArraySet<E> {
 
-
     protected AbstractArraySet(List<E> array, Comparator<? super E> comparator) {
         super(array, comparator);
     }
 
     @Override
+    protected NavigableSet<E> subSet(List<E> list) {
+        return new AbstractArraySet<>(list, comparator());
+    }
+
+    @Override
     public NavigableSet<E> descendingSet() {
-        return new ReverseAbstractAbstractArraySet(new ReversedList<>(array), Collections.reverseOrder(comparator));
+        return new ReversedAbstractArraySet(new ReversedList<>(array), Collections.reverseOrder(comparator));
     }
 
     @Override
@@ -19,10 +23,17 @@ public class AbstractArraySet<E> extends AbstractAbstractArraySet<E> {
         return new ReversedList<>(array).iterator();
     }
 
-    private class ReverseAbstractAbstractArraySet extends AbstractAbstractArraySet<E> {
 
-        protected ReverseAbstractAbstractArraySet(List<E> array, Comparator<? super E> comparator) {
+
+    private class ReversedAbstractArraySet extends AbstractAbstractArraySet<E> {
+
+        protected ReversedAbstractArraySet(List<E> array, Comparator<? super E> comparator) {
             super(array, comparator);
+        }
+
+        @Override
+        protected NavigableSet<E> subSet(List<E> list) {
+            return new ReversedAbstractArraySet(list, comparator());
         }
 
         @Override

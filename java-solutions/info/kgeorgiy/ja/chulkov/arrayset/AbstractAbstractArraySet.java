@@ -112,9 +112,10 @@ public abstract class AbstractAbstractArraySet<E> extends AbstractSet<E> impleme
         return left > right ? Collections.emptyList() : array.subList(left, right);
     }
 
-    private NavigableSet<E> subSet(List<E> list) {
-        return new AbstractArraySet<>(list, comparator());
-    }
+    protected abstract NavigableSet<E> subSet(List<E> list);
+//    {
+//        return new AbstractArraySet<>(list, comparator());
+//    }
 
     private int compare(E left, E rigth) {
         if (comparator == null) {
