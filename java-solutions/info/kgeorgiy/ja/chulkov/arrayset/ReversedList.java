@@ -1,8 +1,10 @@
 package info.kgeorgiy.ja.chulkov.arrayset;
 
-import java.util.*;
+import java.util.AbstractList;
+import java.util.List;
+import java.util.Objects;
 
-public class ReversedList<E> extends AbstractList<E>  implements List<E> {
+public class ReversedList<E> extends AbstractList<E> implements List<E> {
 
     private final List<E> array;
 

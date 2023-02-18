@@ -15,6 +15,10 @@ public class ArraySet<E> extends AbstractArraySet<E> {
         super(processSortedSetToList(prepareSortedSet(collection, comparator)), comparator);
     }
 
+    protected ArraySet(List<E> array, Comparator<? super E> comparator) {
+        super(array, comparator);
+    }
+
     private static <E> List<E> processSortedSetToList(SortedSet<E> set) {
         return Collections.unmodifiableList(new ArrayList<>(set));
     }
@@ -25,4 +29,41 @@ public class ArraySet<E> extends AbstractArraySet<E> {
         return treeSet;
     }
 
+    @Override
+    protected NavigableSet<E> subSet(List<E> list) {
+        return new ArraySet<>(list, comparator());
+    }
+
+    @Override
+    public NavigableSet<E> descendingSet() {
+        return new ReversedArraySet(new ReversedList<>(array), Collections.reverseOrder(comparator));
+    }
+
+    @Override
+    public Iterator<E> descendingIterator() {
+        return new ReversedList<>(array).iterator();
+    }
+
+
+    private class ReversedArraySet extends AbstractArraySet<E> {
+
+        protected ReversedArraySet(List<E> array, Comparator<? super E> comparator) {
+            super(array, comparator);
+        }
+
+        @Override
+        protected NavigableSet<E> subSet(List<E> list) {
+            return new ReversedArraySet(list, comparator());
+        }
+
+        @Override
+        public NavigableSet<E> descendingSet() {
+            return ArraySet.this;
+        }
+
+        @Override
+        public Iterator<E> descendingIterator() {
+            return ArraySet.this.iterator();
+        }
+    }
 }
