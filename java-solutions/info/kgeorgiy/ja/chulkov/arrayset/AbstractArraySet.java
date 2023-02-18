@@ -2,9 +2,9 @@ package info.kgeorgiy.ja.chulkov.arrayset;
 
 import java.util.*;
 
-public class AbstractArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
-    private final List<E> array;
-    private final Comparator<? super E> comparator;
+public abstract class AbstractArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
+    protected final List<E> array;
+    protected final Comparator<? super E> comparator;
 
     protected AbstractArraySet(List<E> array, Comparator<? super E> comparator) {
         this.array = array;
@@ -53,16 +53,6 @@ public class AbstractArraySet<E> extends AbstractSet<E> implements NavigableSet<
         return array.iterator();
     }
 
-    @Override
-    public NavigableSet<E> descendingSet() {
-        return null;
-    }
-
-    @Override
-    public Iterator<E> descendingIterator() {
-        return null;
-    }
-
     private int fromElemWithInclusive(E from, boolean inclusive) {
         return inclusive ? lowerBound(from) : upperBound(from);
     }
@@ -76,7 +66,8 @@ public class AbstractArraySet<E> extends AbstractSet<E> implements NavigableSet<
         if (compare(fromElement, toElement) > 0) {
             throw new IllegalArgumentException();
         }
-        return subSet(safeSubList(fromElemWithInclusive(fromElement, fromInclusive), toElemWithInclusive(toElement, toInclusive)));
+        return subSet(safeSubList(fromElemWithInclusive(fromElement, fromInclusive),
+                                    toElemWithInclusive(toElement, toInclusive)));
     }
 
     @Override
@@ -122,7 +113,7 @@ public class AbstractArraySet<E> extends AbstractSet<E> implements NavigableSet<
     }
 
     private NavigableSet<E> subSet(List<E> list) {
-        return new AbstractArraySet<>(list, comparator());
+        return new ArraySet<>(list, comparator());
     }
 
     private int compare(E left, E rigth) {
@@ -150,22 +141,25 @@ public class AbstractArraySet<E> extends AbstractSet<E> implements NavigableSet<
 
     @Override
     public E first() {
-        if (isEmpty()) {
-            throw new NoSuchElementException();
-        }
+        checkEmpty();
         return array.get(0);
     }
 
     @Override
     public E last() {
+        checkEmpty();
+        return array.get(array.size() - 1);
+    }
+
+    private void checkEmpty() {
         if (isEmpty()) {
             throw new NoSuchElementException();
         }
-        return array.get(array.size() - 1);
     }
 
     @Override
     public boolean contains(Object o) {
         return rawBinarySearch((E) o) >= 0;
     }
+
 }
