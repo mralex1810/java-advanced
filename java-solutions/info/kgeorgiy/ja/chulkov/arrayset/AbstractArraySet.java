@@ -113,9 +113,6 @@ public abstract class AbstractArraySet<E> extends AbstractSet<E> implements Navi
     }
 
     protected abstract NavigableSet<E> subSet(List<E> list);
-//    {
-//        return new AbstractArraySet<>(list, comparator());
-//    }
 
     private int compare(E left, E rigth) {
         if (comparator == null) {
