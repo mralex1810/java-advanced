@@ -57,7 +57,12 @@ public class AdvancedWalk {
                     final FileVisitor<Path> visitor = new HashFileVisitor<>(handler,
                             MessageDigest.getInstance("SHA-256"));
                     for (String file = in.readLine(); file != null; file = in.readLine()) {
-                        walkFromOneFile(file, depth, visitor, handler);
+                        try {
+                            walkFromOneFile(file, depth, visitor, handler);
+                        } catch (IOException e) {
+                            System.err.println("Error on writing in file " + e.getMessage());
+                            return;
+                        }
                     }
                 } catch (final IOException e) {
                     System.err.println("Error on reading input file " + e.getMessage());
@@ -74,12 +79,9 @@ public class AdvancedWalk {
 
 
     private static void walkFromOneFile(final String file, final int depth, final FileVisitor<Path> visitor,
-                                        final HashResultsHandler handler) {
+                                        final HashResultsHandler handler) throws IOException {
         try {
             Files.walkFileTree(Path.of(file), EnumSet.noneOf(FileVisitOption.class), depth, visitor);
-        } catch (final IOException e) {
-            // Unreachable
-            System.err.println("Error on processing file " + file + " : " + e.getMessage());
         } catch (final InvalidPathException e) {
             System.err.println("Error on getting path of " + file + " : " + e.getReason());
             handler.processError(file);

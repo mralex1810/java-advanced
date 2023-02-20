@@ -15,21 +15,17 @@ public class HashResultsHandler implements Closeable {
         this.writer = writer;
     }
 
-    public void processSuccess(byte[] hash, Path file) {
+    public void processSuccess(byte[] hash, Path file) throws IOException {
         processResult(HexFormat.of().formatHex(hash), file.toString());
     }
 
-    public void processError(String path) {
+    public void processError(String path) throws IOException {
         processResult(ERROR_HASH_HEX, path);
     }
 
-    private void processResult(String hexHash, String path) {
-        try {
-            writer.write(hexHash + " " + path + System.lineSeparator());
-        } catch (final IOException e) {
-            // :NOTE: ??
-            throw new ErrorOnWriteException(e);
-        }
+    private void processResult(String hexHash, String path) throws IOException {
+        // :NOTE: ??
+        writer.write(hexHash + " " + path + System.lineSeparator());
     }
 
     @Override

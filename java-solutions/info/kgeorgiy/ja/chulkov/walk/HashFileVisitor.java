@@ -22,29 +22,30 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
         this.messageDigest = messageDigest;
     }
 
-
     @Override
-    public FileVisitResult visitFile(T path, BasicFileAttributes attrs) {
+    public FileVisitResult visitFile(T path, BasicFileAttributes attrs) throws IOException {
         // :NOTE: reuse
         try (
                 InputStream is = new BufferedInputStream(Files.newInputStream(path));
                 DigestInputStream dis = new DigestInputStream(is, messageDigest)
         ) {
             while (dis.read(buffer) != -1) ;
-            resultsHandler.processSuccess(dis.getMessageDigest().digest(), path);
         } catch (IOException e) {
             System.err.println("Error on reading file " + path + " : " + e.getMessage());
             resultsHandler.processError(path.toString());
+            return FileVisitResult.CONTINUE;
         } catch (SecurityException e) {
             System.err.println("Error on access to file " + path + " : " + e.getMessage());
             resultsHandler.processError(path.toString());
+            return FileVisitResult.CONTINUE;
         }
+        resultsHandler.processSuccess(messageDigest.digest(), path);
         return FileVisitResult.CONTINUE;
     }
 
 
     @Override
-    public FileVisitResult visitFileFailed(T path, IOException exc) {
+    public FileVisitResult visitFileFailed(T path, IOException exc) throws IOException {
         resultsHandler.processError(path.toString());
         return FileVisitResult.CONTINUE;
     }
