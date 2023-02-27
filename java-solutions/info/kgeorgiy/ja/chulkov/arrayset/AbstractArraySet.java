@@ -66,18 +66,18 @@ public abstract class AbstractArraySet<E> extends AbstractSet<E> implements Navi
         if (compare(fromElement, toElement) > 0) {
             throw new IllegalArgumentException();
         }
-        return subSet(safeSubList(fromElemWithInclusive(fromElement, fromInclusive),
+        return subSet(array.subList(fromElemWithInclusive(fromElement, fromInclusive),
                 toElemWithInclusive(toElement, toInclusive)));
     }
 
     @Override
     public NavigableSet<E> headSet(E toElement, boolean inclusive) {
-        return subSet(safeSubList(0, toElemWithInclusive(toElement, inclusive)));
+        return subSet(array.subList(0, toElemWithInclusive(toElement, inclusive)));
     }
 
     @Override
     public NavigableSet<E> tailSet(E fromElement, boolean inclusive) {
-        return subSet(safeSubList(fromElemWithInclusive(fromElement, inclusive), size()));
+        return subSet(array.subList(fromElemWithInclusive(fromElement, inclusive), size()));
     }
 
     @Override
@@ -90,35 +90,29 @@ public abstract class AbstractArraySet<E> extends AbstractSet<E> implements Navi
         return comparator;
     }
 
-    private int lowerBound(E elem) {
+    private int uniBound(E elem, int resDelta) {
         int res = rawBinarySearch(elem);
-        return res >= 0 ? res : -res - 1;
+        return res >= 0 ? res + resDelta : -res - 1;
+    }
+    private int lowerBound(E elem) {
+        return uniBound(elem, 0);
     }
 
     private int upperBound(E elem) {
-        int res = rawBinarySearch(elem);
-        return res >= 0 ? res + 1 : -res - 1;
+        return uniBound(elem, 1);
     }
 
     private int rawBinarySearch(E elem) {
-        if (comparator == null) {
-            return Collections.binarySearch((List<? extends Comparable<? super E>>) array, elem);
-        } else {
-            return Collections.binarySearch(array, elem, comparator);
-        }
-    }
-
-    private List<E> safeSubList(int left, int right) {
-        return left > right ? Collections.emptyList() : array.subList(left, right);
+        return Collections.binarySearch(array, elem, comparator);
     }
 
     protected abstract NavigableSet<E> subSet(List<E> list);
 
-    private int compare(E left, E rigth) {
+    private int compare(E left, E right) {
         if (comparator == null) {
-            return ((Comparable<? super E>) left).compareTo(rigth);
+            return ((Comparable<? super E>) left).compareTo(right);
         } else {
-            return comparator.compare(left, rigth);
+            return comparator.compare(left, right);
         }
     }
 
