@@ -25,7 +25,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
     }
 
     @SuppressWarnings("unchecked")
-    private static <E> ToIntBiFunction<? super E, ? super E> generateComparingFunc(Comparator<E> comparator) {
+    private static <E> ToIntBiFunction<? super E, ? super E> generateComparingFunc(Comparator<? super E> comparator) {
         if (comparator == null) {
             return (left, right) -> ((Comparable<? super E>) left).compareTo(right);
         } else {
