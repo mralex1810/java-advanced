@@ -24,15 +24,6 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
         this(array, comparator, generateComparingFunc(comparator));
     }
 
-    @SuppressWarnings("unchecked")
-    private static <E> ToIntBiFunction<? super E, ? super E> generateComparingFunc(Comparator<? super E> comparator) {
-        if (comparator == null) {
-            return (left, right) -> ((Comparable<? super E>) left).compareTo(right);
-        } else {
-            return comparator::compare;
-        }
-    }
-
     protected ArraySet(List<E> array, Comparator<? super E> comparator, ToIntBiFunction<? super E, ? super E> compareFunc) {
         this.array = array;
         this.comparator = comparator;
@@ -47,6 +38,15 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
         SortedSet<E> treeSet = new TreeSet<>(comparator);
         treeSet.addAll(collection);
         return treeSet;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E> ToIntBiFunction<? super E, ? super E> generateComparingFunc(Comparator<? super E> comparator) {
+        if (comparator == null) {
+            return (left, right) -> ((Comparable<? super E>) left).compareTo(right);
+        } else {
+            return comparator::compare;
+        }
     }
 
     private E validateIndexAndReturnElem(int index) {
