@@ -44,7 +44,7 @@ public class AdvancedWalk {
             if (parent != null && !Files.exists(parent)) {
                 Files.createDirectories(parent);
             }
-        } catch (final IOException e) {
+        } catch (final IOException | SecurityException e) {
             System.err.println("Can't create parent dirs of output files " + e.getMessage());
             // :NOTE: ??
         }
@@ -69,10 +69,10 @@ public class AdvancedWalk {
                 } catch (NoSuchAlgorithmException e) {
                     System.err.println("Java must implements SHA-256 algorithm " + e.getMessage());
                 }
-            } catch (final IOException e) {
+            } catch (final IOException | SecurityException e) {
                 System.err.println("Error on open output file " + e.getMessage());
             }
-        } catch (final IOException e) {
+        } catch (final IOException | SecurityException e) {
             System.err.println("Error on open input file " + e.getMessage());
         }
     }

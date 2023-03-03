@@ -30,12 +30,8 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
                 DigestInputStream dis = new DigestInputStream(is, messageDigest)
         ) {
             while (dis.read(buffer) != -1) ;
-        } catch (IOException e) {
+        } catch (IOException | SecurityException e) {
             System.err.println("Error on reading file " + path + " : " + e.getMessage());
-            resultsHandler.processError(path.toString(), messageDigest.digest());
-            return FileVisitResult.CONTINUE;
-        } catch (SecurityException e) {
-            System.err.println("Error on access to file " + path + " : " + e.getMessage());
             resultsHandler.processError(path.toString(), messageDigest.digest());
             return FileVisitResult.CONTINUE;
         }
