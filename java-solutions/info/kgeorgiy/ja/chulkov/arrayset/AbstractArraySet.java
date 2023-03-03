@@ -61,23 +61,27 @@ public abstract class AbstractArraySet<E> extends AbstractSet<E> implements Navi
         return inclusive ? upperBound(to) : lowerBound(to);
     }
 
+    private List<E> safeSubList(int left, int right) {
+        return left > right ? Collections.emptyList() : array.subList(left, right);
+    }
+
     @Override
     public NavigableSet<E> subSet(E fromElement, boolean fromInclusive, E toElement, boolean toInclusive) {
         if (compare(fromElement, toElement) > 0) {
             throw new IllegalArgumentException();
         }
-        return subSet(array.subList(fromElemWithInclusive(fromElement, fromInclusive),
+        return subSet(safeSubList(fromElemWithInclusive(fromElement, fromInclusive),
                 toElemWithInclusive(toElement, toInclusive)));
     }
 
     @Override
     public NavigableSet<E> headSet(E toElement, boolean inclusive) {
-        return subSet(array.subList(0, toElemWithInclusive(toElement, inclusive)));
+        return subSet(safeSubList(0, toElemWithInclusive(toElement, inclusive)));
     }
 
     @Override
     public NavigableSet<E> tailSet(E fromElement, boolean inclusive) {
-        return subSet(array.subList(fromElemWithInclusive(fromElement, inclusive), size()));
+        return subSet(safeSubList(fromElemWithInclusive(fromElement, inclusive), size()));
     }
 
     @Override
