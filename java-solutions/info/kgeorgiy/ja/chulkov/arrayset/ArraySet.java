@@ -1,10 +1,12 @@
 package info.kgeorgiy.ja.chulkov.arrayset;
 
 import java.util.*;
+import java.util.function.ToIntBiFunction;
 
 public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
     protected final List<E> array;
     protected final Comparator<? super E> comparator;
+    private final ToIntBiFunction<? super E, ? super E> compareFunc;
 
     public ArraySet() {
         this(Collections.emptyList(), null);
@@ -15,12 +17,26 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
     }
 
     public ArraySet(Collection<? extends E> collection, Comparator<? super E> comparator) {
-        this(processSortedSetToList(prepareSortedSet(collection, comparator)), comparator);
+        this(processSortedSetToList(prepareSortedSet(collection, comparator)), comparator, generateComparingFunc(comparator));
     }
 
     protected ArraySet(List<E> array, Comparator<? super E> comparator) {
+        this(array, comparator, generateComparingFunc(comparator));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E> ToIntBiFunction<? super E, ? super E> generateComparingFunc(Comparator<E> comparator) {
+        if (comparator == null) {
+            return (left, right) -> ((Comparable<? super E>) left).compareTo(right);
+        } else {
+            return comparator::compare;
+        }
+    }
+
+    protected ArraySet(List<E> array, Comparator<? super E> comparator, ToIntBiFunction<? super E, ? super E> compareFunc) {
         this.array = array;
         this.comparator = comparator;
+        this.compareFunc = compareFunc;
     }
 
     private static <E> List<E> processSortedSetToList(SortedSet<E> set) {
@@ -88,14 +104,14 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
     }
 
     protected NavigableSet<E> subSet(List<E> list) {
-        return new ArraySet<>(list, comparator());
+        return new ArraySet<>(list, comparator(), compareFunc);
     }
 
     @Override
     public NavigableSet<E> subSet(E fromElement, boolean fromInclusive, E toElement, boolean toInclusive) {
         if (compare(fromElement, toElement) > 0) {
             // :NOTE: сообщение
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("fromElement is greatest than toElement");
         }
         return safeSubSet(fromElemWithInclusive(fromElement, fromInclusive),
                 toElemWithInclusive(toElement, toInclusive));
@@ -138,14 +154,9 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
         return Collections.binarySearch(array, elem, comparator);
     }
 
-    @SuppressWarnings("unchecked")
     private int compare(E left, E right) {
         // :NOTE: не делать == null каждый раз
-        if (comparator == null) {
-            return ((Comparable<? super E>) left).compareTo(right);
-        } else {
-            return comparator.compare(left, right);
-        }
+        return compareFunc.applyAsInt(left, right);
     }
 
     @Override
