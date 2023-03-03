@@ -5,6 +5,7 @@ import java.util.*;
 public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
     protected final List<E> array;
     protected final Comparator<? super E> comparator;
+
     public ArraySet() {
         this(Collections.emptyList(), null);
     }
@@ -31,6 +32,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
         treeSet.addAll(collection);
         return treeSet;
     }
+
     private E validateIndexAndReturnElem(int index) {
         if (index >= 0 && index < size()) {
             return array.get(index);
@@ -92,6 +94,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
     @Override
     public NavigableSet<E> subSet(E fromElement, boolean fromInclusive, E toElement, boolean toInclusive) {
         if (compare(fromElement, toElement) > 0) {
+            // :NOTE: сообщение
             throw new IllegalArgumentException();
         }
         return safeSubSet(fromElemWithInclusive(fromElement, fromInclusive),
@@ -137,6 +140,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
 
     @SuppressWarnings("unchecked")
     private int compare(E left, E right) {
+        // :NOTE: не делать == null каждый раз
         if (comparator == null) {
             return ((Comparable<? super E>) left).compareTo(right);
         } else {
@@ -180,6 +184,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
     @Override
     @SuppressWarnings("unchecked")
     public boolean contains(Object o) {
+        // :NOTE: а что если Comparator<Object>? (Вроде выразимо)
         return rawBinarySearch((E) o) >= 0;
     }
 
