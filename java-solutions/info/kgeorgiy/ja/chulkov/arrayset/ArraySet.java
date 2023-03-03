@@ -36,12 +36,12 @@ public class ArraySet<E> extends AbstractArraySet<E> {
 
     @Override
     public NavigableSet<E> descendingSet() {
-        return new ReversedArraySet(new ReversedList<>(array), Collections.reverseOrder(comparator));
+        return new ReversedArraySet(new ReversedListView<>(array), Collections.reverseOrder(comparator));
     }
 
     @Override
     public Iterator<E> descendingIterator() {
-        return new ReversedList<>(array).iterator();
+        return new ReversedListView<>(array).iterator();
     }
 
 

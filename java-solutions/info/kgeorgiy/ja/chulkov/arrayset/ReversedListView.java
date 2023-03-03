@@ -4,11 +4,11 @@ import java.util.AbstractList;
 import java.util.List;
 import java.util.Objects;
 
-public class ReversedList<E> extends AbstractList<E> implements List<E> {
+public class ReversedListView<E> extends AbstractList<E> implements List<E> {
 
     private final List<E> array;
 
-    public ReversedList(List<E> array) {
+    public ReversedListView(List<E> array) {
         this.array = array;
     }
 
