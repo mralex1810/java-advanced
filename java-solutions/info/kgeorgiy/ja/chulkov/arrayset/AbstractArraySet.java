@@ -112,6 +112,7 @@ public abstract class AbstractArraySet<E> extends AbstractSet<E> implements Navi
 
     protected abstract NavigableSet<E> subSet(List<E> list);
 
+    @SuppressWarnings("unchecked cast")
     private int compare(E left, E right) {
         if (comparator == null) {
             return ((Comparable<? super E>) left).compareTo(right);
@@ -154,6 +155,7 @@ public abstract class AbstractArraySet<E> extends AbstractSet<E> implements Navi
     }
 
     @Override
+    @SuppressWarnings("unchecked cast")
     public boolean contains(Object o) {
         return rawBinarySearch((E) o) >= 0;
     }
