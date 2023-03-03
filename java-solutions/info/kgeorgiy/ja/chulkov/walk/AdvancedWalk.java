@@ -30,6 +30,7 @@ public class AdvancedWalk {
         // :NOTE: copy-paste
         final Path inputFile = toPath(args[0]);
         final Path outputFile = toPath(args[1]);
+        // :NOTE: copy-paste
         if (inputFile == null) {
             System.err.println("Input file isn't correct");
             return;
@@ -49,6 +50,7 @@ public class AdvancedWalk {
             // :NOTE: ??
         }
 
+        // :NOTE: encoding
         try (final BufferedReader in = Files.newBufferedReader(inputFile)) {
             try (final Writer out = Files.newBufferedWriter(outputFile)) {
                 // :NOTE: double close
@@ -59,14 +61,14 @@ public class AdvancedWalk {
                     for (String file = in.readLine(); file != null; file = in.readLine()) {
                         try {
                             walkFromOneFile(file, depth, visitor, handler);
-                        } catch (IOException e) {
+                        } catch (final IOException e) {
                             System.err.println("Error on writing in file " + e.getMessage());
                             return;
                         }
                     }
                 } catch (final IOException e) {
                     System.err.println("Error on reading input file " + e.getMessage());
-                } catch (NoSuchAlgorithmException e) {
+                } catch (final NoSuchAlgorithmException e) {
                     System.err.println("Java must implements SHA-256 algorithm " + e.getMessage());
                 }
             } catch (final IOException | SecurityException e) {
@@ -78,8 +80,10 @@ public class AdvancedWalk {
     }
 
 
-    private static void walkFromOneFile(final String file, final int depth, final FileVisitor<Path> visitor,
-                                        final HashResultsHandler handler) throws IOException {
+    private static void walkFromOneFile(
+            final String file, final int depth, final FileVisitor<Path> visitor,
+            final HashResultsHandler handler
+    ) throws IOException {
         try {
             Files.walkFileTree(Path.of(file), EnumSet.noneOf(FileVisitOption.class), depth, visitor);
         } catch (final InvalidPathException e) {
@@ -91,13 +95,13 @@ public class AdvancedWalk {
         }
     }
 
-    private static Path toPath(String file) {
+    private static Path toPath(final String file) {
         if (file == null) {
             return null;
         }
         try {
             return Path.of(file);
-        } catch (InvalidPathException e) {
+        } catch (final InvalidPathException e) {
             System.err.println(file + " isn't path " + e.getReason());
             return null;
         }

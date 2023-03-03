@@ -17,22 +17,23 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
     private final byte[] buffer = new byte[1024];
     private final MessageDigest messageDigest;
 
-    public HashFileVisitor(HashResultsHandler resultsHandler, MessageDigest messageDigest) {
+    public HashFileVisitor(final HashResultsHandler resultsHandler, final MessageDigest messageDigest) {
         this.resultsHandler = resultsHandler;
         this.messageDigest = messageDigest;
     }
 
     @Override
     @SuppressWarnings({"StatementWithEmptyBody"})
-    public FileVisitResult visitFile(T path, BasicFileAttributes attrs) throws IOException {
+    public FileVisitResult visitFile(final T path, final BasicFileAttributes attrs) throws IOException {
         // :NOTE: reuse
         try (
-                InputStream is = new BufferedInputStream(Files.newInputStream(path));
-                DigestInputStream dis = new DigestInputStream(is, messageDigest)
+                final InputStream is = new BufferedInputStream(Files.newInputStream(path));
+                final DigestInputStream dis = new DigestInputStream(is, messageDigest)
         ) {
             while (dis.read(buffer) != -1) ;
-        } catch (IOException | SecurityException e) {
+        } catch (final IOException | SecurityException e) {
             System.err.println("Error on reading file " + path + " : " + e.getMessage());
+            // :NOTE: digest()?
             resultsHandler.processError(path.toString(), messageDigest.digest());
             return FileVisitResult.CONTINUE;
         }
@@ -42,7 +43,7 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
 
 
     @Override
-    public FileVisitResult visitFileFailed(T path, IOException exc) throws IOException {
+    public FileVisitResult visitFileFailed(final T path, final IOException exc) throws IOException {
         resultsHandler.processError(path.toString());
         return FileVisitResult.CONTINUE;
     }
