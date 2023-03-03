@@ -32,14 +32,14 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
             while (dis.read(buffer) != -1) ;
         } catch (IOException e) {
             System.err.println("Error on reading file " + path + " : " + e.getMessage());
-            resultsHandler.processError(path.toString());
+            resultsHandler.processError(path.toString(), messageDigest.digest());
             return FileVisitResult.CONTINUE;
         } catch (SecurityException e) {
             System.err.println("Error on access to file " + path + " : " + e.getMessage());
-            resultsHandler.processError(path.toString());
+            resultsHandler.processError(path.toString(), messageDigest.digest());
             return FileVisitResult.CONTINUE;
         }
-        resultsHandler.processSuccess(messageDigest.digest(), path);
+        resultsHandler.processSuccess(path, messageDigest.digest());
         return FileVisitResult.CONTINUE;
     }
 
