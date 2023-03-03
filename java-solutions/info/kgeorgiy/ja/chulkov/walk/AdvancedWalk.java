@@ -3,6 +3,7 @@ package info.kgeorgiy.ja.chulkov.walk;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -46,8 +47,8 @@ public class AdvancedWalk {
         }
 
         // :NOTE: encoding
-        try (final BufferedReader in = Files.newBufferedReader(inputFile)) {
-            try (final Writer out = Files.newBufferedWriter(outputFile)) {
+        try (final BufferedReader in = Files.newBufferedReader(inputFile, StandardCharsets.UTF_8)) {
+            try (final Writer out = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8)) {
                 // :NOTE: double close
                 final HashResultsHandler handler = new HashResultsHandler(out);
                 try {
