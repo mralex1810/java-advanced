@@ -23,6 +23,7 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
     }
 
     @Override
+    @SuppressWarnings({"StatementWithEmptyBody"})
     public FileVisitResult visitFile(T path, BasicFileAttributes attrs) throws IOException {
         // :NOTE: reuse
         try (
