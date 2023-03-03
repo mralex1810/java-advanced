@@ -41,29 +41,19 @@ public class ArraySet<E> extends AbstractArraySet<E> {
 
     @Override
     public Iterator<E> descendingIterator() {
-        return new ReversedListView<>(array).iterator();
+        return descendingSet().iterator();
     }
 
 
-    private class ReversedArraySet extends AbstractArraySet<E> {
+    private class ReversedArraySet extends ArraySet<E> {
 
         protected ReversedArraySet(List<E> array, Comparator<? super E> comparator) {
             super(array, comparator);
         }
 
         @Override
-        protected NavigableSet<E> subSet(List<E> list) {
-            return new ReversedArraySet(list, comparator());
-        }
-
-        @Override
         public NavigableSet<E> descendingSet() {
             return ArraySet.this;
-        }
-
-        @Override
-        public Iterator<E> descendingIterator() {
-            return ArraySet.this.iterator();
         }
     }
 }
