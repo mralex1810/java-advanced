@@ -20,6 +20,7 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
     public HashFileVisitor(final HashResultsHandler resultsHandler, final MessageDigest messageDigest) {
         this.resultsHandler = resultsHandler;
         this.messageDigest = messageDigest;
+        messageDigest.reset();
     }
 
     @Override
@@ -34,7 +35,8 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
         } catch (final IOException | SecurityException e) {
             System.err.println("Error on reading file " + path + " : " + e.getMessage());
             // :NOTE: digest()?
-            resultsHandler.processError(path.toString(), messageDigest.digest());
+            resultsHandler.processError(path.toString());
+            messageDigest.reset();
             return FileVisitResult.CONTINUE;
         }
         resultsHandler.processSuccess(path, messageDigest.digest());

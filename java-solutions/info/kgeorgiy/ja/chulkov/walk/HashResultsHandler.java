@@ -23,10 +23,6 @@ public class HashResultsHandler implements Closeable {
         processResult(ERROR_HASH_HEX, path);
     }
 
-    public void processError(String path, byte[] hash) throws IOException {
-        processResult(ERROR_HASH_HEX, path);
-    }
-
     private void processResult(String hexHash, String path) throws IOException {
         writer.write(hexHash + " " + path + System.lineSeparator());
     }

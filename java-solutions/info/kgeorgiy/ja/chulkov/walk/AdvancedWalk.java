@@ -28,15 +28,10 @@ public class AdvancedWalk {
             return;
         }
         // :NOTE: copy-paste
-        final Path inputFile = toPath(args[0]);
-        final Path outputFile = toPath(args[1]);
+        final Path inputFile = toPath(args[0], "input");
+        final Path outputFile = toPath(args[1], "output");
         // :NOTE: copy-paste
-        if (inputFile == null) {
-            System.err.println("Input file isn't correct");
-            return;
-        }
-        if (outputFile == null) {
-            System.err.println("Output file isn't correct");
+        if (inputFile == null || outputFile == null) {
             return;
         }
         try {
@@ -95,14 +90,15 @@ public class AdvancedWalk {
         }
     }
 
-    private static Path toPath(final String file) {
+    private static Path toPath(final String file, final String fileName) {
         if (file == null) {
+            System.err.println(fileName + "is null");
             return null;
         }
         try {
             return Path.of(file);
         } catch (final InvalidPathException e) {
-            System.err.println(file + " isn't path " + e.getReason());
+            System.err.println(fileName + " isn't path " + e.getReason());
             return null;
         }
     }
