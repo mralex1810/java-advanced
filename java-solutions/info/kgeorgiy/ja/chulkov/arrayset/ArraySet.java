@@ -135,7 +135,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
         return Collections.binarySearch(array, elem, comparator);
     }
 
-    @SuppressWarnings("unchecked cast")
+    @SuppressWarnings("unchecked")
     private int compare(E left, E right) {
         if (comparator == null) {
             return ((Comparable<? super E>) left).compareTo(right);
@@ -178,7 +178,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
     }
 
     @Override
-    @SuppressWarnings("unchecked cast")
+    @SuppressWarnings("unchecked")
     public boolean contains(Object o) {
         return rawBinarySearch((E) o) >= 0;
     }
