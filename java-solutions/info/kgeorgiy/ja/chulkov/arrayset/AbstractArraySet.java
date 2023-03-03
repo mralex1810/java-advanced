@@ -61,8 +61,11 @@ public abstract class AbstractArraySet<E> extends AbstractSet<E> implements Navi
         return inclusive ? upperBound(to) : lowerBound(to);
     }
 
-    private List<E> safeSubList(int left, int right) {
-        return left > right ? Collections.emptyList() : array.subList(left, right);
+
+    protected abstract NavigableSet<E> subSet(List<E> list);
+
+    private NavigableSet<E> safeSubSet(int left, int right) {
+        return left > right ? Collections.emptyNavigableSet() : subSet(array.subList(left, right));
     }
 
     @Override
@@ -70,18 +73,18 @@ public abstract class AbstractArraySet<E> extends AbstractSet<E> implements Navi
         if (compare(fromElement, toElement) > 0) {
             throw new IllegalArgumentException();
         }
-        return subSet(safeSubList(fromElemWithInclusive(fromElement, fromInclusive),
-                toElemWithInclusive(toElement, toInclusive)));
+        return safeSubSet(fromElemWithInclusive(fromElement, fromInclusive),
+                toElemWithInclusive(toElement, toInclusive));
     }
 
     @Override
     public NavigableSet<E> headSet(E toElement, boolean inclusive) {
-        return subSet(safeSubList(0, toElemWithInclusive(toElement, inclusive)));
+        return safeSubSet(0, toElemWithInclusive(toElement, inclusive));
     }
 
     @Override
     public NavigableSet<E> tailSet(E fromElement, boolean inclusive) {
-        return subSet(safeSubList(fromElemWithInclusive(fromElement, inclusive), size()));
+        return safeSubSet(fromElemWithInclusive(fromElement, inclusive), size());
     }
 
     @Override
@@ -98,6 +101,7 @@ public abstract class AbstractArraySet<E> extends AbstractSet<E> implements Navi
         int res = rawBinarySearch(elem);
         return res >= 0 ? res + resDelta : -res - 1;
     }
+
     private int lowerBound(E elem) {
         return uniBound(elem, 0);
     }
@@ -109,8 +113,6 @@ public abstract class AbstractArraySet<E> extends AbstractSet<E> implements Navi
     private int rawBinarySearch(E elem) {
         return Collections.binarySearch(array, elem, comparator);
     }
-
-    protected abstract NavigableSet<E> subSet(List<E> list);
 
     @SuppressWarnings("unchecked cast")
     private int compare(E left, E right) {
