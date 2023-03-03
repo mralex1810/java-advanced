@@ -4,8 +4,8 @@ import java.util.*;
 import java.util.function.ToIntBiFunction;
 
 public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
-    protected final List<E> array;
-    protected final Comparator<? super E> comparator;
+    private final List<E> array;
+    private final Comparator<? super E> comparator;
     private final ToIntBiFunction<? super E, ? super E> compareFunc;
 
     public ArraySet() {
