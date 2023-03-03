@@ -47,8 +47,8 @@ public class AdvancedWalk {
         }
 
         // :NOTE: encoding
-        try (final BufferedReader in = Files.newBufferedReader(inputFile, StandardCharsets.UTF_8)) {
-            try (final Writer out = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8)) {
+        try (final BufferedReader in = Files.newBufferedReader(inputFile)) {
+            try (final Writer out = Files.newBufferedWriter(outputFile)) {
                 // :NOTE: double close
                 final HashResultsHandler handler = new HashResultsHandler(out);
                 try {
