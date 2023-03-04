@@ -1,12 +1,11 @@
 package info.kgeorgiy.ja.chulkov.arrayset;
 
 import java.util.*;
-import java.util.function.ToIntBiFunction;
 
 public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
     private final List<E> array;
     private final Comparator<? super E> comparator;
-    private final ToIntBiFunction<? super E, ? super E> compareFunc;
+    private final Comparator<? super E> compareFunc;
 
     public ArraySet() {
         this(Collections.emptyList(), null);
@@ -24,7 +23,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
         this(array, comparator, generateComparingFunc(comparator));
     }
 
-    protected ArraySet(List<E> array, Comparator<? super E> comparator, ToIntBiFunction<? super E, ? super E> compareFunc) {
+    protected ArraySet(List<E> array, Comparator<? super E> comparator, Comparator<? super E> compareFunc) {
         this.array = array;
         this.comparator = comparator;
         this.compareFunc = compareFunc;
@@ -40,12 +39,12 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
         return treeSet;
     }
 
-    @SuppressWarnings("unchecked")
-    private static <E> ToIntBiFunction<? super E, ? super E> generateComparingFunc(Comparator<? super E> comparator) {
+    @SuppressWarnings({"unchecked", "ReplaceNullCheck"})
+    private static <E> Comparator<? super E> generateComparingFunc(Comparator<? super E> comparator) {
         if (comparator == null) {
             return (left, right) -> ((Comparable<? super E>) left).compareTo(right);
         } else {
-            return comparator::compare;
+            return comparator;
         }
     }
 
@@ -78,12 +77,12 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
 
     @Override
     public E pollFirst() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("Array set is unmodifiable");
     }
 
     @Override
     public E pollLast() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("Array set is unmodifiable");
     }
 
     @Override
@@ -156,7 +155,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
 
     private int compare(E left, E right) {
         // :NOTE: не делать == null каждый раз
-        return compareFunc.applyAsInt(left, right);
+        return compareFunc.compare(left, right);
     }
 
     @Override
