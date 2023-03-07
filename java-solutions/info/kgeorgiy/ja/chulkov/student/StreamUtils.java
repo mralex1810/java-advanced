@@ -17,10 +17,6 @@ public class StreamUtils {
                 .collect(collector);
     }
 
-    public static <T, R> List<R> processCollectionByStreamToList(Collection<T> input, Function<Stream<T>, Stream<R>> map) {
-        return processCollectionByStream(input, map, Collectors.toList());
-    }
-
     public static <T, A, R, CR> CR mapCollection(Collection<T> input, Function<T, R> function, Collector<R, A, CR> collector) {
         return processCollectionByStream(input, stream -> stream.map(function), collector);
     }
