@@ -18,10 +18,10 @@ public class StudentDB implements AdvancedQuery {
 
     public static final String EMPTY_STRING = "";
     public static final Comparator<Student> ID_COMPARATOR = Comparator.comparingInt(Student::getId);
-    private static final Comparator<Student> STUDENT_COMPARATOR = Comparator.comparing(Student::getLastName)
-            .thenComparing(Student::getFirstName)
-            .reversed()
-            .thenComparing(Student::getId);
+    private static final Comparator<Student> STUDENT_COMPARATOR =
+            Comparator.comparing(Student::getLastName, Comparator.reverseOrder())
+                    .thenComparing(Student::getFirstName, Comparator.reverseOrder())
+                    .thenComparing(Student::getId);
     public static final Collector<Student, ?, TreeMap<GroupName, List<Student>>> GROUP_COLLECTOR =
             Collectors.groupingBy(Student::getGroup, TreeMap::new, Collectors.toList());
 
@@ -110,7 +110,7 @@ public class StudentDB implements AdvancedQuery {
     }
 
     private List<Group> getGroups(Collection<Student> students) {
-        return toGroupList(processCollectionByStream(students, Function.identity(), GROUP_COLLECTOR));
+        return toGroupList(students.stream().collect(GROUP_COLLECTOR));
     }
 
     private List<Group> getGroupsBySmth(Collection<Student> students, Comparator<Student> comparator) {
@@ -131,19 +131,23 @@ public class StudentDB implements AdvancedQuery {
         return maxAndMapOptional(getGroups(students), comparator, Group::getName, null);
     }
 
+    private GroupName getLargestGroupNameByComparatorWithOrder(Collection<Student> students,
+                                                               Comparator<Group> comparator, Comparator<String> order) {
+        return getLargestGroup(students, comparator.thenComparing(group -> group.getName().name(), order));
+    }
+
     @Override
     public GroupName getLargestGroup(Collection<Student> students) {
-        return getLargestGroup(students, Comparator.comparing((Group group) -> group.getStudents().size())
-                .thenComparing(group -> group.getName().name()));
+        return getLargestGroupNameByComparatorWithOrder(students,
+                Comparator.comparingInt((Group group) -> group.getStudents().size()),
+                Comparator.naturalOrder());
     }
 
     @Override
     public GroupName getLargestGroupFirstName(Collection<Student> students) {
-        return getLargestGroup(students,
-                Comparator.comparingInt((Group group) -> getDistinctFirstNames(group.getStudents()).size())
-                        .reversed()
-                        .thenComparing(group -> group.getName().name())
-                        .reversed());
+        return getLargestGroupNameByComparatorWithOrder(students,
+                Comparator.comparingInt((Group group) -> getDistinctFirstNames(group.getStudents()).size()),
+                Comparator.reverseOrder());
     }
 
     @Override
