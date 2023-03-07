@@ -11,9 +11,10 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-public class StudentQueryImpl implements AdvancedQuery {
+import static info.kgeorgiy.ja.chulkov.student.StreamUtils.*;
+
+public class StudentDB implements AdvancedQuery {
 
     public static final String EMPTY_STRING = "";
     public static final Comparator<Student> ID_COMPARATOR = Comparator.comparingInt(Student::getId);
@@ -23,28 +24,11 @@ public class StudentQueryImpl implements AdvancedQuery {
             .thenComparing(Student::getId);
     public static final BinaryOperator<String> STRING_MIN_OPERATOR =
             (first, second) -> first.compareTo(second) < 0 ? first : second;
-    public static final Collector<Student, ?, TreeMap<GroupName, List<Student>>> GROUP_COLLECTOR = Collectors.groupingBy(Student::getGroup, TreeMap::new, Collectors.toList());
+    public static final Collector<Student, ?, TreeMap<GroupName, List<Student>>> GROUP_COLLECTOR =
+            Collectors.groupingBy(Student::getGroup, TreeMap::new, Collectors.toList());
 
     private static String studentFullName(Student student) {
         return student.getFirstName() + " " + student.getLastName();
-    }
-
-    private <T, R, CR, A> CR processCollectionByStream(Collection<T> input, Function<Stream<T>, Stream<R>> map,
-                                                       Collector<R, A, CR> collector) {
-        return map.apply(input.stream())
-                .collect(collector);
-    }
-
-    private <T, R> List<R> processCollectionByStreamToList(Collection<T> input, Function<Stream<T>, Stream<R>> map) {
-        return processCollectionByStream(input, map, Collectors.toList());
-    }
-
-    private <T, A, R, CR> CR mapCollection(Collection<T> input, Function<T, R> function, Collector<R, A, CR> collector) {
-        return processCollectionByStream(input, stream -> stream.map(function), collector);
-    }
-
-    private <T, R> List<R> mapCollectiontoList(Collection<T> input, Function<T, R> function) {
-        return mapCollection(input, function, Collectors.toList());
     }
 
     @Override
@@ -64,7 +48,7 @@ public class StudentQueryImpl implements AdvancedQuery {
 
     @Override
     public List<String> getFullNames(List<Student> students) {
-        return mapCollectiontoList(students, StudentQueryImpl::studentFullName);
+        return mapCollectiontoList(students, StudentDB::studentFullName);
     }
 
     @Override
@@ -72,28 +56,11 @@ public class StudentQueryImpl implements AdvancedQuery {
         return mapCollection(students, Student::getFirstName, Collectors.toCollection(TreeSet::new));
     }
 
-    private <T, R> R maxAndMapOptional(Collection<T> input, Comparator<T> comparator,
-                                       Function<T, R> mapper, R defaultValue) {
-        return input.stream()
-                .max(comparator)
-                .map(mapper)
-                .orElse(defaultValue);
-    }
 
     @Override
     public String getMaxStudentFirstName(List<Student> students) {
         return maxAndMapOptional(students, ID_COMPARATOR, Student::getFirstName, EMPTY_STRING);
     }
-
-    private <T, A, CR> CR sortCollectionByComparator(Collection<T> input, Comparator<T> comparator,
-                                                     Collector<T, A, CR> collector) {
-        return processCollectionByStream(input, stream -> stream.sorted(comparator), collector);
-    }
-
-    private <T> List<T> sortCollectionByComparatorToList(Collection<T> input, Comparator<T> comparator) {
-        return sortCollectionByComparator(input, comparator, Collectors.toList());
-    }
-
 
     @Override
     public List<Student> sortStudentsById(Collection<Student> students) {
@@ -194,14 +161,6 @@ public class StudentQueryImpl implements AdvancedQuery {
         );
     }
 
-    private <R> List<R> mapByIndicesOnList(List<Student> students, int[] indices, Function<Student, R> mapper) {
-        return Arrays.stream(indices).mapToObj(students::get).map(mapper).toList();
-    }
-
-    private <R> List<R> mapByIndices(Collection<Student> students, int[] indices, Function<Student, R> mapper) {
-        return mapByIndicesOnList(List.copyOf(students), indices, mapper);
-    }
-
     @Override
     public List<String> getFirstNames(Collection<Student> students, int[] indices) {
         return mapByIndices(students, indices, Student::getFirstName);
@@ -219,6 +178,6 @@ public class StudentQueryImpl implements AdvancedQuery {
 
     @Override
     public List<String> getFullNames(Collection<Student> students, int[] indices) {
-        return mapByIndices(students, indices, StudentQueryImpl::studentFullName);
+        return mapByIndices(students, indices, StudentDB::studentFullName);
     }
 }
