@@ -22,8 +22,6 @@ public class StudentDB implements AdvancedQuery {
             .thenComparing(Student::getFirstName)
             .reversed()
             .thenComparing(Student::getId);
-    public static final BinaryOperator<String> STRING_MIN_OPERATOR =
-            (first, second) -> first.compareTo(second) < 0 ? first : second;
     public static final Collector<Student, ?, TreeMap<GroupName, List<Student>>> GROUP_COLLECTOR =
             Collectors.groupingBy(Student::getGroup, TreeMap::new, Collectors.toList());
 
@@ -102,7 +100,8 @@ public class StudentDB implements AdvancedQuery {
     @Override
     public Map<String, String> findStudentNamesByGroup(Collection<Student> students, GroupName group) {
         return findStudentBySmth(students, group, Student::getGroup,
-                Collectors.toMap(Student::getLastName, Student::getFirstName, STRING_MIN_OPERATOR));
+                Collectors.toMap(Student::getLastName, Student::getFirstName,
+                        BinaryOperator.minBy(Comparator.naturalOrder())));
     }
 
     private List<Group> toGroupList(Map<GroupName, List<Student>> map) {
