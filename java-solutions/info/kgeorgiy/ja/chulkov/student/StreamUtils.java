@@ -11,14 +11,14 @@ import java.util.stream.Stream;
 
 public class StreamUtils {
 
-    public static <T, CR, A> CR recollectCollection(Collection<T> input, Collector<T, A, CR> collector) {
-        return input.stream().collect(collector);
-    }
 
     public static <T, R, CR, A> CR processCollectionByStream(Collection<T> input, Function<Stream<T>, Stream<R>> map,
                                                              Collector<R, A, CR> collector) {
         return map.apply(input.stream())
                 .collect(collector);
+    }
+    public static <T, CR, A> CR recollectCollection(Collection<T> input, Collector<T, A, CR> collector) {
+        return processCollectionByStream(input, Function.identity(), collector);
     }
 
     public static <T, A, R, CR> CR mapCollection(Collection<T> input, Function<T, R> function, Collector<R, A, CR> collector) {
@@ -46,12 +46,12 @@ public class StreamUtils {
         return sortCollectionByComparator(input, comparator, Collectors.toList());
     }
 
-    public static  <T, R> List<R> mapByIndicesOnList(List<T> collection, int[] indices, Function<T, R> mapper) {
+    public static  <T, R> List<R> mapByIndices(List<T> collection, int[] indices, Function<T, R> mapper) {
         return Arrays.stream(indices).mapToObj(collection::get).map(mapper).toList();
     }
 
     public static <T, R> List<R> mapByIndices(Collection<T> collection, int[] indices, Function<T, R> mapper) {
-        return mapByIndicesOnList(List.copyOf(collection), indices, mapper);
+        return mapByIndices(List.copyOf(collection), indices, mapper);
     }
 
 }

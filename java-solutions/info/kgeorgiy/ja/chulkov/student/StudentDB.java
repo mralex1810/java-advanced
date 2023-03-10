@@ -71,14 +71,15 @@ public class StudentDB implements AdvancedQuery {
     }
 
 
-    private <T, A, CR> CR findStudentBySmth(Collection<Student> students, T obj, Function<Student, T> mapper,
+    private <R, A, CR> CR findStudentBySmth(Collection<Student> students, R obj, Function<Student, R> mapper,
                                             Collector<Student, A, CR> collector) {
         return processCollectionByStream(students,
-                (stream) -> stream.filter(student -> mapper.apply(student).equals(obj)).sorted(STUDENT_COMPARATOR),
+                stream -> stream.filter(student -> mapper.apply(student).equals(obj)).sorted(STUDENT_COMPARATOR),
                 collector);
     }
 
-    private <T> List<Student> findStudentBySmthToList(Collection<Student> students, T obj, Function<Student, T> mapper) {
+    private <T> List<Student> findStudentBySmthToList(Collection<Student> students, T obj,
+                                                      Function<Student, T> mapper) {
         return findStudentBySmth(students, obj, mapper, Collectors.toList());
     }
 
@@ -139,14 +140,14 @@ public class StudentDB implements AdvancedQuery {
     @Override
     public GroupName getLargestGroup(Collection<Student> students) {
         return getLargestGroupNameByComparatorWithOrder(students,
-                Comparator.comparingInt((Group group) -> group.getStudents().size()),
+                Comparator.comparingInt(group -> group.getStudents().size()),
                 Comparator.naturalOrder());
     }
 
     @Override
     public GroupName getLargestGroupFirstName(Collection<Student> students) {
         return getLargestGroupNameByComparatorWithOrder(students,
-                Comparator.comparingInt((Group group) -> getDistinctFirstNames(group.getStudents()).size()),
+                Comparator.comparingInt(group -> getDistinctFirstNames(group.getStudents()).size()),
                 Comparator.reverseOrder());
     }
 
