@@ -22,7 +22,7 @@ public class StudentDB implements AdvancedQuery {
             Comparator.comparing(Student::getLastName, Comparator.reverseOrder())
                     .thenComparing(Student::getFirstName, Comparator.reverseOrder())
                     .thenComparing(Student::getId);
-    public static final Collector<Student, ?, TreeMap<GroupName, List<Student>>> GROUP_COLLECTOR =
+    public static final Collector<Student, ?, SortedMap<GroupName, List<Student>>> GROUP_COLLECTOR =
             Collectors.groupingBy(Student::getGroup, TreeMap::new, Collectors.toList());
 
     private static String studentFullName(Student student) {
