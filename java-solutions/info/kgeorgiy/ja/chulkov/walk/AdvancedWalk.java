@@ -3,7 +3,6 @@ package info.kgeorgiy.ja.chulkov.walk;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -67,7 +66,7 @@ public class AdvancedWalk {
                 } catch (final IOException e) {
                     System.err.println("Error on reading input file " + e.getMessage());
                 } catch (final NoSuchAlgorithmException e) {
-                    System.err.println("Java must implements SHA-256 algorithm " + e.getMessage());
+                    System.err.println("Java must implements " + ALGORITHM + " algorithm" + e.getMessage());
                 }
             } catch (final IOException | SecurityException e) {
                 System.err.println("Error on open output file " + e.getMessage());
