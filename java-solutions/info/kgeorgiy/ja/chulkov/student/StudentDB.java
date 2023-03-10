@@ -173,22 +173,22 @@ public class StudentDB implements AdvancedQuery {
     }
 
     @Override
-    public List<String> getFirstNames(Collection<Student> students, int[] indices) {
-        return mapByIndices(students, indices, Student::getFirstName);
+    public List<String> getFirstNames(Collection<Student> students, int[] ids) {
+        return mapByIndices(students, ids, Student::getFirstName);
     }
 
     @Override
-    public List<String> getLastNames(Collection<Student> students, int[] indices) {
-        return mapByIndices(students, indices, Student::getLastName);
+    public List<String> getLastNames(Collection<Student> students, int[] ids) {
+        return mapByIndices(students, ids, Student::getLastName);
     }
 
     @Override
-    public List<GroupName> getGroups(Collection<Student> students, int[] indices) {
-        return mapByIndices(students, indices, Student::getGroup);
+    public List<GroupName> getGroups(Collection<Student> students, int[] ids) {
+        return mapByIndices(students, ids, Student::getGroup);
     }
 
     @Override
-    public List<String> getFullNames(Collection<Student> students, int[] indices) {
-        return mapByIndices(students, indices, StudentDB::studentFullName);
+    public List<String> getFullNames(Collection<Student> students, int[] ids) {
+        return mapByIndices(students, ids, StudentDB::studentFullName);
     }
 }
