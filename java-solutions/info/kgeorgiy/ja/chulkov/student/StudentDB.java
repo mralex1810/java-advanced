@@ -157,10 +157,19 @@ public class StudentDB implements AdvancedQuery {
                         .entrySet(),
                 Comparator.comparingLong((Map.Entry<String, List<Student>> entry) ->
                                 entry.getValue().stream().map(Student::getGroup).distinct().count())
-                        .thenComparing(Map.Entry::getKey),
+                        .thenComparing(Map.Entry::getKey, Comparator.reverseOrder()),
                 Map.Entry::getKey,
                 EMPTY_STRING
         );
+    }
+
+    public static <R> List<R> mapByIndices(Map<Integer, Student> collection, int[] indices, Function<Student, R> mapper) {
+        return Arrays.stream(indices).mapToObj(collection::get).map(mapper).toList();
+    }
+
+    public static <R> List<R> mapByIndices(Collection<Student> collection, int[] indices, Function<Student, R> mapper) {
+        return mapByIndices(collection.stream().collect(Collectors.toMap(Student::getId, Function.identity())),
+                indices, mapper);
     }
 
     @Override

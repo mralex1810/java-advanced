@@ -1,6 +1,5 @@
 package info.kgeorgiy.ja.chulkov.student;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -45,13 +44,4 @@ public class StreamUtils {
     public static <T> List<T> sortCollectionByComparatorToList(Collection<T> input, Comparator<T> comparator) {
         return sortCollectionByComparator(input, comparator, Collectors.toList());
     }
-
-    public static  <T, R> List<R> mapByIndices(List<T> collection, int[] indices, Function<T, R> mapper) {
-        return Arrays.stream(indices).mapToObj(collection::get).map(mapper).toList();
-    }
-
-    public static <T, R> List<R> mapByIndices(Collection<T> collection, int[] indices, Function<T, R> mapper) {
-        return mapByIndices(List.copyOf(collection), indices, mapper);
-    }
-
 }
