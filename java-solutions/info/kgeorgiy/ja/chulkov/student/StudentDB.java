@@ -110,7 +110,7 @@ public class StudentDB implements AdvancedQuery {
     }
 
     private List<Group> getGroups(Collection<Student> students) {
-        return toGroupList(students.stream().collect(GROUP_COLLECTOR));
+        return toGroupList(recollectCollection(students, GROUP_COLLECTOR));
     }
 
     private List<Group> getGroupsBySmth(Collection<Student> students, Comparator<Student> comparator) {
@@ -153,8 +153,7 @@ public class StudentDB implements AdvancedQuery {
     @Override
     public String getMostPopularName(Collection<Student> students) {
         return maxAndMapOptional(
-                students.stream()
-                        .collect(Collectors.groupingBy(Student::getFirstName, Collectors.toList()))
+                recollectCollection(students, Collectors.groupingBy(Student::getFirstName, Collectors.toList()))
                         .entrySet(),
                 Comparator.comparingLong((Map.Entry<String, List<Student>> entry) ->
                                 entry.getValue().stream().map(Student::getGroup).distinct().count())
