@@ -11,19 +11,19 @@ public class HashResultsHandler implements Closeable {
     private static final String ERROR_HASH_HEX = "0".repeat(64);
     private final Writer writer;
 
-    public HashResultsHandler(Writer writer) {
+    public HashResultsHandler(final Writer writer) {
         this.writer = writer;
     }
 
-    public void processSuccess(Path file, byte[] hash) throws IOException {
+    public void processSuccess(final Path file, final byte[] hash) throws IOException {
         processResult(HexFormat.of().formatHex(hash), file.toString());
     }
 
-    public void processError(String path) throws IOException {
+    public void processError(final String path) throws IOException {
         processResult(ERROR_HASH_HEX, path);
     }
 
-    private void processResult(String hexHash, String path) throws IOException {
+    private void processResult(final String hexHash, final String path) throws IOException {
         writer.write(hexHash + " " + path + System.lineSeparator());
     }
 

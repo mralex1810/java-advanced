@@ -29,32 +29,30 @@ public class AdvancedWalk {
             System.err.println("Program needs two arguments for work: input and output files");
             return;
         }
-        // :NOTE: copy-paste
+
         final Path inputFile = toPath(args[0], "input");
         final Path outputFile = toPath(args[1], "output");
-        // :NOTE: copy-paste
+
         if (inputFile == null || outputFile == null) {
             return;
         }
         try {
-            // :NOTE: outputFile.getParent()
             final Path parent = outputFile.getParent();
             if (parent != null && !Files.exists(parent)) {
                 Files.createDirectories(parent);
             }
         } catch (final IOException | SecurityException e) {
             System.err.println("Can't create parent dirs of output files " + e.getMessage());
-            // :NOTE: ??
         }
 
-        // :NOTE: encoding
         try (final BufferedReader in = Files.newBufferedReader(inputFile)) {
             try (final Writer out = Files.newBufferedWriter(outputFile)) {
-                // :NOTE: double close
                 final HashResultsHandler handler = new HashResultsHandler(out);
                 try {
-                    final FileVisitor<Path> visitor = new HashFileVisitor<>(handler,
-                            MessageDigest.getInstance(ALGORITHM));
+                    final FileVisitor<Path> visitor = new HashFileVisitor<>(
+                            handler,
+                            MessageDigest.getInstance(ALGORITHM)
+                    );
                     for (String file = in.readLine(); file != null; file = in.readLine()) {
                         try {
                             walkFromOneFile(file, depth, visitor, handler);

@@ -20,13 +20,12 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
     public HashFileVisitor(final HashResultsHandler resultsHandler, final MessageDigest messageDigest) {
         this.resultsHandler = resultsHandler;
         this.messageDigest = messageDigest;
-        messageDigest.reset();
     }
 
     @Override
     @SuppressWarnings({"StatementWithEmptyBody"})
     public FileVisitResult visitFile(final T path, final BasicFileAttributes attrs) throws IOException {
-        // :NOTE: reuse
+        messageDigest.reset();
         try (
                 final InputStream is = new BufferedInputStream(Files.newInputStream(path));
                 final DigestInputStream dis = new DigestInputStream(is, messageDigest)
@@ -34,9 +33,8 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
             while (dis.read(buffer) != -1) ;
         } catch (final IOException | SecurityException e) {
             System.err.println("Error on reading file " + path + " : " + e.getMessage());
-            // :NOTE: digest()?
             resultsHandler.processError(path.toString());
-            messageDigest.reset();
+//            messageDigest.reset();
             return FileVisitResult.CONTINUE;
         }
         resultsHandler.processSuccess(path, messageDigest.digest());
