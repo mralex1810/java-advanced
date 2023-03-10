@@ -1,8 +1,19 @@
 package info.kgeorgiy.ja.chulkov.arrayset;
 
-import java.util.*;
+import java.util.AbstractSet;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.NoSuchElementException;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
+
     private final List<E> array;
     private final Comparator<? super E> comparator;
     private final Comparator<? super E> compareFunc;
@@ -16,7 +27,8 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
     }
 
     public ArraySet(Collection<? extends E> collection, Comparator<? super E> comparator) {
-        this(processSortedSetToList(prepareSortedSet(collection, comparator)), comparator, generateComparingFunc(comparator));
+        this(processSortedSetToList(prepareSortedSet(collection, comparator)), comparator,
+                generateComparingFunc(comparator));
     }
 
     protected ArraySet(List<E> array, Comparator<? super E> comparator) {
@@ -34,7 +46,8 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
         return Collections.unmodifiableList(new ArrayList<>(set));
     }
 
-    private static <E> SortedSet<E> prepareSortedSet(Collection<? extends E> collection, Comparator<? super E> comparator) {
+    private static <E> SortedSet<E> prepareSortedSet(Collection<? extends E> collection,
+            Comparator<? super E> comparator) {
         SortedSet<E> treeSet = new TreeSet<>(comparator);
         treeSet.addAll(collection);
         return treeSet;

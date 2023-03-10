@@ -12,15 +12,16 @@ public class StreamUtils {
 
 
     public static <T, R, CR, A> CR processCollectionByStream(Collection<T> input, Function<Stream<T>, Stream<R>> map,
-                                                             Collector<R, A, CR> collector) {
-        return map.apply(input.stream())
-                .collect(collector);
+            Collector<R, A, CR> collector) {
+        return map.apply(input.stream()).collect(collector);
     }
+
     public static <T, CR, A> CR recollectCollection(Collection<T> input, Collector<T, A, CR> collector) {
         return processCollectionByStream(input, Function.identity(), collector);
     }
 
-    public static <T, A, R, CR> CR mapCollection(Collection<T> input, Function<T, R> function, Collector<R, A, CR> collector) {
+    public static <T, A, R, CR> CR mapCollection(Collection<T> input, Function<T, R> function,
+            Collector<R, A, CR> collector) {
         return processCollectionByStream(input, stream -> stream.map(function), collector);
     }
 
@@ -28,16 +29,13 @@ public class StreamUtils {
         return mapCollection(input, function, Collectors.toList());
     }
 
-    public static <T, R> R maxAndMapOptional(Collection<T> input, Comparator<T> comparator,
-                                             Function<T, R> mapper, R defaultValue) {
-        return input.stream()
-                .max(comparator)
-                .map(mapper)
-                .orElse(defaultValue);
+    public static <T, R> R maxAndMapOptional(Collection<T> input, Comparator<T> comparator, Function<T, R> mapper,
+            R defaultValue) {
+        return input.stream().max(comparator).map(mapper).orElse(defaultValue);
     }
 
     public static <T, A, CR> CR sortCollectionByComparator(Collection<T> input, Comparator<T> comparator,
-                                                           Collector<T, A, CR> collector) {
+            Collector<T, A, CR> collector) {
         return processCollectionByStream(input, stream -> stream.sorted(comparator), collector);
     }
 

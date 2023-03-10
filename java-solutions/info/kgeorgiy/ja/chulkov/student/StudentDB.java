@@ -1,32 +1,54 @@
 package info.kgeorgiy.ja.chulkov.student;
 
 
+import static info.kgeorgiy.ja.chulkov.student.StreamUtils.mapCollection;
+import static info.kgeorgiy.ja.chulkov.student.StreamUtils.mapCollectiontoList;
+import static info.kgeorgiy.ja.chulkov.student.StreamUtils.maxAndMapOptional;
+import static info.kgeorgiy.ja.chulkov.student.StreamUtils.processCollectionByStream;
+import static info.kgeorgiy.ja.chulkov.student.StreamUtils.recollectCollection;
+import static info.kgeorgiy.ja.chulkov.student.StreamUtils.sortCollectionByComparator;
+import static info.kgeorgiy.ja.chulkov.student.StreamUtils.sortCollectionByComparatorToList;
+
 import info.kgeorgiy.java.advanced.student.AdvancedQuery;
 import info.kgeorgiy.java.advanced.student.Group;
 import info.kgeorgiy.java.advanced.student.GroupName;
 import info.kgeorgiy.java.advanced.student.Student;
-
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
-import static info.kgeorgiy.ja.chulkov.student.StreamUtils.*;
-
 public class StudentDB implements AdvancedQuery {
 
     public static final String EMPTY_STRING = "";
     public static final Comparator<Student> ID_COMPARATOR = Comparator.comparingInt(Student::getId);
+    public static final Collector<Student, ?, SortedMap<GroupName, List<Student>>> GROUP_COLLECTOR =
+            Collectors.groupingBy(Student::getGroup, TreeMap::new, Collectors.toList());
     private static final Comparator<Student> STUDENT_COMPARATOR =
             Comparator.comparing(Student::getLastName, Comparator.reverseOrder())
                     .thenComparing(Student::getFirstName, Comparator.reverseOrder())
                     .thenComparing(Student::getId);
-    public static final Collector<Student, ?, SortedMap<GroupName, List<Student>>> GROUP_COLLECTOR =
-            Collectors.groupingBy(Student::getGroup, TreeMap::new, Collectors.toList());
 
     private static String studentFullName(Student student) {
         return student.getFirstName() + " " + student.getLastName();
+    }
+
+    public static <R> List<R> mapByIds(Map<Integer, Student> collection, int[] indices, Function<Student, R> mapper) {
+        return Arrays.stream(indices).mapToObj(collection::get).map(mapper).toList();
+    }
+
+    public static <R> List<R> mapByIds(Collection<Student> collection, int[] indices, Function<Student, R> mapper) {
+        return mapByIds(collection.stream().collect(Collectors.toMap(Student::getId, Function.identity())),
+                indices, mapper);
     }
 
     @Override
@@ -54,7 +76,6 @@ public class StudentDB implements AdvancedQuery {
         return mapCollection(students, Student::getFirstName, Collectors.toCollection(TreeSet::new));
     }
 
-
     @Override
     public String getMaxStudentFirstName(List<Student> students) {
         return maxAndMapOptional(students, ID_COMPARATOR, Student::getFirstName, EMPTY_STRING);
@@ -70,16 +91,15 @@ public class StudentDB implements AdvancedQuery {
         return sortCollectionByComparatorToList(students, STUDENT_COMPARATOR);
     }
 
-
     private <R, A, CR> CR findStudentBySmth(Collection<Student> students, R obj, Function<Student, R> mapper,
-                                            Collector<Student, A, CR> collector) {
+            Collector<Student, A, CR> collector) {
         return processCollectionByStream(students,
                 stream -> stream.filter(student -> mapper.apply(student).equals(obj)).sorted(STUDENT_COMPARATOR),
                 collector);
     }
 
     private <T> List<Student> findStudentBySmthToList(Collection<Student> students, T obj,
-                                                      Function<Student, T> mapper) {
+            Function<Student, T> mapper) {
         return findStudentBySmth(students, obj, mapper, Collectors.toList());
     }
 
@@ -132,7 +152,7 @@ public class StudentDB implements AdvancedQuery {
     }
 
     private GroupName getLargestGroupNameByComparatorWithOrder(Collection<Student> students,
-                                                               Comparator<Group> comparator, Comparator<String> order) {
+            Comparator<Group> comparator, Comparator<String> order) {
         return getLargestGroup(students, comparator.thenComparing(group -> group.getName().name(), order));
     }
 
@@ -161,15 +181,6 @@ public class StudentDB implements AdvancedQuery {
                 Map.Entry::getKey,
                 EMPTY_STRING
         );
-    }
-
-    public static <R> List<R> mapByIds(Map<Integer, Student> collection, int[] indices, Function<Student, R> mapper) {
-        return Arrays.stream(indices).mapToObj(collection::get).map(mapper).toList();
-    }
-
-    public static <R> List<R> mapByIds(Collection<Student> collection, int[] indices, Function<Student, R> mapper) {
-        return mapByIds(collection.stream().collect(Collectors.toMap(Student::getId, Function.identity())),
-                indices, mapper);
     }
 
     @Override

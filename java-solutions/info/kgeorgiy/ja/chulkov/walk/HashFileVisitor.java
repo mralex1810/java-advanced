@@ -13,6 +13,7 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 
 public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
+
     private final HashResultsHandler resultsHandler;
     private final byte[] buffer = new byte[1024];
     private final MessageDigest messageDigest;
@@ -30,11 +31,11 @@ public class HashFileVisitor<T extends Path> extends SimpleFileVisitor<T> {
                 final InputStream is = new BufferedInputStream(Files.newInputStream(path));
                 final DigestInputStream dis = new DigestInputStream(is, messageDigest)
         ) {
-            while (dis.read(buffer) != -1) ;
+            while (dis.read(buffer) != -1)
+                ;
         } catch (final IOException | SecurityException e) {
             System.err.println("Error on reading file " + path + " : " + e.getMessage());
             resultsHandler.processError(path.toString());
-//            messageDigest.reset();
             return FileVisitResult.CONTINUE;
         }
         resultsHandler.processSuccess(path, messageDigest.digest());
