@@ -106,8 +106,7 @@ public class StudentDB implements AdvancedQuery {
     }
 
     private List<Group> toGroupList(Map<GroupName, List<Student>> map) {
-        return processCollectionByStream(map.entrySet(),
-                stream -> stream.map(it -> new Group(it.getKey(), it.getValue())), Collectors.toList());
+        return mapCollectiontoList(map.entrySet(), it -> new Group(it.getKey(), it.getValue()));
     }
 
     private List<Group> getGroups(Collection<Student> students) {
