@@ -11,6 +11,8 @@ import java.util.EnumSet;
 
 public class AdvancedWalk {
 
+    public static final String ALGORITHM = "SHA-256";
+
     public static void recursiveWalk(final String[] args) {
         walk(args, Integer.MAX_VALUE);
     }
@@ -53,7 +55,7 @@ public class AdvancedWalk {
                 final HashResultsHandler handler = new HashResultsHandler(out);
                 try {
                     final FileVisitor<Path> visitor = new HashFileVisitor<>(handler,
-                            MessageDigest.getInstance("SHA-256"));
+                            MessageDigest.getInstance(ALGORITHM));
                     for (String file = in.readLine(); file != null; file = in.readLine()) {
                         try {
                             walkFromOneFile(file, depth, visitor, handler);
