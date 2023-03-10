@@ -163,32 +163,32 @@ public class StudentDB implements AdvancedQuery {
         );
     }
 
-    public static <R> List<R> mapByIndices(Map<Integer, Student> collection, int[] indices, Function<Student, R> mapper) {
+    public static <R> List<R> mapByIds(Map<Integer, Student> collection, int[] indices, Function<Student, R> mapper) {
         return Arrays.stream(indices).mapToObj(collection::get).map(mapper).toList();
     }
 
-    public static <R> List<R> mapByIndices(Collection<Student> collection, int[] indices, Function<Student, R> mapper) {
-        return mapByIndices(collection.stream().collect(Collectors.toMap(Student::getId, Function.identity())),
+    public static <R> List<R> mapByIds(Collection<Student> collection, int[] indices, Function<Student, R> mapper) {
+        return mapByIds(collection.stream().collect(Collectors.toMap(Student::getId, Function.identity())),
                 indices, mapper);
     }
 
     @Override
     public List<String> getFirstNames(Collection<Student> students, int[] ids) {
-        return mapByIndices(students, ids, Student::getFirstName);
+        return mapByIds(students, ids, Student::getFirstName);
     }
 
     @Override
     public List<String> getLastNames(Collection<Student> students, int[] ids) {
-        return mapByIndices(students, ids, Student::getLastName);
+        return mapByIds(students, ids, Student::getLastName);
     }
 
     @Override
     public List<GroupName> getGroups(Collection<Student> students, int[] ids) {
-        return mapByIndices(students, ids, Student::getGroup);
+        return mapByIds(students, ids, Student::getGroup);
     }
 
     @Override
     public List<String> getFullNames(Collection<Student> students, int[] ids) {
-        return mapByIndices(students, ids, StudentDB::studentFullName);
+        return mapByIds(students, ids, StudentDB::studentFullName);
     }
 }
