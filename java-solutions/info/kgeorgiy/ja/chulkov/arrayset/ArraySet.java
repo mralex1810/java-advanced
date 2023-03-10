@@ -29,6 +29,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E> {
         this.compareFunc = compareFunc;
     }
 
+    @SuppressWarnings("Java9CollectionFactory")
     private static <E> List<E> processSortedSetToList(SortedSet<E> set) {
         return Collections.unmodifiableList(new ArrayList<>(set));
     }
