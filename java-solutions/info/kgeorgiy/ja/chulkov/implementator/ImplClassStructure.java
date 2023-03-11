@@ -17,7 +17,7 @@ public class ImplClassStructure extends ImplInterfaceStructure {
 
     public ImplClassStructure(Class<?> superType, String name) {
         this(name,
-                Implementor.getTypeName(superType),
+                superType.getCanonicalName(),
                 Stream.concat(
                         Arrays.stream(superType.getDeclaredConstructors())
                                 .filter(it -> !Modifier.isPrivate(it.getModifiers()))

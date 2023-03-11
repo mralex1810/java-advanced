@@ -65,7 +65,7 @@ public class MethodStructure {
 
 
     protected String returnType() {
-        return Implementor.getTypeName(returnType);
+        return returnType.getCanonicalName();
     }
 
     protected String name() {
@@ -76,7 +76,7 @@ public class MethodStructure {
         var list = new ArrayList<String>(typeParameters.size());
         var varList = getVarNames(typeParameters.size());
         for (int i = 0; i < typeParameters.size(); i++) {
-            list.add(Implementor.getTypeName(typeParameters.get(i)) + " " + varList.get(i));
+            list.add(typeParameters.get(i).getCanonicalName() + " " + varList.get(i));
         }
         return String.join(", ", list);
     }
@@ -93,7 +93,7 @@ public class MethodStructure {
         if (exceptions.isEmpty()) {
             return "";
         }
-        return "throws " + exceptions.stream().map(Implementor::getTypeName).collect(Collectors.joining(", "));
+        return "throws " + exceptions.stream().map(Class::getCanonicalName).collect(Collectors.joining(", "));
     }
 
     protected String body() {

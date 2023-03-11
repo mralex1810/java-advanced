@@ -63,9 +63,4 @@ public class Implementor implements Impler {
     private void addPackage(Class<?> token, Writer writer) throws IOException {
         writer.write("package " + token.getPackageName() + ";" + lineSeparator());
     }
-
-    static String getTypeName(Class<?> type) {
-        return type.getCanonicalName();
-    }
-
 }

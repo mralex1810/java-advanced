@@ -21,7 +21,7 @@ public class ImplInterfaceStructure {
 
     public ImplInterfaceStructure(Class<?> superType, String name) {
         this.typeName = name;
-        this.superType = Implementor.getTypeName(superType);
+        this.superType = superType.getCanonicalName();
         this.methods = Stream.concat(
                 Stream.of(trivialConstructor(typeName)),
                 Arrays.stream(superType.getMethods())
