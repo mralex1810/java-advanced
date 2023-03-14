@@ -1,4 +1,4 @@
-package info.kgeorgiy.ja.chulkov.implementator;
+package info.kgeorgiy.ja.chulkov.implementor;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -40,16 +40,24 @@ public class MethodStructure {
 
     @Override
     public String toString() {
-        return String.format("%s %s %s(%s) %s { %s %s %s }",
+        return String.format("""
+                        
+                        \t%s%s%s%s(%s)%s {
+                        \t\t%s
+                        \t}
+                        """,
+                override(),
                 modifiers(),
                 returnType(),
                 name(),
                 parameters(),
                 exceptions(),
-                System.lineSeparator(),
-                body(),
-                System.lineSeparator()
+                body()
         );
+    }
+
+    protected String override() {
+        return "@Override" + System.lineSeparator() + "\t";
     }
 
 
@@ -60,12 +68,12 @@ public class MethodStructure {
                 list.add(str);
             }
         });
-        return String.join(" ", list);
+        return String.join(" ", list) + (!list.isEmpty() ? " " : "");
     }
 
 
     protected String returnType() {
-        return returnType.getCanonicalName();
+        return returnType.getCanonicalName() + " ";
     }
 
     protected String name() {
@@ -93,7 +101,7 @@ public class MethodStructure {
         if (exceptions.isEmpty()) {
             return "";
         }
-        return "throws " + exceptions.stream().map(Class::getCanonicalName).collect(Collectors.joining(", "));
+        return " throws " + exceptions.stream().map(Class::getCanonicalName).collect(Collectors.joining(", "));
     }
 
     protected String body() {
@@ -102,9 +110,9 @@ public class MethodStructure {
 
     private String defaultReturnValueString() {
         if (returnType.isPrimitive()) {
-            if (returnType.getName().equals("boolean")) {
+            if (returnType.equals(Boolean.TYPE)) {
                 return "false";
-            } else if (returnType.getName().equals("void")) {
+            } else if (returnType.equals(Void.TYPE)) {
                 return "";
             } else {
                 return "0";

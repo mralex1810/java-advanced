@@ -1,4 +1,4 @@
-package info.kgeorgiy.ja.chulkov.implementator;
+package info.kgeorgiy.ja.chulkov.implementor;
 
 import java.lang.reflect.Constructor;
 
@@ -13,6 +13,12 @@ public class ConstructorStructure extends MethodStructure {
     public ConstructorStructure(String name, Class<?>[] typeParameters, Class<?>[] exceptions,
             int modifiers) {
         super(name, null, typeParameters, exceptions, modifiers);
+    }
+
+
+    @Override
+    protected String override() {
+        return "";
     }
 
     @Override

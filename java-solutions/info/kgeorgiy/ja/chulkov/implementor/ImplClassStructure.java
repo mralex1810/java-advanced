@@ -1,5 +1,6 @@
-package info.kgeorgiy.ja.chulkov.implementator;
+package info.kgeorgiy.ja.chulkov.implementor;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -19,11 +20,10 @@ public class ImplClassStructure extends ImplInterfaceStructure {
         this(name,
                 superType.getCanonicalName(),
                 Stream.concat(
-                        Arrays.stream(superType.getDeclaredConstructors())
-                                .filter(it -> !Modifier.isPrivate(it.getModifiers()))
+                        getNonPrivateConstructorsStream(superType)
                                 .map(it -> new ConstructorStructure(it, name)),
                         Stream.concat(
-                                getAllAbstractMethodsFromSuperClasses(superType).stream()
+                                getAllAbstractMethodStructures(superType).stream()
                                         .filter(method -> !Modifier.isPublic(method.modifiers)),
                                 Arrays.stream(superType.getMethods())
                                         .filter(it -> Modifier.isAbstract(it.getModifiers()))
@@ -31,11 +31,16 @@ public class ImplClassStructure extends ImplInterfaceStructure {
                 ).toList());
     }
 
-    private static Set<MethodStructure> getAllAbstractMethodsFromSuperClasses(Class<?> superType) {
+    static Stream<Constructor<?>> getNonPrivateConstructorsStream(Class<?> token) {
+        return Arrays.stream(token.getDeclaredConstructors())
+                .filter(it -> !Modifier.isPrivate(it.getModifiers()));
+    }
+
+    private static Set<MethodStructure> getAllAbstractMethodStructures(Class<?> superType) {
         if (superType == null) {
             return new HashSet<>();
         }
-        Set<MethodStructure> set = getAllAbstractMethodsFromSuperClasses(superType.getSuperclass());
+        Set<MethodStructure> set = getAllAbstractMethodStructures(superType.getSuperclass());
         Arrays.stream(superType.getDeclaredMethods())
                 .filter(it -> Modifier.isAbstract(it.getModifiers()))
                 .map(MethodStructure::new)
@@ -51,5 +56,4 @@ public class ImplClassStructure extends ImplInterfaceStructure {
     protected String superType() {
         return "extends " + superType;
     }
-
 }

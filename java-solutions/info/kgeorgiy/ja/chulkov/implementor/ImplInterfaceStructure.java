@@ -1,4 +1,4 @@
-package info.kgeorgiy.ja.chulkov.implementator;
+package info.kgeorgiy.ja.chulkov.implementor;
 
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
@@ -28,8 +28,6 @@ public class ImplInterfaceStructure {
                         .filter(it -> Modifier.isAbstract(it.getModifiers()))
                         .map(MethodStructure::new)
         ).toList();
-//        Arrays.stream(superType.getConstructors()).map(ConstructorStructure::new)
-
     }
 
     private ConstructorStructure trivialConstructor(String name) {
@@ -38,12 +36,13 @@ public class ImplInterfaceStructure {
 
     @Override
     public String toString() {
-        return String.format("public class %s %s { %s %s %s }",
+        return String.format("""
+                        public class %s %s {
+                        %s}
+                        """,
                 typeName(),
                 superType(),
-                System.lineSeparator(),
-                methods(),
-                System.lineSeparator()
+                methods()
         );
     }
 
