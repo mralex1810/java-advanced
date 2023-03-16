@@ -7,11 +7,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ImplInterfaceStructure {
+
     protected final String typeName;
     protected final String superType;
     protected final List<MethodStructure> methods;
 
-    public ImplInterfaceStructure(String typeName, String  superType,
+    public ImplInterfaceStructure(String typeName, String superType,
             List<MethodStructure> methods
     ) {
         this.typeName = typeName;

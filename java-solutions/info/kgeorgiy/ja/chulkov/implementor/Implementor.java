@@ -1,6 +1,5 @@
 package info.kgeorgiy.ja.chulkov.implementor;
 
-import static java.lang.System.lineSeparator;
 
 import info.kgeorgiy.java.advanced.implementor.Impler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
@@ -25,6 +24,20 @@ public class Implementor implements Impler {
             it -> !it.isInterface() && ImplClassStructure.getNonPrivateConstructorsStream(it).findAny().isEmpty(),
             "Superclass must has not private constructor"
     );
+    public static final String JAVA = ".java";
+    public static final String IMPL = "Impl";
+
+    private static String getTypeName(Class<?> token) {
+        return token.getSimpleName() + IMPL;
+    }
+
+    private static void createDirectories(Path implemetationPath) {
+        try {
+            Files.createDirectories(implemetationPath);
+        } catch (IOException e) {
+            System.err.println("Can't create directories");
+        }
+    }
 
     @Override
     public void implement(Class<?> token, Path root) throws ImplerException {
@@ -36,28 +49,22 @@ public class Implementor implements Impler {
             }
         }
         final Path implemetationPath = root.resolve(token.getPackageName().replace(".", File.separator));
-        try {
-            Files.createDirectories(implemetationPath);
-        } catch (IOException e) {
-            System.err.println("Can't create directories to root");
-        }
-        var typeName = token.getSimpleName() + "Impl";
-        final Path filePath = implemetationPath.resolve(typeName + ".java");
+        createDirectories(implemetationPath);
+        var typeName = getTypeName(token);
+        final Path filePath = implemetationPath.resolve(typeName + JAVA);
         try (var writer = Files.newBufferedWriter(filePath)) {
             addPackage(token, writer);
-            String res;
             if (token.isInterface()) {
-                writer.write(res = new ImplInterfaceStructure(token, typeName).toString());
+                writer.write(new ImplInterfaceStructure(token, typeName).toString());
             } else {
-                writer.write(res = new ImplClassStructure(token, typeName).toString());
+                writer.write(new ImplClassStructure(token, typeName).toString());
             }
-            System.out.println(res);
         } catch (IOException e) {
             throw new ImplerException("Error on writing in file", e);
         }
     }
 
     private void addPackage(Class<?> token, Writer writer) throws IOException {
-        writer.write("package " + token.getPackageName() + ";" + lineSeparator());
+        writer.write("package " + token.getPackageName() + ";" + System.lineSeparator());
     }
 }
