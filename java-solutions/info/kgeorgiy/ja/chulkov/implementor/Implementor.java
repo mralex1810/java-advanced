@@ -34,7 +34,7 @@ public class Implementor implements Impler {
         return token.getSimpleName() + IMPL;
     }
 
-    private static void createDirectories(final Path implemetationPath) {
+    private static void tryCreateDirectories(final Path implemetationPath) {
         try {
             Files.createDirectories(implemetationPath);
         } catch (final IOException e) {
@@ -52,16 +52,15 @@ public class Implementor implements Impler {
             }
         }
         final Path implemetationPath = root.resolve(token.getPackageName().replace(".", File.separator));
-        createDirectories(implemetationPath);
+        tryCreateDirectories(implemetationPath);
         final String typeName = getTypeName(token);
         final Path filePath = implemetationPath.resolve(typeName + JAVA);
         try (final BufferedWriter writer = Files.newBufferedWriter(filePath)) {
             addPackage(token, writer);
-            if (token.isInterface()) {
-                writer.write(new ImplInterfaceStructure(token, typeName).toString());
-            } else {
-                writer.write(new ImplClassStructure(token, typeName).toString());
-            }
+            final ImplInterfaceStructure implementedClass = token.isInterface() ?
+                    new ImplInterfaceStructure(token, typeName) :
+                    new ImplClassStructure(token, typeName);
+            writer.write(implementedClass.toString());
         } catch (final IOException e) {
             throw new ImplerException("Error on writing in file", e);
         }

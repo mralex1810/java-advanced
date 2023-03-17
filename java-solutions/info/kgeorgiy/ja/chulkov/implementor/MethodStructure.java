@@ -129,8 +129,9 @@ public class MethodStructure {
             return true;
         }
         if (o instanceof MethodStructure that) {
-            return Objects.equals(name, that.name) && Objects.equals(
-                    returnType, that.returnType) && Objects.equals(typeParameters, that.typeParameters)
+            return Objects.equals(name, that.name)
+                    && Objects.equals(returnType, that.returnType)
+                    && Objects.equals(typeParameters, that.typeParameters)
                     && Objects.equals(exceptions, that.exceptions);
         }
         return false;
