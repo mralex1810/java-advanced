@@ -15,6 +15,8 @@ import java.util.function.Predicate;
 
 public class Implementor implements Impler {
 
+    public static final String JAVA = ".java";
+    public static final String IMPL = "Impl";
     private static final Map<Predicate<Class<?>>, String> EXCEPTIONS_REASONS = Map.of(
             Class::isPrimitive, "Token mustn't be primitive",
             Class::isArray, "Token mustn't be primitive",
@@ -26,8 +28,6 @@ public class Implementor implements Impler {
             it -> !it.isInterface() && ImplClassStructure.getNonPrivateConstructorsStream(it).findAny().isEmpty(),
             "Superclass must has not private constructor"
     );
-    public static final String JAVA = ".java";
-    public static final String IMPL = "Impl";
 
     private static String getTypeName(Class<?> token) {
         return token.getSimpleName() + IMPL;
