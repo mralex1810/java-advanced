@@ -42,7 +42,7 @@ public class ImplInterfaceStructure {
                         %s}
                         """,
                 typeName(),
-                superType(),
+                implementingSuperType(),
                 methods()
         );
     }
@@ -51,7 +51,7 @@ public class ImplInterfaceStructure {
         return typeName;
     }
 
-    protected String superType() {
+    protected String implementingSuperType() {
         return "implements " + superType;
     }
 

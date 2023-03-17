@@ -18,6 +18,8 @@ public class Implementor implements Impler {
     private static final Map<Predicate<Class<?>>, String> EXCEPTIONS_REASONS = Map.of(
             Class::isPrimitive, "Token mustn't be primitive",
             Class::isArray, "Token mustn't be primitive",
+            Class::isRecord, "Can't extend records",
+            Class::isSealed, "Can't extend sealed class",
             it -> it.isAssignableFrom(Enum.class), "Token mustn't be enum",
             it -> Modifier.isPrivate(it.getModifiers()), "Can't implement private token",
             it -> !it.isInterface() && Modifier.isFinal(it.getModifiers()), "Superclass must be not final",
@@ -65,6 +67,8 @@ public class Implementor implements Impler {
     }
 
     private void addPackage(Class<?> token, Writer writer) throws IOException {
-        writer.write("package " + token.getPackageName() + ";" + System.lineSeparator());
+        if (!token.getPackageName().isEmpty()) {
+            writer.write("package " + token.getPackageName() + ";" + System.lineSeparator());
+        }
     }
 }

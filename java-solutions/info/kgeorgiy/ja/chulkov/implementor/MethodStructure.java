@@ -18,6 +18,7 @@ public class MethodStructure {
             Modifier::isProtected, "protected",
             Modifier::isPrivate, "private"
     );
+
     protected final String name;
     protected final Class<?> returnType;
     protected final List<Class<?>> typeParameters;

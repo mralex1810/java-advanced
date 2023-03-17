@@ -53,7 +53,7 @@ public class ImplClassStructure extends ImplInterfaceStructure {
     }
 
     @Override
-    protected String superType() {
+    protected String implementingSuperType() {
         return "extends " + superType;
     }
 }
