@@ -25,13 +25,13 @@ public class MethodStructure {
     protected final List<Class<?>> exceptions;
     protected final int modifiers;
 
-    public MethodStructure(Method method) {
+    public MethodStructure(final Method method) {
         this(method.getName(), method.getReturnType(), method.getParameterTypes(), method.getExceptionTypes(),
                 method.getModifiers());
     }
 
-    protected MethodStructure(String name, Class<?> returnType, Class<?>[] typeParameters,
-            Class<?>[] exceptions, int modifiers) {
+    protected MethodStructure(final String name, final Class<?> returnType, final Class<?>[] typeParameters,
+            final Class<?>[] exceptions, final int modifiers) {
         this.name = name;
         this.returnType = returnType;
         this.typeParameters = Arrays.stream(typeParameters).toList();
@@ -63,7 +63,7 @@ public class MethodStructure {
 
 
     private String modifiers() {
-        List<String> list = new ArrayList<>();
+        final List<String> list = new ArrayList<>();
         METHOD_MODIFIERS_STRING.forEach((predicate, str) -> {
             if (predicate.test(modifiers)) {
                 list.add(str);
@@ -82,16 +82,16 @@ public class MethodStructure {
     }
 
     protected String parameters() {
-        var list = new ArrayList<String>(typeParameters.size());
-        var varList = getVarNames(typeParameters.size());
+        final List<String> list = new ArrayList<>(typeParameters.size());
+        final List<String> varList = getVarNames(typeParameters.size());
         for (int i = 0; i < typeParameters.size(); i++) {
             list.add(typeParameters.get(i).getCanonicalName() + " " + varList.get(i));
         }
         return String.join(", ", list);
     }
 
-    protected List<String> getVarNames(int size) {
-        var list = new ArrayList<String>(size);
+    protected List<String> getVarNames(final int size) {
+        final List<String> list = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             list.add(VAR + i);
         }
@@ -124,7 +124,7 @@ public class MethodStructure {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
         if (this == o) {
             return true;
         }

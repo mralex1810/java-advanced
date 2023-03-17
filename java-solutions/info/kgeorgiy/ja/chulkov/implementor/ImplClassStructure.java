@@ -10,13 +10,13 @@ import java.util.stream.Stream;
 
 public class ImplClassStructure extends ImplInterfaceStructure {
 
-    public ImplClassStructure(String typeName, String superType,
-            List<MethodStructure> methods
+    public ImplClassStructure(final String typeName, final String superType,
+            final List<MethodStructure> methods
     ) {
         super(typeName, superType, methods);
     }
 
-    public ImplClassStructure(Class<?> superType, String name) {
+    public ImplClassStructure(final Class<?> superType, final String name) {
         this(name,
                 superType.getCanonicalName(),
                 Stream.concat(
@@ -31,16 +31,16 @@ public class ImplClassStructure extends ImplInterfaceStructure {
                 ).toList());
     }
 
-    static Stream<Constructor<?>> getNonPrivateConstructorsStream(Class<?> token) {
+    static Stream<Constructor<?>> getNonPrivateConstructorsStream(final Class<?> token) {
         return Arrays.stream(token.getDeclaredConstructors())
                 .filter(it -> !Modifier.isPrivate(it.getModifiers()));
     }
 
-    private static Set<MethodStructure> getAllAbstractMethodStructures(Class<?> superType) {
+    private static Set<MethodStructure> getAllAbstractMethodStructures(final Class<?> superType) {
         if (superType == null) {
             return new HashSet<>();
         }
-        Set<MethodStructure> set = getAllAbstractMethodStructures(superType.getSuperclass());
+        final Set<MethodStructure> set = getAllAbstractMethodStructures(superType.getSuperclass());
         Arrays.stream(superType.getDeclaredMethods())
                 .filter(it -> Modifier.isAbstract(it.getModifiers()))
                 .map(MethodStructure::new)

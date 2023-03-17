@@ -12,15 +12,15 @@ public class ImplInterfaceStructure {
     protected final String superType;
     protected final List<MethodStructure> methods;
 
-    public ImplInterfaceStructure(String typeName, String superType,
-            List<MethodStructure> methods
+    public ImplInterfaceStructure(final String typeName, final String superType,
+            final List<MethodStructure> methods
     ) {
         this.typeName = typeName;
         this.superType = superType;
         this.methods = methods;
     }
 
-    public ImplInterfaceStructure(Class<?> superType, String name) {
+    public ImplInterfaceStructure(final Class<?> superType, final String name) {
         this.typeName = name;
         this.superType = superType.getCanonicalName();
         this.methods = Stream.concat(
@@ -31,7 +31,7 @@ public class ImplInterfaceStructure {
         ).toList();
     }
 
-    private ConstructorStructure trivialConstructor(String name) {
+    private ConstructorStructure trivialConstructor(final String name) {
         return new ConstructorStructure(name, new Class[0], new Class[0], Modifier.PUBLIC);
     }
 
