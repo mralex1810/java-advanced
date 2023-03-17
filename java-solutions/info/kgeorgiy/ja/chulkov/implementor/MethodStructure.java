@@ -41,8 +41,7 @@ public class MethodStructure {
 
     @Override
     public String toString() {
-        return String.format("""
-                                                
+        return String.format("""                
                         \t%s%s%s%s(%s)%s {
                         \t\t%s
                         \t}

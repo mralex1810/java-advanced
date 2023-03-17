@@ -32,13 +32,14 @@ public class ImplInterfaceStructure {
     }
 
     private ConstructorStructure trivialConstructor(final String name) {
-        return new ConstructorStructure(name, new Class[0], new Class[0], Modifier.PUBLIC);
+        return new TrivialConstructorStructure(name, Modifier.PUBLIC);
     }
 
     @Override
     public String toString() {
         return String.format("""
                         public class %s %s {
+                        
                         %s}
                         """,
                 typeName(),
