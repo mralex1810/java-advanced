@@ -6,7 +6,7 @@ public class ConstructorStructure extends MethodStructure {
 
 
     public ConstructorStructure(final Constructor<?> constructor, final String name) {
-        super(name, null, constructor.getParameterTypes(), constructor.getExceptionTypes(),
+        this(name, constructor.getParameterTypes(), constructor.getExceptionTypes(),
                 constructor.getModifiers());
     }
 
