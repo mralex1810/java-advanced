@@ -102,7 +102,7 @@ public class MethodStructure {
         if (exceptions.isEmpty()) {
             return "";
         }
-        return " throws " + exceptions.stream().map(Class::getCanonicalName).collect(Collectors.joining(", "));
+        return exceptions.stream().map(Class::getCanonicalName).collect(Collectors.joining(", ", " throws ", ""));
     }
 
     protected String body() {
@@ -130,15 +130,13 @@ public class MethodStructure {
         }
         if (o instanceof MethodStructure that) {
             return Objects.equals(name, that.name)
-                    && Objects.equals(returnType, that.returnType)
-                    && Objects.equals(typeParameters, that.typeParameters)
-                    && Objects.equals(exceptions, that.exceptions);
+                    && Objects.equals(typeParameters, that.typeParameters);
         }
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, returnType, typeParameters, exceptions);
+        return Objects.hash(name, typeParameters);
     }
 }
