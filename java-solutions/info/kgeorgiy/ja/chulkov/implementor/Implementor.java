@@ -57,10 +57,10 @@ public class Implementor implements Impler {
         final Path filePath = implemetationPath.resolve(typeName + JAVA);
         try (final BufferedWriter writer = Files.newBufferedWriter(filePath)) {
             addPackage(token, writer);
-            final ImplInterfaceStructure implementedClass = token.isInterface() ?
+            final ImplInterfaceStructure implementedClassStructure = token.isInterface() ?
                     new ImplInterfaceStructure(token, typeName) :
                     new ImplClassStructure(token, typeName);
-            writer.write(implementedClass.toString());
+            writer.write(implementedClassStructure.toString());
         } catch (final IOException e) {
             throw new ImplerException("Error on writing in file", e);
         }
