@@ -62,8 +62,6 @@ public class Implementor implements Impler {
                     new ImplInterfaceStructure(token, typeName) :
                     new ImplClassStructure(token, typeName);
             writer.write(implementedClassStructure.toString());
-            writer.flush();
-            System.out.println(new String(Files.readAllBytes(filePath)));
         } catch (final IOException e) {
             throw new ImplerException("Error on writing in file", e);
         }
