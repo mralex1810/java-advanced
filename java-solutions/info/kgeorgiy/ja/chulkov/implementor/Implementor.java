@@ -171,13 +171,9 @@ public class Implementor implements JarImpler {
             if (compiler == null) {
                 throw new ImplerException("Needs compiler to compile implementation");
             }
-
-           final String[] args = Stream.concat(Stream.of(javaFilePath.toString(),
+           final String[] args =Stream.of(javaFilePath.toString(),
                                     "-sourcepath", tempDir.toString(),
-                                    "-cp", getClassPath(token)),
-                            token.getModule().getName().equals("java.base") ?
-                                    Stream.of("--patch-module", token.getModule().getName() + "=" + tempDir)
-                                    : Stream.empty())
+                                    "-cp", getClassPath(token))
                     .toArray(String[]::new);
             if (compiler.run(null, null, null, args) != 0) {
                 throw new ImplerException("Error on compilation of implementation");
