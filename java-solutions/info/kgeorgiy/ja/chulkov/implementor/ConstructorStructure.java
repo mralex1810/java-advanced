@@ -15,7 +15,6 @@ public class ConstructorStructure extends MethodStructure {
         super(name, null, typeParameters, exceptions, modifiers);
     }
 
-
     @Override
     protected String override() {
         return "";
