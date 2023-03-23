@@ -34,6 +34,7 @@ public class MethodStructure {
             final Class<?>[] exceptions, final int modifiers) {
         this.name = name;
         this.returnType = returnType;
+        // :NOTE: typeParameters и parameterTypes это разные вещи
         this.typeParameters = Arrays.stream(typeParameters).toList();
         this.exceptions = Arrays.stream(exceptions).toList();
         this.modifiers = modifiers;
@@ -41,6 +42,7 @@ public class MethodStructure {
 
     @Override
     public String toString() {
+        // :NOTE: какие переводы строк здесь генерируются?
         return String.format("""                
                         \t%s%s%s%s(%s)%s {
                         \t\t%s
@@ -56,12 +58,14 @@ public class MethodStructure {
         );
     }
 
+    // :NOTE: лучше запихнуть переводы строк и табы в toString для единого вида
     protected String override() {
         return "@Override" + System.lineSeparator() + "\t";
     }
 
 
     private String modifiers() {
+        // :NOTE: для этого есть стандартный метод
         final List<String> list = new ArrayList<>();
         METHOD_MODIFIERS_STRING.forEach((predicate, str) -> {
             if (predicate.test(modifiers)) {
@@ -82,6 +86,7 @@ public class MethodStructure {
 
     protected String parameters() {
         final List<String> list = new ArrayList<>(typeParameters.size());
+        // :NOTE: varList тебе не нужен
         final List<String> varList = getVarNames(typeParameters.size());
         for (int i = 0; i < typeParameters.size(); i++) {
             list.add(typeParameters.get(i).getCanonicalName() + " " + varList.get(i));
@@ -109,16 +114,14 @@ public class MethodStructure {
     }
 
     private String defaultReturnValueString() {
-        if (returnType.isPrimitive()) {
-            if (returnType.equals(Boolean.TYPE)) {
-                return "false";
-            } else if (returnType.equals(Void.TYPE)) {
-                return "";
-            } else {
-                return "0";
-            }
-        } else {
+        if (!returnType.isPrimitive()) {
             return "null";
+        } else if (returnType.equals(Boolean.TYPE)) {
+            return "false";
+        } else if (returnType.equals(Void.TYPE)) {
+            return "";
+        } else {
+            return "0";
         }
     }
 

@@ -1,6 +1,7 @@
 package info.kgeorgiy.ja.chulkov.implementor;
 
 
+import info.kgeorgiy.java.advanced.implementor.Impler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
 import info.kgeorgiy.java.advanced.implementor.JarImpler;
 import java.io.BufferedWriter;
@@ -31,7 +32,6 @@ import javax.tools.ToolProvider;
  */
 public class Implementor implements JarImpler {
 
-
     /**
      * Suffix for Java files
      */
@@ -59,9 +59,12 @@ public class Implementor implements JarImpler {
             Class::isSealed, "Can't extend sealed class",
             it -> it.isAssignableFrom(Enum.class), "Token mustn't be enum",
             it -> Modifier.isPrivate(it.getModifiers()), "Can't implement private token",
+            // :NOTE: а если интерфейс то что?
             it -> !it.isInterface() && Modifier.isFinal(it.getModifiers()), "Superclass must be not final",
-            it -> !it.isInterface() && ImplClassStructure.getNonPrivateConstructorsStream(it).findAny()
-                    .isEmpty(), "Superclass must has not private constructor");
+            // :NOTE: а если интерфейс то что?
+            it -> !it.isInterface() && ImplClassStructure.getNonPrivateConstructorsStream(it).findAny().isEmpty(),
+            "Superclass must has not private constructor"
+    );
 
 
     /**
@@ -159,6 +162,7 @@ public class Implementor implements JarImpler {
      * @return classpath or empty string if classpath is unavailable
      */
     private String getClassPath(final Class<?> token) {
+    private static void tryCreateDirectories(final Path implementationPath) {
         try {
             if (token.getProtectionDomain() == null || token.getProtectionDomain().getCodeSource() == null) {
                 return "";
@@ -166,6 +170,9 @@ public class Implementor implements JarImpler {
             return Path.of(token.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
         } catch (final URISyntaxException | IllegalArgumentException | FileSystemNotFoundException e) {
             return "";
+            Files.createDirectories(implementationPath);
+        } catch (final IOException e) {
+            System.err.println("Can't create directories");
         }
     }
 
@@ -191,13 +198,22 @@ public class Implementor implements JarImpler {
         } catch (final IOException e) {
             System.err.println("Can't create directories");
         }
+        final Path implementationPath = root.resolve(token.getPackageName().replace(".", File.separator));
+        tryCreateDirectories(implementationPath);
         final String typeName = getTypeName(token);
         final Path filePath = implemetationPath.resolve(getFileName(token, JAVA));
+        final Path filePath = implementationPath.resolve(typeName + JAVA);
         try (final BufferedWriter writer = Files.newBufferedWriter(filePath)) {
             writer.write(generatePackage(token));
             final ImplInterfaceStructure implementedClassStructure =
                     token.isInterface() ? new ImplInterfaceStructure(token, typeName)
                             : new ImplClassStructure(token, typeName);
+            addPackage(token, writer);
+            writer.write(System.lineSeparator());
+            final ImplInterfaceStructure implementedClassStructure = token.isInterface() ?
+                // :NOTE: неужели настолько большая разница между имплементацией интерфейса и класса?
+                    new ImplInterfaceStructure(token, typeName) :
+                    new ImplClassStructure(token, typeName);
             writer.write(implementedClassStructure.toString());
         } catch (final IOException e) {
             throw new ImplerException("Error on writing in file", e);

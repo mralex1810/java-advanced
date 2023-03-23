@@ -17,6 +17,7 @@ public class ImplClassStructure extends ImplInterfaceStructure {
     }
 
     public ImplClassStructure(final Class<?> superType, final String name) {
+        // :NOTE: очень сложно и не читаемо
         this(name,
                 superType.getCanonicalName(),
                 Stream.concat(
@@ -45,6 +46,7 @@ public class ImplClassStructure extends ImplInterfaceStructure {
                 .filter(it -> Modifier.isAbstract(it.getModifiers()))
                 .map(MethodStructure::new)
                 .forEach(set::add);
+        // :NOTE: здесь точно есть что удалять?
         Arrays.stream(superType.getDeclaredMethods())
                 .filter(it -> !Modifier.isAbstract(it.getModifiers()))
                 .map(MethodStructure::new)
