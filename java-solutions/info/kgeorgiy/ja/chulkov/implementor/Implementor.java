@@ -34,8 +34,8 @@ public class Implementor implements JarImpler {
     private static final Map<Predicate<Class<?>>, String> EXCEPTIONS_REASONS = Map.of(
             Class::isPrimitive, "Token mustn't be primitive",
             Class::isArray, "Token mustn't be primitive",
-            Class::isRecord, "Can't extend records",
-            Class::isSealed, "Can't extend sealed class",
+//            Class::isRecord, "Can't extend records",
+//            Class::isSealed, "Can't extend sealed class",
             it -> it.isAssignableFrom(Enum.class), "Token mustn't be enum",
             it -> Modifier.isPrivate(it.getModifiers()), "Can't implement private token",
             it -> !it.isInterface() && Modifier.isFinal(it.getModifiers()), "Superclass must be not final",
@@ -112,9 +112,12 @@ public class Implementor implements JarImpler {
         return token.getPackageName().replace(".", separator);
     }
 
-    private static String getClassPath() throws ImplerException {
+    private String getClassPath(final Class<?> token) throws ImplerException {
         try {
-            return Path.of(JarImpler.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
+            if (token.getProtectionDomain() == null || token.getProtectionDomain().getCodeSource() == null) {
+                return "";
+            }
+            return Path.of(token.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
         } catch (final URISyntaxException e) {
             throw new ImplerException("Can't get class path", e);
         }
@@ -168,8 +171,14 @@ public class Implementor implements JarImpler {
             if (compiler == null) {
                 throw new ImplerException("Needs compiler to compile implementation");
             }
-            final String classpath = getClassPath();
-            final String[] args = Stream.of(javaFilePath.toString(), "-sourcepath", tempDir.toString(), "-cp", classpath).toArray(String[]::new);
+
+           final String[] args = Stream.concat(Stream.of(javaFilePath.toString(),
+                                    "-sourcepath", tempDir.toString(),
+                                    "-cp", getClassPath(token)),
+                            token.getModule().getName().equals("java.base") ?
+                                    Stream.of("--patch-module", token.getModule().getName() + "=" + tempDir)
+                                    : Stream.empty())
+                    .toArray(String[]::new);
             if (compiler.run(null, null, null, args) != 0) {
                 throw new ImplerException("Error on compilation of implementation");
             }
