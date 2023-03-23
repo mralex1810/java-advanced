@@ -25,7 +25,9 @@ public class Implementor implements Impler {
             Class::isSealed, "Can't extend sealed class",
             it -> it.isAssignableFrom(Enum.class), "Token mustn't be enum",
             it -> Modifier.isPrivate(it.getModifiers()), "Can't implement private token",
+            // :NOTE: а если интерфейс то что?
             it -> !it.isInterface() && Modifier.isFinal(it.getModifiers()), "Superclass must be not final",
+            // :NOTE: а если интерфейс то что?
             it -> !it.isInterface() && ImplClassStructure.getNonPrivateConstructorsStream(it).findAny().isEmpty(),
             "Superclass must has not private constructor"
     );
@@ -34,9 +36,9 @@ public class Implementor implements Impler {
         return token.getSimpleName() + IMPL;
     }
 
-    private static void tryCreateDirectories(final Path implemetationPath) {
+    private static void tryCreateDirectories(final Path implementationPath) {
         try {
-            Files.createDirectories(implemetationPath);
+            Files.createDirectories(implementationPath);
         } catch (final IOException e) {
             System.err.println("Can't create directories");
         }
@@ -51,14 +53,15 @@ public class Implementor implements Impler {
                 throw new ImplerException(reasonMessageEntry.getValue());
             }
         }
-        final Path implemetationPath = root.resolve(token.getPackageName().replace(".", File.separator));
-        tryCreateDirectories(implemetationPath);
+        final Path implementationPath = root.resolve(token.getPackageName().replace(".", File.separator));
+        tryCreateDirectories(implementationPath);
         final String typeName = getTypeName(token);
-        final Path filePath = implemetationPath.resolve(typeName + JAVA);
+        final Path filePath = implementationPath.resolve(typeName + JAVA);
         try (final BufferedWriter writer = Files.newBufferedWriter(filePath)) {
             addPackage(token, writer);
             writer.write(System.lineSeparator());
             final ImplInterfaceStructure implementedClassStructure = token.isInterface() ?
+                // :NOTE: неужели настолько большая разница между имплементацией интерфейса и класса?
                     new ImplInterfaceStructure(token, typeName) :
                     new ImplClassStructure(token, typeName);
             writer.write(implementedClassStructure.toString());
