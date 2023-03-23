@@ -1,7 +1,6 @@
 package info.kgeorgiy.ja.chulkov.implementor;
 
 
-import info.kgeorgiy.java.advanced.implementor.Impler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
 import info.kgeorgiy.java.advanced.implementor.JarImpler;
 import java.io.BufferedWriter;
@@ -60,11 +59,20 @@ public class Implementor implements JarImpler {
             it -> it.isAssignableFrom(Enum.class), "Token mustn't be enum",
             it -> Modifier.isPrivate(it.getModifiers()), "Can't implement private token",
             // :NOTE: а если интерфейс то что?
+            // :NOTE-ANSWER: если у нас final интерфейс то мы можем его имплементировать, никаких проблем быть не должно
             it -> !it.isInterface() && Modifier.isFinal(it.getModifiers()), "Superclass must be not final",
             // :NOTE: а если интерфейс то что?
+            // :NOTE-ANSWER: нам не нужно создавать инстанс интерфейса, поэтому нам не важны его конструкторы
             it -> !it.isInterface() && ImplClassStructure.getNonPrivateConstructorsStream(it).findAny().isEmpty(),
             "Superclass must has not private constructor"
     );
+
+    /**
+     * Primitive constructor for {@link Implementor}
+     */
+    Implementor() {
+
+    }
 
 
     /**
@@ -156,13 +164,13 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * Generates classpath for given {@code token}. To generate uses location of {@code token} code source.
-     * If code source location is unavailable returns empty string.
+     * Generates classpath for given {@code token}. To generate uses location of {@code token} code source. If code
+     * source location is unavailable returns empty string.
+     *
      * @param token Class for finding classpath of it
      * @return classpath or empty string if classpath is unavailable
      */
     private String getClassPath(final Class<?> token) {
-    private static void tryCreateDirectories(final Path implementationPath) {
         try {
             if (token.getProtectionDomain() == null || token.getProtectionDomain().getCodeSource() == null) {
                 return "";
@@ -170,9 +178,6 @@ public class Implementor implements JarImpler {
             return Path.of(token.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
         } catch (final URISyntaxException | IllegalArgumentException | FileSystemNotFoundException e) {
             return "";
-            Files.createDirectories(implementationPath);
-        } catch (final IOException e) {
-            System.err.println("Can't create directories");
         }
     }
 
@@ -182,7 +187,12 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * Similar to {@link Implementor#implement}, but returns path to implemented java file.
+     * Same as {@link Implementor#implement}, but returns path to implemented java file.
+     *
+     * @param token type token to create implementation for.
+     * @param root  root directory
+     * @return path to implemented java file
+     * @throws ImplerException if token can't be implemented
      */
     private Path implementAndReturnFilePath(final Class<?> token, final Path root) throws ImplerException {
         Objects.requireNonNull(token);
@@ -198,23 +208,20 @@ public class Implementor implements JarImpler {
         } catch (final IOException e) {
             System.err.println("Can't create directories");
         }
-        final Path implementationPath = root.resolve(token.getPackageName().replace(".", File.separator));
-        tryCreateDirectories(implementationPath);
         final String typeName = getTypeName(token);
         final Path filePath = implemetationPath.resolve(getFileName(token, JAVA));
-        final Path filePath = implementationPath.resolve(typeName + JAVA);
         try (final BufferedWriter writer = Files.newBufferedWriter(filePath)) {
             writer.write(generatePackage(token));
-            final ImplInterfaceStructure implementedClassStructure =
-                    token.isInterface() ? new ImplInterfaceStructure(token, typeName)
-                            : new ImplClassStructure(token, typeName);
-            addPackage(token, writer);
-            writer.write(System.lineSeparator());
+            // :NOTE: неужели настолько большая разница между имплементацией интерфейса и класса?
+            /* :NOTE-ANSWER: в процессе генерации нам нужно хотя бы одно ветвление isInterface
+            ("implements" или "extends").
+            Чем выбирать каждый раз ифом, я предпочел написать его один раз, а затем всё разрешается через полиморфизм.
+            */
             final ImplInterfaceStructure implementedClassStructure = token.isInterface() ?
-                // :NOTE: неужели настолько большая разница между имплементацией интерфейса и класса?
                     new ImplInterfaceStructure(token, typeName) :
                     new ImplClassStructure(token, typeName);
             writer.write(implementedClassStructure.toString());
+            System.out.println(implementedClassStructure);
         } catch (final IOException e) {
             throw new ImplerException("Error on writing in file", e);
         }
@@ -222,14 +229,14 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * Generate package line about {@code token}.
-     * If package isn't present, returns empty string.
-     * If {@code token} has package {@code my.best.package}, returns package line with two line separators after
+     * Generate package line about {@code token}. If package isn't present, returns empty string. If {@code token} has
+     * package {@code my.best.package}, returns package line with two line separators after
      * <pre>
      *     {@code package my.best.package;}
      *
      *
      * </pre>
+     *
      * @param token type to getting package
      * @return package lines string if package is present, or empty string otherwise
      */
@@ -247,38 +254,41 @@ public class Implementor implements JarImpler {
         Objects.requireNonNull(jarFile);
         try {
             final Path tempDir = Files.createTempDirectory("temp");
-            final Path javaFilePath = implementAndReturnFilePath(token, tempDir);
-            final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-            if (compiler == null) {
-                throw new ImplerException("Needs compiler to compile implementation");
+            try {
+                final Path javaFilePath = implementAndReturnFilePath(token, tempDir);
+                final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+                if (compiler == null) {
+                    throw new ImplerException("Needs compiler to compile implementation");
+                }
+                final String[] args = Stream.of(javaFilePath.toString(),
+                                "-sourcepath", tempDir.toString(),
+                                "-cp", getClassPath(token))
+                        .toArray(String[]::new);
+                if (compiler.run(null, null, null, args) != 0) {
+                    throw new ImplerException("Error on compilation of implementation");
+                }
+                final Path classFilePath = javaFilePath.getParent().resolve(getFileName(token, CLASS));
+                final Manifest manifest = new Manifest();
+                manifest.getMainAttributes().put(Name.MANIFEST_VERSION, "1.0");
+                manifest.getMainAttributes().put(Name.IMPLEMENTATION_VERSION, "1.0.0");
+                manifest.getMainAttributes().put(Name.IMPLEMENTATION_VENDOR, "Chulkov Alexey");
+                try (
+                        final JarOutputStream jarOutputStream =
+                                new JarOutputStream(Files.newOutputStream(jarFile), manifest)
+                ) {
+                    jarOutputStream.putNextEntry(
+                            new JarEntry(
+                                    token.getPackageName().replace(".", JAR_PATH_SEPARATOR)
+                                            + JAR_PATH_SEPARATOR
+                                            + getFileName(token, CLASS)
+                            ));
+                    Files.copy(classFilePath, jarOutputStream);
+                } catch (final IOException e) {
+                    throw new ImplerException("Error on writing in jar-file", e);
+                }
+            } finally {
+                Files.walkFileTree(tempDir, DELETE);
             }
-            final String[] args = Stream.of(javaFilePath.toString(),
-                            "-sourcepath", tempDir.toString(),
-                            "-cp", getClassPath(token))
-                    .toArray(String[]::new);
-            if (compiler.run(null, null, null, args) != 0) {
-                throw new ImplerException("Error on compilation of implementation");
-            }
-            final Path classFilePath = javaFilePath.getParent().resolve(getFileName(token, CLASS));
-            final Manifest manifest = new Manifest();
-            manifest.getMainAttributes().put(Name.MANIFEST_VERSION, "1.0");
-            manifest.getMainAttributes().put(Name.IMPLEMENTATION_VERSION, "1.0.0");
-            manifest.getMainAttributes().put(Name.IMPLEMENTATION_VENDOR, "Chulkov Alexey");
-            try (
-                    final JarOutputStream jarOutputStream =
-                            new JarOutputStream(Files.newOutputStream(jarFile), manifest)
-            ) {
-                jarOutputStream.putNextEntry(
-                        new JarEntry(
-                                token.getPackageName().replace(".", JAR_PATH_SEPARATOR)
-                                        + JAR_PATH_SEPARATOR
-                                        + getFileName(token, CLASS)
-                        ));
-                Files.copy(classFilePath, jarOutputStream);
-            } catch (final IOException e) {
-                throw new ImplerException("Error on writing in jar-file", e);
-            }
-            Files.walkFileTree(tempDir, DELETE);
         } catch (final IOException e) {
             System.err.println("Can't create temporary directory");
         }
