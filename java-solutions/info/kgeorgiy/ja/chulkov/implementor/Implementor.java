@@ -3,6 +3,7 @@ package info.kgeorgiy.ja.chulkov.implementor;
 
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
 import info.kgeorgiy.java.advanced.implementor.JarImpler;
+import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -66,15 +67,6 @@ public class Implementor implements JarImpler {
             it -> !it.isInterface() && ImplClassStructure.getNonPrivateConstructorsStream(it).findAny().isEmpty(),
             "Superclass must has not private constructor"
     );
-
-    /**
-     * Primitive constructor for {@link Implementor}
-     */
-    Implementor() {
-
-    }
-
-
     /**
      * Simple file visitor to recursive delete all files in directory. Good way to use it in method
      * {@link Files#walkFileTree(Path, FileVisitor)}
@@ -93,6 +85,13 @@ public class Implementor implements JarImpler {
         }
     };
 
+
+    /**
+     * Primitive constructor for {@link Implementor}
+     */
+    public Implementor() {
+
+    }
 
     /**
      * Method that process cli users requests. From Java prefer to use {@link Implementor#implement(Class, Path)} or
@@ -274,7 +273,7 @@ public class Implementor implements JarImpler {
                 manifest.getMainAttributes().put(Name.IMPLEMENTATION_VENDOR, "Chulkov Alexey");
                 try (
                         final JarOutputStream jarOutputStream =
-                                new JarOutputStream(Files.newOutputStream(jarFile), manifest)
+                                new JarOutputStream(new BufferedOutputStream(Files.newOutputStream(jarFile)), manifest)
                 ) {
                     jarOutputStream.putNextEntry(
                             new JarEntry(

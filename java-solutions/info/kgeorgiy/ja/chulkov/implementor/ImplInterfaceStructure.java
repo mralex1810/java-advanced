@@ -1,8 +1,10 @@
 package info.kgeorgiy.ja.chulkov.implementor;
 
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 
@@ -11,6 +13,13 @@ import java.util.stream.Collectors;
  * implementation by {@link ImplInterfaceStructure#toString()}
  */
 public class ImplInterfaceStructure {
+
+    /**
+     * Predicate to check abstract or non-abstract method.
+     * Returns true on abstract method
+     */
+    protected static final Predicate<Method> ABSTRACT_METHOD_PREDICATE =
+            method -> Modifier.isAbstract(method.getModifiers());
 
 
     /**
@@ -25,7 +34,7 @@ public class ImplInterfaceStructure {
      * Keeps list of {@link MethodStructure}, that keeps information about methods and constructors of implemented
      * class
      */
-    protected final List<MethodStructure> methods;
+    protected final List<? extends MethodStructure> methods;
 
     /**
      * Directly creates class
@@ -35,7 +44,7 @@ public class ImplInterfaceStructure {
      * @param methods   same as {@link ImplInterfaceStructure#methods}
      */
     public ImplInterfaceStructure(final String typeName, final String superType,
-            final List<MethodStructure> methods
+            final List<? extends MethodStructure> methods
     ) {
         this.typeName = typeName;
         this.superType = superType;
@@ -52,7 +61,7 @@ public class ImplInterfaceStructure {
         this.typeName = name;
         this.superType = superType.getCanonicalName();
         this.methods = Arrays.stream(superType.getMethods())
-                .filter(it -> Modifier.isAbstract(it.getModifiers()))
+                .filter(ABSTRACT_METHOD_PREDICATE)
                 .map(MethodStructure::new)
                 .toList();
     }

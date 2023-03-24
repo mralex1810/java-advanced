@@ -1,0 +1,4 @@
+Automatic-Module-Name: true
+Implementation-Title: Implementor
+Implementation-Vendor: Chulkov Alexey
+Implementation-Version: 1.0.0

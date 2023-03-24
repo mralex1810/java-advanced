@@ -6,6 +6,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -16,6 +18,12 @@ public class ImplClassStructure extends ImplInterfaceStructure {
 
 
     /**
+     * Predicate to check non-public or public method. Returns true if method is non-public
+     */
+    private static final Predicate<MethodStructure> METHOD_NONPUBLIC_PREDICATE =
+            method -> !Modifier.isPublic(method.modifiers);
+
+    /**
      * Directly creates class
      *
      * @param typeName  same as {@link ImplInterfaceStructure#typeName}
@@ -23,7 +31,7 @@ public class ImplClassStructure extends ImplInterfaceStructure {
      * @param methods   same as {@link ImplInterfaceStructure#methods}
      */
     public ImplClassStructure(final String typeName, final String superType,
-            final List<MethodStructure> methods
+            final List<? extends MethodStructure> methods
     ) {
         super(typeName, superType, methods);
     }
@@ -38,22 +46,40 @@ public class ImplClassStructure extends ImplInterfaceStructure {
      */
     public ImplClassStructure(final Class<?> superType, final String name) {
         // :NOTE: очень сложно и не читаемо
-        this(name,
+        this(
+                name,
                 superType.getCanonicalName(),
-                Stream.concat(
-                        getNonPrivateConstructorsStream(superType)
-                                .map(it -> new ConstructorStructure(it, name)),
-                        Stream.concat(
-                                getAllAbstractMethodStructures(superType).stream()
-                                        .filter(method -> !Modifier.isPublic(method.modifiers)),
-                                Arrays.stream(superType.getMethods())
-                                        .filter(it -> Modifier.isAbstract(it.getModifiers()))
-                                        .map(MethodStructure::new))
-                ).toList());
+                getRequiredForImplementationMethods(superType, name)
+        );
     }
 
     /**
-     * Gets stream of non-private constructors.
+     * Generates list of required to implement methods and constructors. Merges three types of methods by signature:
+     * <ul>
+     *    <li> all non-private constructors </li>
+     *    <li> all public abstract methods declared in all superclasses and interfaces </li>
+     *    <li> all non-public abstract methods, declared in all superclasses </li>
+     * </ul>
+     *
+     * @param token super class token, that needs to be implemented
+     * @param name  of implemented class
+     * @return list of required to implement methods
+     */
+    private static List<? extends MethodStructure> getRequiredForImplementationMethods(Class<?> token, String name) {
+        final Set<MethodStructure> set = new HashSet<>();
+        getNonPrivateConstructorsStream(token)
+                .map(it -> new ConstructorStructure(it, name))
+                .forEach(set::add);
+        Arrays.stream(token.getMethods())
+                .filter(ABSTRACT_METHOD_PREDICATE)
+                .map(MethodStructure::new)
+                .forEach(set::add);
+        set.addAll(getAllAbstractMethodStructures(token));
+        return set.stream().toList();
+    }
+
+    /**
+     * Gets stream of non-private constructors from {@code token} class.
      *
      * @param token class token to get constructors
      * @return stream of non-private constructors
@@ -79,10 +105,11 @@ public class ImplClassStructure extends ImplInterfaceStructure {
                 .map(MethodStructure::new)
                 .forEach(set::add);
         // :NOTE: здесь точно есть что удалять?
-        /* :NOTE-ANSWER: Да. Вот пример: (class A, class B extends A)
+        /* :NOTE-ANSWER: Да. Вот пример: {class A, class B extends A}
             abstract A.bar()
             final B.bar() {}
             В этом случае мы должны исключить bar() из множества абстрактных, так как не можем его реализовать
+            Можно убирать
          */
         Arrays.stream(superType.getDeclaredMethods())
                 .filter(it -> !Modifier.isAbstract(it.getModifiers()))
