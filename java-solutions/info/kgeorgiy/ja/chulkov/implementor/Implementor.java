@@ -220,7 +220,6 @@ public class Implementor implements JarImpler {
                     new ImplInterfaceStructure(token, typeName) :
                     new ImplClassStructure(token, typeName);
             writer.write(implementedClassStructure.toString());
-            System.out.println(implementedClassStructure);
         } catch (final IOException e) {
             throw new ImplerException("Error on writing in file", e);
         }

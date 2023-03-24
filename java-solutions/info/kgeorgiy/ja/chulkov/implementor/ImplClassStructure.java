@@ -1,12 +1,12 @@
 package info.kgeorgiy.ja.chulkov.implementor;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -17,11 +17,18 @@ import java.util.stream.Stream;
 public class ImplClassStructure extends ImplInterfaceStructure {
 
 
+
+
     /**
-     * Predicate to check non-public or public method. Returns true if method is non-public
+     * Predicate to check abstract and non-public. Returns true if method is abstract and non-public
      */
-    private static final Predicate<MethodStructure> METHOD_NONPUBLIC_PREDICATE =
-            method -> !Modifier.isPublic(method.modifiers);
+    private static final Predicate<Method> ABSTRACT_AND_NONPUBLIC_METHOD_PREDICATE =
+            ABSTRACT_METHOD_PREDICATE.and(method -> !Modifier.isPublic(method.getModifiers()));
+    /**
+     * Predicate to check non-private or private constructors. Returns true if method is non-private
+     */
+    private static final Predicate<Constructor<?>> NONPRIVATE_CONSTRUCTOR_PREDICATE =
+            it -> !Modifier.isPrivate(it.getModifiers());
 
     /**
      * Directly creates class
@@ -65,16 +72,17 @@ public class ImplClassStructure extends ImplInterfaceStructure {
      * @param name  of implemented class
      * @return list of required to implement methods
      */
-    private static List<? extends MethodStructure> getRequiredForImplementationMethods(Class<?> token, String name) {
+    private static List<? extends MethodStructure> getRequiredForImplementationMethods(final Class<?> token,
+            final String name) {
         final Set<MethodStructure> set = new HashSet<>();
         getNonPrivateConstructorsStream(token)
                 .map(it -> new ConstructorStructure(it, name))
                 .forEach(set::add);
+        set.addAll(getAllAbstractNonPublicMethodStructures(token));
         Arrays.stream(token.getMethods())
                 .filter(ABSTRACT_METHOD_PREDICATE)
                 .map(MethodStructure::new)
                 .forEach(set::add);
-        set.addAll(getAllAbstractMethodStructures(token));
         return set.stream().toList();
     }
 
@@ -86,22 +94,22 @@ public class ImplClassStructure extends ImplInterfaceStructure {
      */
     static Stream<Constructor<?>> getNonPrivateConstructorsStream(final Class<?> token) {
         return Arrays.stream(token.getDeclaredConstructors())
-                .filter(it -> !Modifier.isPrivate(it.getModifiers()));
+                .filter(NONPRIVATE_CONSTRUCTOR_PREDICATE);
     }
 
     /**
-     * Recursive get all methods that are abstract in {@code superType} from parents classes.
+     * Recursive get all methods that are abstract and non-public in {@code superType} from parents classes.
      *
-     * @param superType token to get abstract methods for
-     * @return set of {@link MethodStructure} that are abstract methods in {@code superType}
+     * @param superType token to get methods for
+     * @return set of {@link MethodStructure} that are abstract and non-public methods in {@code superType}
      */
-    private static Set<MethodStructure> getAllAbstractMethodStructures(final Class<?> superType) {
+    private static Set<MethodStructure> getAllAbstractNonPublicMethodStructures(final Class<?> superType) {
         if (superType == null) {
             return new HashSet<>();
         }
-        final Set<MethodStructure> set = getAllAbstractMethodStructures(superType.getSuperclass());
+        final Set<MethodStructure> set = getAllAbstractNonPublicMethodStructures(superType.getSuperclass());
         Arrays.stream(superType.getDeclaredMethods())
-                .filter(it -> Modifier.isAbstract(it.getModifiers()))
+                .filter(ABSTRACT_AND_NONPUBLIC_METHOD_PREDICATE)
                 .map(MethodStructure::new)
                 .forEach(set::add);
         // :NOTE: здесь точно есть что удалять?
@@ -109,10 +117,9 @@ public class ImplClassStructure extends ImplInterfaceStructure {
             abstract A.bar()
             final B.bar() {}
             В этом случае мы должны исключить bar() из множества абстрактных, так как не можем его реализовать
-            Можно убирать
          */
         Arrays.stream(superType.getDeclaredMethods())
-                .filter(it -> !Modifier.isAbstract(it.getModifiers()))
+                .filter(ABSTRACT_AND_NONPUBLIC_METHOD_PREDICATE.negate())
                 .map(MethodStructure::new)
                 .forEach(set::remove);
         return set;
