@@ -115,7 +115,7 @@ public class MethodStructure {
     // :NOTE: лучше запихнуть переводы строк и табы в toString для единого вида
     // :NOTE-ANSWER: это, к сожалению, убьет форматирование. Или мы можем позволить себе лишние пробелы и строки?
     protected String overrideRepresentation() {
-        return "@Override" + System.lineSeparator() + TABULATION;
+        return "";
     }
 
 

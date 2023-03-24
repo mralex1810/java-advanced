@@ -6,9 +6,11 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -76,12 +78,27 @@ public class ImplClassStructure extends ImplInterfaceStructure {
         return Stream.of(
                 getNonPrivateConstructorsStream(token)
                         .map(it -> (MethodStructure) new ConstructorStructure(it, name)),
-                getAllAbstractNonPublicMethodStructures(token).stream(),
-                Arrays.stream(token.getMethods())
+                compressReturnedTypes(Arrays.stream(token.getMethods())
                         .filter(ABSTRACT_METHOD_PREDICATE)
-                        .map(MethodStructure::new)
-                ).flatMap(Function.identity()).toList();
+                        .map(MethodStructure::new)),
+                getAllAbstractNonPublicMethodStructures(token).stream()
+                ).flatMap(Function.identity()).collect(Collectors.toSet()).stream().toList();
 
+    }
+
+    /**
+     * Compress methods with same signature. Return one method with covariant type.
+     *
+     * @param methods stream of methods
+     * @return stream of compressed methods
+     */
+    private static Stream<MethodStructure> compressReturnedTypes(final Stream<MethodStructure> methods) {
+        return methods
+                .collect(Collectors.groupingBy(it -> it, Collectors.toList()))
+                .values().stream()
+                .map(it -> it.stream().min((a, b) -> a == b ? 0 : a.returnType.isAssignableFrom(b.returnType) ? 1 : -1))
+                .map(Optional::get)
+        ;
     }
 
     /**
