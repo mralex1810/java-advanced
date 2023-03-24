@@ -28,7 +28,7 @@ public class ImplClassStructure extends ImplInterfaceStructure {
     /**
      * Predicate to check non-private or private constructors. Returns true if method is non-private
      */
-    private static final Predicate<Constructor<?>> NONPRIVATE_CONSTRUCTOR_PREDICATE =
+    private static final Predicate<Constructor<?>> NON_PRIVATE_CONSTRUCTOR_PREDICATE =
             it -> !Modifier.isPrivate(it.getModifiers());
 
     /**
@@ -82,7 +82,10 @@ public class ImplClassStructure extends ImplInterfaceStructure {
                         .filter(ABSTRACT_METHOD_PREDICATE)
                         .map(MethodStructure::new)),
                 getAllAbstractNonPublicMethodStructures(token).stream()
-                ).flatMap(Function.identity()).collect(Collectors.toSet()).stream().toList();
+        ).flatMap(Function.identity())
+            .collect(Collectors.toSet())
+            .stream()
+            .toList();
 
     }
 
@@ -109,7 +112,7 @@ public class ImplClassStructure extends ImplInterfaceStructure {
      */
     static Stream<Constructor<?>> getNonPrivateConstructorsStream(final Class<?> token) {
         return Arrays.stream(token.getDeclaredConstructors())
-                .filter(NONPRIVATE_CONSTRUCTOR_PREDICATE);
+                .filter(NON_PRIVATE_CONSTRUCTOR_PREDICATE);
     }
 
     /**
@@ -123,6 +126,7 @@ public class ImplClassStructure extends ImplInterfaceStructure {
             return new HashSet<>();
         }
         final Set<MethodStructure> set = getAllAbstractNonPublicMethodStructures(superType.getSuperclass());
+        //set.addAll(superType.getMethods());
         Arrays.stream(superType.getDeclaredMethods())
                 .filter(ABSTRACT_AND_NONPUBLIC_METHOD_PREDICATE)
                 .map(MethodStructure::new)

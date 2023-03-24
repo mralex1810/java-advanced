@@ -91,11 +91,7 @@ public class MethodStructure {
     public String toString() {
         // :NOTE: какие переводы строк здесь генерируются?
         // :NOTE-ANSWER: fixed. Method from doc https://docs.oracle.com/en/java/javase/15/text-blocks/index.html
-        return String.format("""                
-                        %s%s%s%s(%s)%s {
-                            %s
-                        }
-                        """.indent(TABULATION_SIZE),
+        return String.format("%s%s%s%s(%s)%s {%n\t\t%s%n}".indent(TABULATION_SIZE),
                 overrideRepresentation(),
                 modifiersRepresentation(),
                 returnTypeRepresentation(),
@@ -103,7 +99,7 @@ public class MethodStructure {
                 parametersRepresentation(),
                 exceptionsRepresentation(),
                 bodyRepresentation()
-        ).replaceAll("\n", System.lineSeparator());
+        );
     }
 
 
@@ -115,6 +111,7 @@ public class MethodStructure {
     // :NOTE: лучше запихнуть переводы строк и табы в toString для единого вида
     // :NOTE-ANSWER: это, к сожалению, убьет форматирование. Или мы можем позволить себе лишние пробелы и строки?
     protected String overrideRepresentation() {
+        // :NOTE: пропали аннотации
         return "";
     }
 

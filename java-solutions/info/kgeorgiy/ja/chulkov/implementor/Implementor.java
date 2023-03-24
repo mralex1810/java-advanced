@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.security.ProtectionDomain;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -61,7 +62,7 @@ public class Implementor implements JarImpler {
             it -> Modifier.isPrivate(it.getModifiers()), "Can't implement private token",
             // :NOTE: а если интерфейс то что?
             // :NOTE-ANSWER: если у нас final интерфейс то мы можем его имплементировать, никаких проблем быть не должно
-            it -> !it.isInterface() && Modifier.isFinal(it.getModifiers()), "Superclass must be not final",
+            it -> Modifier.isFinal(it.getModifiers()), "Superclass must be not final",
             // :NOTE: а если интерфейс то что?
             // :NOTE-ANSWER: нам не нужно создавать инстанс интерфейса, поэтому нам не важны его конструкторы
             it -> !it.isInterface() && ImplClassStructure.getNonPrivateConstructorsStream(it).findAny().isEmpty(),
@@ -171,10 +172,11 @@ public class Implementor implements JarImpler {
      */
     private String getClassPath(final Class<?> token) {
         try {
-            if (token.getProtectionDomain() == null || token.getProtectionDomain().getCodeSource() == null) {
+            ProtectionDomain protectionDomain = token.getProtectionDomain();
+            if (protectionDomain == null || protectionDomain.getCodeSource() == null) {
                 return "";
             }
-            return Path.of(token.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
+            return Path.of(protectionDomain.getCodeSource().getLocation().toURI()).toString();
         } catch (final URISyntaxException | IllegalArgumentException | FileSystemNotFoundException e) {
             return "";
         }
@@ -254,6 +256,7 @@ public class Implementor implements JarImpler {
             final Path tempDir = Files.createTempDirectory("temp");
             try {
                 final Path javaFilePath = implementAndReturnFilePath(token, tempDir);
+                // :NOTE: передавать компилятору кодировку
                 final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
                 if (compiler == null) {
                     throw new ImplerException("Needs compiler to compile implementation");
