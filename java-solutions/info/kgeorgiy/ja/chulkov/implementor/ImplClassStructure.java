@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -15,8 +16,6 @@ import java.util.stream.Stream;
  * {@link ImplClassStructure#toString()}
  */
 public class ImplClassStructure extends ImplInterfaceStructure {
-
-
 
 
     /**
@@ -74,16 +73,15 @@ public class ImplClassStructure extends ImplInterfaceStructure {
      */
     private static List<? extends MethodStructure> getRequiredForImplementationMethods(final Class<?> token,
             final String name) {
-        final Set<MethodStructure> set = new HashSet<>();
-        getNonPrivateConstructorsStream(token)
-                .map(it -> new ConstructorStructure(it, name))
-                .forEach(set::add);
-        set.addAll(getAllAbstractNonPublicMethodStructures(token));
-        Arrays.stream(token.getMethods())
-                .filter(ABSTRACT_METHOD_PREDICATE)
-                .map(MethodStructure::new)
-                .forEach(set::add);
-        return set.stream().toList();
+        return Stream.of(
+                getNonPrivateConstructorsStream(token)
+                        .map(it -> (MethodStructure) new ConstructorStructure(it, name)),
+                getAllAbstractNonPublicMethodStructures(token).stream(),
+                Arrays.stream(token.getMethods())
+                        .filter(ABSTRACT_METHOD_PREDICATE)
+                        .map(MethodStructure::new)
+                ).flatMap(Function.identity()).toList();
+
     }
 
     /**
