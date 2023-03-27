@@ -21,6 +21,13 @@ public class ImplInterfaceStructure {
     protected static final Predicate<Method> ABSTRACT_METHOD_PREDICATE =
             method -> Modifier.isAbstract(method.getModifiers());
 
+    /**
+     * Predicate to check abstract or non-abstract {@link MethodStructure}.
+     * Returns true on abstract method
+     */
+    protected static final Predicate<MethodStructure> ABSTRACT_METHOD_STRUCTURE_PREDICATE =
+            method -> Modifier.isAbstract(method.modifiers);
+
 
     /**
      * Keeps name of implemented class
@@ -74,15 +81,11 @@ public class ImplInterfaceStructure {
      */
     @Override
     public String toString() {
-        return String.format("""
-                        public class %s %s {
-                                                
-                        %s}
-                        """,
+        return String.format("public class %s %s {%n%n%s}",
                 typeNamePresentation(),
                 implementingSuperTypePresentation(),
                 methodsPresentation()
-        ).replaceAll("\n", System.lineSeparator());
+        );
     }
 
     /**

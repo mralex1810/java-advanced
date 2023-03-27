@@ -1,14 +1,13 @@
 package info.kgeorgiy.ja.chulkov.implementor;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -21,15 +20,13 @@ public class ImplClassStructure extends ImplInterfaceStructure {
 
 
     /**
-     * Predicate to check abstract and non-public. Returns true if method is abstract and non-public
-     */
-    private static final Predicate<Method> ABSTRACT_AND_NONPUBLIC_METHOD_PREDICATE =
-            ABSTRACT_METHOD_PREDICATE.and(method -> !Modifier.isPublic(method.getModifiers()));
-    /**
      * Predicate to check non-private or private constructors. Returns true if method is non-private
      */
     private static final Predicate<Constructor<?>> NON_PRIVATE_CONSTRUCTOR_PREDICATE =
             it -> !Modifier.isPrivate(it.getModifiers());
+
+    private static final Comparator<MethodStructure> RETURN_TYPES_COVARIANT_COMPARATOR =
+            (a, b) -> a == b ? 0 : a.returnType.isAssignableFrom(b.returnType) ? 1 : -1;
 
     /**
      * Directly creates class
@@ -75,18 +72,16 @@ public class ImplClassStructure extends ImplInterfaceStructure {
      */
     private static List<? extends MethodStructure> getRequiredForImplementationMethods(final Class<?> token,
             final String name) {
-        return Stream.of(
+        final var methods = compressReturnedTypes(Arrays.stream(token.getMethods())
+                .map(MethodStructure::new))
+                .collect(Collectors.toSet());
+        addAllParentsMethodsToSet(methods, token);
+        return Stream.concat(
+                methods.stream()
+                        .filter(ABSTRACT_METHOD_STRUCTURE_PREDICATE),
                 getNonPrivateConstructorsStream(token)
-                        .map(it -> (MethodStructure) new ConstructorStructure(it, name)),
-                compressReturnedTypes(Arrays.stream(token.getMethods())
-                        .filter(ABSTRACT_METHOD_PREDICATE)
-                        .map(MethodStructure::new)),
-                getAllAbstractNonPublicMethodStructures(token).stream()
-        ).flatMap(Function.identity())
-            .collect(Collectors.toSet())
-            .stream()
-            .toList();
-
+                        .map(it -> new ConstructorStructure(it, name))
+        ).toList();
     }
 
     /**
@@ -95,13 +90,15 @@ public class ImplClassStructure extends ImplInterfaceStructure {
      * @param methods stream of methods
      * @return stream of compressed methods
      */
+    @SuppressWarnings("DataFlowIssue")
     private static Stream<MethodStructure> compressReturnedTypes(final Stream<MethodStructure> methods) {
         return methods
                 .collect(Collectors.groupingBy(it -> it, Collectors.toList()))
-                .values().stream()
-                .map(it -> it.stream().min((a, b) -> a == b ? 0 : a.returnType.isAssignableFrom(b.returnType) ? 1 : -1))
-                .map(Optional::get)
-        ;
+                .values()
+                .stream()
+                .map(Collection::stream)
+                .map(it -> it.min(RETURN_TYPES_COVARIANT_COMPARATOR))
+                .map(Optional::get);
     }
 
     /**
@@ -116,32 +113,26 @@ public class ImplClassStructure extends ImplInterfaceStructure {
     }
 
     /**
-     * Recursive get all methods that are abstract and non-public in {@code superType} from parents classes.
+     * Recursive get all methods that are abstract and non-public in {@code token} from parents classes.
      *
-     * @param superType token to get methods for
-     * @return set of {@link MethodStructure} that are abstract and non-public methods in {@code superType}
+     * @param token token to get methods for
+     * @return set of {@link MethodStructure} that are abstract and non-public methods in {@code token}
      */
-    private static Set<MethodStructure> getAllAbstractNonPublicMethodStructures(final Class<?> superType) {
-        if (superType == null) {
-            return new HashSet<>();
+    private static Set<MethodStructure> addAllParentsMethodsToSet(final Set<MethodStructure> methods,
+            final Class<?> token) {
+        if (token == null) {
+            return methods;
         }
-        final Set<MethodStructure> set = getAllAbstractNonPublicMethodStructures(superType.getSuperclass());
-        //set.addAll(superType.getMethods());
-        Arrays.stream(superType.getDeclaredMethods())
-                .filter(ABSTRACT_AND_NONPUBLIC_METHOD_PREDICATE)
+        Arrays.stream(token.getDeclaredMethods())
                 .map(MethodStructure::new)
-                .forEach(set::add);
+                .forEach(methods::add);
         // :NOTE: здесь точно есть что удалять?
         /* :NOTE-ANSWER: Да. Вот пример: {class A, class B extends A}
             abstract A.bar()
             final B.bar() {}
             В этом случае мы должны исключить bar() из множества абстрактных, так как не можем его реализовать
          */
-        Arrays.stream(superType.getDeclaredMethods())
-                .filter(ABSTRACT_AND_NONPUBLIC_METHOD_PREDICATE.negate())
-                .map(MethodStructure::new)
-                .forEach(set::remove);
-        return set;
+        return addAllParentsMethodsToSet(methods, token.getSuperclass());
     }
 
     /**

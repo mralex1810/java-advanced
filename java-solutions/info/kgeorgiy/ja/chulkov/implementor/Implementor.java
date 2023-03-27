@@ -172,7 +172,7 @@ public class Implementor implements JarImpler {
      */
     private String getClassPath(final Class<?> token) {
         try {
-            ProtectionDomain protectionDomain = token.getProtectionDomain();
+            final ProtectionDomain protectionDomain = token.getProtectionDomain();
             if (protectionDomain == null || protectionDomain.getCodeSource() == null) {
                 return "";
             }
@@ -262,6 +262,7 @@ public class Implementor implements JarImpler {
                     throw new ImplerException("Needs compiler to compile implementation");
                 }
                 final String[] args = Stream.of(javaFilePath.toString(),
+                                "-encoding", "UTF-8",
                                 "-sourcepath", tempDir.toString(),
                                 "-cp", getClassPath(token))
                         .toArray(String[]::new);
