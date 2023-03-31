@@ -6,6 +6,7 @@
 module info.kgeorgiy.ja.chulkov {
     requires info.kgeorgiy.java.advanced.student;
     requires info.kgeorgiy.java.advanced.implementor;
+    requires info.kgeorgiy.java.advanced.concurrent;
     requires java.compiler;
 
     exports info.kgeorgiy.ja.chulkov.implementor;
@@ -13,6 +14,8 @@ module info.kgeorgiy.ja.chulkov {
     exports info.kgeorgiy.ja.chulkov.student;
     exports info.kgeorgiy.ja.chulkov.walk;
 
+    opens info.kgeorgiy.ja.chulkov.concurrent to info.kgeorgiy.java.advanced.concurrent,
+            info.kgeorgiy.java.advanced.base;
     opens info.kgeorgiy.ja.chulkov.implementor to info.kgeorgiy.java.advanced.implementor,
             info.kgeorgiy.java.advanced.base;
     opens info.kgeorgiy.ja.chulkov.student to info.kgeorgiy.java.advanced.student, info.kgeorgiy.java.advanced.base;

@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -25,11 +26,15 @@ public class ImplClassStructure extends ImplInterfaceStructure {
     private static final Predicate<Constructor<?>> NON_PRIVATE_CONSTRUCTOR_PREDICATE =
             it -> !Modifier.isPrivate(it.getModifiers());
 
+    /**
+     * Compares {@link MethodStructure} by return types in covariant context. Returns 1 if {@code a.returnType} is
+     * assignable from {@code b.returnType}
+     */
     private static final Comparator<MethodStructure> RETURN_TYPES_COVARIANT_COMPARATOR =
             (a, b) -> a == b ? 0 : a.returnType.isAssignableFrom(b.returnType) ? 1 : -1;
 
     /**
-     * Directly creates class
+     * Directly creates class by fields
      *
      * @param typeName  same as {@link ImplInterfaceStructure#typeName}
      * @param superType same as {@link ImplInterfaceStructure#superType}
@@ -93,7 +98,7 @@ public class ImplClassStructure extends ImplInterfaceStructure {
     @SuppressWarnings("DataFlowIssue")
     private static Stream<MethodStructure> compressReturnedTypes(final Stream<MethodStructure> methods) {
         return methods
-                .collect(Collectors.groupingBy(it -> it, Collectors.toList()))
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.toList()))
                 .values()
                 .stream()
                 .map(Collection::stream)
