@@ -44,30 +44,33 @@ public class IterativeParallelism implements AdvancedIP {
             final Function<List<R>, R> collectorFunction
     ) throws InterruptedException {
         checkParameters(threads, values);
-        final List<OptionalNullable<R>> results =
-                new ArrayList<>(Collections.nCopies(threads, OptionalNullable.empty()));
 
-        final List<Thread> threadList = IntStream.range(0, threads)
+        final List<List<T>> subValuesList = IntStream.range(0, threads)
                 .boxed()
-                .<IndexedObject<List<T>>>mapMulti((index, consumer) -> {
+                .<List<T>>mapMulti((index, consumer) -> {
                     final List<T> subValues = getSubValues(threads, values, index);
                     if (!subValues.isEmpty()) {
-                        consumer.accept(new IndexedObject<>(index, subValues));
+                        consumer.accept(subValues);
                     }
-                })
-                .map(it -> new Thread(
-                        () -> results.set(it.index, OptionalNullable.of(threadTask.apply(it.value.stream())))))
+                }).toList();
+
+        final List<OptionalNullable<R>> results =
+                new ArrayList<>(Collections.nCopies(subValuesList.size(), OptionalNullable.empty()));
+
+        final List<Thread> threadList = IntStream.range(0, threads)
+                .mapToObj(it -> new Thread(
+                        () -> results.set(it, OptionalNullable.of(threadTask.apply(subValuesList.get(it).stream())))))
                 .toList();
 
         threadList.forEach(Thread::start);
         try {
-            for (final Thread indexedThread : threadList) {
+            for (final Thread thread : threadList) {
                 if (terminateExecutionPredicate.isPresent() &&
                         getObjectStreamForPresentedValues(results).anyMatch(terminateExecutionPredicate.get())) {
                     threadList.forEach(Thread::interrupt);
                     break;
                 }
-                indexedThread.join();
+                thread.join();
             }
         } catch (final InterruptedException e) {
             threadList.forEach(Thread::interrupt);
@@ -191,7 +194,4 @@ public class IterativeParallelism implements AdvancedIP {
 
     }
 
-    private record IndexedObject<T>(int index, T value) {
-
-    }
 }
