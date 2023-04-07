@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -20,8 +21,12 @@ import java.util.stream.Stream;
 public class IterativeParallelism implements AdvancedIP {
 
     private static <T> List<T> getSubValues(final int threads, final List<T> values, final int i) {
+        final int bucketSize = (values.size() + threads - 1) / threads;
         // :NOTE: not even
-        return values.subList(i * (values.size() / threads), Math.min((i + 1) * (values.size() / threads), values.size()));
+        return values.subList(
+                Math.min(i * bucketSize, values.size()),
+                Math.min((i + 1) * bucketSize, values.size())
+        );
     }
 
     private static <T> void checkParameters(final int threads, final List<? extends T> values) {
@@ -35,43 +40,63 @@ public class IterativeParallelism implements AdvancedIP {
             final int threads,
             final List<T> values,
             final Function<Stream<T>, R> threadTask,
-            final Predicate<R> terminateExecutionPredicate,
+            final Optional<Predicate<R>> terminateExecutionPredicate,
             final Function<List<R>, R> collectorFunction
     ) throws InterruptedException {
         checkParameters(threads, values);
         final List<OptionalNullable<R>> results =
                 new ArrayList<>(Collections.nCopies(threads, OptionalNullable.empty()));
 
-        final List<IndexedObject<Thread>> indexedThreadsList = IntStream.range(0, threads)
-                .mapToObj(i -> new IndexedObject<>(i, getSubValues(threads, values, i)))
-                .filter(it -> !it.value.isEmpty()) // :NOTE: simplify
-                .map(it -> new IndexedObject<>(it.index, new Thread(
-                        () -> results.set(it.index, OptionalNullable.of(threadTask.apply(it.value.stream()))))))
+        final List<Thread> threadList = IntStream.range(0, threads)
+                .boxed()
+                .<IndexedObject<List<T>>>mapMulti((index, consumer) -> {
+                    final List<T> subValues = getSubValues(threads, values, index);
+                    if (!subValues.isEmpty()) {
+                        consumer.accept(new IndexedObject<>(index, subValues));
+                    }
+                })
+                .map(it -> new Thread(
+                        () -> results.set(it.index, OptionalNullable.of(threadTask.apply(it.value.stream())))))
                 .toList();
 
-        indexedThreadsList.forEach(it -> it.value.start());
+        threadList.forEach(Thread::start);
         try {
-            for (final IndexedObject<Thread> indexedThread : indexedThreadsList) {
-                if (results.stream()
-                                .anyMatch(it -> it.isPresent && terminateExecutionPredicate.test(it.object))) {
-                    indexedThreadsList.forEach(it -> it.value.interrupt());
+            for (final Thread indexedThread : threadList) {
+                if (terminateExecutionPredicate.isPresent() &&
+                        getObjectStreamForPresentedValues(results).anyMatch(terminateExecutionPredicate.get())) {
+                    threadList.forEach(Thread::interrupt);
                     break;
                 }
-                indexedThread.value.join();
+                indexedThread.join();
             }
         } catch (final InterruptedException e) {
-            indexedThreadsList.forEach(it -> it.value.interrupt());
+            threadList.forEach(Thread::interrupt);
             throw e;
         }
 
-        return collectorFunction.apply(
-                results.stream().filter(OptionalNullable::isPresent).map(OptionalNullable::object).toList());
+        return collectorFunction.apply(getObjectStreamForPresentedValues(results).toList());
     }
 
-    protected static <T, R> R taskSchemaWithoutTerminating(final int threads, final List<T> values,
+    private static <R> Stream<R> getObjectStreamForPresentedValues(final List<OptionalNullable<R>> results) {
+        return results.stream()
+                .filter(OptionalNullable::isPresent)
+                .map(OptionalNullable::object);
+    }
+
+    protected static <T, R> R taskSchemaWithoutTerminating(
+            final int threads,
+            final List<T> values,
             final Function<Stream<T>, R> threadTask,
-            final Function<List<R>, R> collectorFunction) throws InterruptedException {
-        return taskSchema(threads, values, threadTask, it -> false, collectorFunction);
+            final Function<List<R>, R> collectorFunction
+    ) throws InterruptedException {
+        return taskSchema(threads, values, threadTask, Optional.empty(), collectorFunction);
+    }
+
+    private static <T, R> List<R> streamOperationSchema(final int threads, final List<? extends T> values,
+            final Function<Stream<? extends T>, Stream<? extends R>> operation) throws InterruptedException {
+        return taskSchemaWithoutTerminating(threads, values,
+                stream -> operation.apply(stream).collect(Collectors.toList()),
+                list -> list.stream().flatMap(List::stream).collect(Collectors.toList()));
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
@@ -84,7 +109,7 @@ public class IterativeParallelism implements AdvancedIP {
         // :NOTE: .orElse(null)
         return taskSchemaWithoutTerminating(threads, values,
                 stream -> stream.max(comparator).get(),
-                list -> list.stream().max(comparator).orElse(null));
+                list -> list.stream().max(comparator).get());
     }
 
     @Override
@@ -98,7 +123,7 @@ public class IterativeParallelism implements AdvancedIP {
             throws InterruptedException {
         return taskSchema(threads, values,
                 val -> val.allMatch(predicate),
-                it -> !it,
+                Optional.of(it -> !it),
                 list -> list.stream().allMatch(it -> it));
     }
 
@@ -107,40 +132,35 @@ public class IterativeParallelism implements AdvancedIP {
             throws InterruptedException {
         return taskSchema(threads, values,
                 stream -> stream.anyMatch(predicate),
-                it -> it,
+                Optional.of(it -> it),
                 list -> list.stream().anyMatch(it -> it));
     }
 
     @Override
     public <T> int count(final int threads, final List<? extends T> values, final Predicate<? super T> predicate)
             throws InterruptedException {
-        return taskSchemaWithoutTerminating(threads, values,
-                stream -> (int) stream.filter(predicate).count(),
-                list -> list.stream().mapToInt(it -> it).sum());
+        return mapReduce(threads, values, (it) -> predicate.test(it) ? 1 : 0, new Monoid<>(0, Integer::sum));
     }
 
     @Override
     public String join(final int threads, final List<?> values) throws InterruptedException {
-        return taskSchemaWithoutTerminating(threads, values,
-                stream -> stream.map(Objects::toString).collect(Collectors.joining()),
-                list -> String.join("", list));
+        return mapReduce(threads, values,
+                Object::toString,
+                new Monoid<>("", String::concat)
+        );
     }
 
     @Override
     public <T> List<T> filter(final int threads, final List<? extends T> values, final Predicate<? super T> predicate)
             throws InterruptedException {
         // :NOTE: copy-paste
-        return taskSchemaWithoutTerminating(threads, values,
-                stream -> stream.filter(predicate).collect(Collectors.toList()),
-                list -> list.stream().flatMap(List::stream).collect(Collectors.toList()));
+        return streamOperationSchema(threads, values, stream -> stream.filter(predicate));
     }
 
     @Override
     public <T, U> List<U> map(final int threads, final List<? extends T> values,
             final Function<? super T, ? extends U> f) throws InterruptedException {
-        return taskSchemaWithoutTerminating(threads, values,
-                stream -> stream.map(f).collect(Collectors.toList()),
-                list -> list.stream().flatMap(List::stream).collect(Collectors.toList()));
+        return streamOperationSchema(threads, values, stream -> stream.map(f));
     }
 
     @Override
@@ -159,8 +179,10 @@ public class IterativeParallelism implements AdvancedIP {
 
     private record OptionalNullable<R>(R object, boolean isPresent) {
 
+        public static final OptionalNullable EMPTY = new OptionalNullable(null, false);
+
         public static <R> OptionalNullable<R> empty() {
-            return new OptionalNullable<>(null, false);
+            return EMPTY;
         }
 
         public static <R> OptionalNullable<R> of(final R object) {
