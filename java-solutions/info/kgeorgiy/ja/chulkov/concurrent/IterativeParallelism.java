@@ -20,10 +20,8 @@ import java.util.stream.Stream;
 public class IterativeParallelism implements AdvancedIP {
 
     private static <T> List<T> getSubValues(final int threads, final List<T> values, final int i) {
-        if (i == threads - 1) {
-            return values.subList(i * (values.size() / threads), values.size());
-        }
-        return values.subList(i * (values.size() / threads), (i + 1) * (values.size() / threads));
+        // :NOTE: not even
+        return values.subList(i * (values.size() / threads), Math.min((i + 1) * (values.size() / threads), values.size()));
     }
 
     private static <T> void checkParameters(final int threads, final List<? extends T> values) {
@@ -33,19 +31,24 @@ public class IterativeParallelism implements AdvancedIP {
         }
     }
 
-    protected static <T, R> R taskSchema(final int threads, final List<T> values,
+    protected static <T, R> R taskSchema(
+            final int threads,
+            final List<T> values,
             final Function<Stream<T>, R> threadTask,
             final Predicate<R> terminateExecutionPredicate,
-            final Function<List<R>, R> collectorFunction) throws InterruptedException {
+            final Function<List<R>, R> collectorFunction
+    ) throws InterruptedException {
         checkParameters(threads, values);
         final List<OptionalNullable<R>> results =
                 new ArrayList<>(Collections.nCopies(threads, OptionalNullable.empty()));
+
         final List<IndexedObject<Thread>> indexedThreadsList = IntStream.range(0, threads)
                 .mapToObj(i -> new IndexedObject<>(i, getSubValues(threads, values, i)))
-                .filter(it -> !it.value.isEmpty())
+                .filter(it -> !it.value.isEmpty()) // :NOTE: simplify
                 .map(it -> new IndexedObject<>(it.index, new Thread(
                         () -> results.set(it.index, OptionalNullable.of(threadTask.apply(it.value.stream()))))))
                 .toList();
+
         indexedThreadsList.forEach(it -> it.value.start());
         try {
             for (final IndexedObject<Thread> indexedThread : indexedThreadsList) {
@@ -60,6 +63,7 @@ public class IterativeParallelism implements AdvancedIP {
             indexedThreadsList.forEach(it -> it.value.interrupt());
             throw e;
         }
+
         return collectorFunction.apply(
                 results.stream().filter(OptionalNullable::isPresent).map(OptionalNullable::object).toList());
     }
@@ -77,6 +81,7 @@ public class IterativeParallelism implements AdvancedIP {
         if (values.isEmpty()) {
             throw new NoSuchElementException();
         }
+        // :NOTE: .orElse(null)
         return taskSchemaWithoutTerminating(threads, values,
                 stream -> stream.max(comparator).get(),
                 list -> list.stream().max(comparator).orElse(null));
@@ -124,6 +129,7 @@ public class IterativeParallelism implements AdvancedIP {
     @Override
     public <T> List<T> filter(final int threads, final List<? extends T> values, final Predicate<? super T> predicate)
             throws InterruptedException {
+        // :NOTE: copy-paste
         return taskSchemaWithoutTerminating(threads, values,
                 stream -> stream.filter(predicate).collect(Collectors.toList()),
                 list -> list.stream().flatMap(List::stream).collect(Collectors.toList()));
@@ -166,5 +172,4 @@ public class IterativeParallelism implements AdvancedIP {
     private record IndexedObject<T>(int index, T value) {
 
     }
-
 }
