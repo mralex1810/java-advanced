@@ -1,5 +1,6 @@
 package info.kgeorgiy.ja.chulkov.concurrent;
 
+import info.kgeorgiy.java.advanced.concurrent.AdvancedIP;
 import info.kgeorgiy.java.advanced.concurrent.ListIP;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,7 +17,7 @@ import java.util.stream.Stream;
 /**
  * Implementation of {@link ListIP}
  */
-public class IterativeParallelism implements ListIP {
+public class IterativeParallelism implements AdvancedIP {
 
     private static <T> List<T> getSubValues(final int threads, final List<T> values, final int i) {
         if (i == threads - 1) {
@@ -134,6 +135,20 @@ public class IterativeParallelism implements ListIP {
         return taskSchemaWithoutTerminating(threads, values,
                 stream -> stream.map(f).collect(Collectors.toList()),
                 list -> list.stream().flatMap(List::stream).collect(Collectors.toList()));
+    }
+
+    @Override
+    public <T> T reduce(final int threads, final List<T> values, final Monoid<T> monoid) throws InterruptedException {
+        return mapReduce(threads, values, Function.identity(), monoid);
+    }
+
+    @Override
+    public <T, R> R mapReduce(final int threads, final List<T> values, final Function<T, R> lift,
+            final Monoid<R> monoid) throws InterruptedException {
+        return taskSchemaWithoutTerminating(threads, values,
+                stream -> stream.map(lift).reduce(monoid.getIdentity(), monoid.getOperator()),
+                stream -> stream.stream().reduce(monoid.getIdentity(), monoid.getOperator())
+        );
     }
 
     private record OptionalNullable<R>(R object, boolean isPresent) {
