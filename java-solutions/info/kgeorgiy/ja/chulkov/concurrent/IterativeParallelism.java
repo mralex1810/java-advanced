@@ -20,13 +20,24 @@ import java.util.stream.Stream;
  */
 public class IterativeParallelism implements AdvancedIP {
 
-    private static <T> List<T> getSubValues(final int threads, final List<T> values, final int i) {
-        final int bucketSize = (values.size() + threads - 1) / threads;
-        // :NOTE: not even
-        return values.subList(
-                Math.min(i * bucketSize, values.size()),
-                Math.min((i + 1) * bucketSize, values.size())
-        );
+    // :NOTE: not even
+    private static <T> List<List<T>> generateSubValuesList(final int threads, final List<T> values) {
+        final int smallBucketSize = values.size() / threads;
+        final int bigBucketSize = smallBucketSize + 1;
+        final int bigBuckets = values.size() % threads;
+        final int buckets = smallBucketSize == 0 ? bigBuckets : threads;
+        int start = 0;
+        final List<List<T>> subValuesList = new ArrayList<>(buckets);
+        for (int i = 0; i < buckets; i++) {
+            final int step = (i < bigBuckets ? bigBucketSize : smallBucketSize);
+            subValuesList.add(values.subList(
+                    start,
+                    start + step
+            ));
+            start += step;
+        }
+        return subValuesList;
+
     }
 
     private static <T> void checkParameters(final int threads, final List<? extends T> values) {
@@ -41,26 +52,18 @@ public class IterativeParallelism implements AdvancedIP {
             final List<T> values,
             final Function<Stream<T>, R> threadTask,
             final Optional<Predicate<R>> terminateExecutionPredicate,
-            final Function<List<R>, R> collectorFunction
+            final Function<Stream<R>, R> collectorFunction
     ) throws InterruptedException {
         checkParameters(threads, values);
 
-        final List<List<T>> subValuesList = IntStream.range(0, threads)
-                .boxed()
-                .<List<T>>mapMulti((index, consumer) -> {
-                    final List<T> subValues = getSubValues(threads, values, index);
-                    if (!subValues.isEmpty()) {
-                        consumer.accept(subValues);
-                    }
-                }).toList();
-
+        final List<List<T>> subValuesList = generateSubValuesList(threads, values);
         final List<OptionalNullable<R>> results =
                 new ArrayList<>(Collections.nCopies(subValuesList.size(), OptionalNullable.empty()));
 
         final List<Thread> threadList = IntStream.range(0, threads)
                 .mapToObj(it -> new Thread(
-                        () -> results.set(it, OptionalNullable.of(threadTask.apply(subValuesList.get(it).stream())))))
-                .toList();
+                        () -> results.set(it, OptionalNullable.of(threadTask.apply(subValuesList.get(it).stream())))
+                )).toList();
 
         threadList.forEach(Thread::start);
         try {
@@ -77,7 +80,7 @@ public class IterativeParallelism implements AdvancedIP {
             throw e;
         }
 
-        return collectorFunction.apply(getObjectStreamForPresentedValues(results).toList());
+        return collectorFunction.apply(getObjectStreamForPresentedValues(results));
     }
 
     private static <R> Stream<R> getObjectStreamForPresentedValues(final List<OptionalNullable<R>> results) {
@@ -90,7 +93,7 @@ public class IterativeParallelism implements AdvancedIP {
             final int threads,
             final List<T> values,
             final Function<Stream<T>, R> threadTask,
-            final Function<List<R>, R> collectorFunction
+            final Function<Stream<R>, R> collectorFunction
     ) throws InterruptedException {
         return taskSchema(threads, values, threadTask, Optional.empty(), collectorFunction);
     }
@@ -99,7 +102,7 @@ public class IterativeParallelism implements AdvancedIP {
             final Function<Stream<? extends T>, Stream<? extends R>> operation) throws InterruptedException {
         return taskSchemaWithoutTerminating(threads, values,
                 stream -> operation.apply(stream).collect(Collectors.toList()),
-                list -> list.stream().flatMap(List::stream).collect(Collectors.toList()));
+                stream -> stream.flatMap(List::stream).collect(Collectors.toList()));
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
@@ -112,7 +115,7 @@ public class IterativeParallelism implements AdvancedIP {
         // :NOTE: .orElse(null)
         return taskSchemaWithoutTerminating(threads, values,
                 stream -> stream.max(comparator).get(),
-                list -> list.stream().max(comparator).get());
+                stream -> stream.max(comparator).get());
     }
 
     @Override
@@ -127,7 +130,7 @@ public class IterativeParallelism implements AdvancedIP {
         return taskSchema(threads, values,
                 val -> val.allMatch(predicate),
                 Optional.of(it -> !it),
-                list -> list.stream().allMatch(it -> it));
+                stream -> stream.allMatch(it -> it));
     }
 
     @Override
@@ -136,7 +139,7 @@ public class IterativeParallelism implements AdvancedIP {
         return taskSchema(threads, values,
                 stream -> stream.anyMatch(predicate),
                 Optional.of(it -> it),
-                list -> list.stream().anyMatch(it -> it));
+                stream -> stream.anyMatch(it -> it));
     }
 
     @Override
@@ -176,16 +179,17 @@ public class IterativeParallelism implements AdvancedIP {
             final Monoid<R> monoid) throws InterruptedException {
         return taskSchemaWithoutTerminating(threads, values,
                 stream -> stream.map(lift).reduce(monoid.getIdentity(), monoid.getOperator()),
-                stream -> stream.stream().reduce(monoid.getIdentity(), monoid.getOperator())
+                stream -> stream.reduce(monoid.getIdentity(), monoid.getOperator())
         );
     }
 
     private record OptionalNullable<R>(R object, boolean isPresent) {
 
-        public static final OptionalNullable EMPTY = new OptionalNullable(null, false);
+        private static final OptionalNullable<?> EMPTY = new OptionalNullable<>(null, false);
 
+        @SuppressWarnings("unchecked")
         public static <R> OptionalNullable<R> empty() {
-            return EMPTY;
+            return (OptionalNullable<R>) EMPTY;
         }
 
         public static <R> OptionalNullable<R> of(final R object) {

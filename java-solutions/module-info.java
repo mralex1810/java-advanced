@@ -7,8 +7,10 @@ module info.kgeorgiy.ja.chulkov {
     requires info.kgeorgiy.java.advanced.student;
     requires info.kgeorgiy.java.advanced.implementor;
     requires info.kgeorgiy.java.advanced.concurrent;
+    requires info.kgeorgiy.java.advanced.mapper;
     requires java.compiler;
 
+    exports info.kgeorgiy.ja.chulkov.concurrent;
     exports info.kgeorgiy.ja.chulkov.implementor;
     exports info.kgeorgiy.ja.chulkov.arrayset;
     exports info.kgeorgiy.ja.chulkov.student;
