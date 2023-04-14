@@ -73,20 +73,7 @@ public class ParallelMapperImpl implements ParallelMapper {
     @Override
     public void close() {
         threads.forEach(Thread::interrupt);
-        RuntimeException exception = null;
-        for (final Thread thread : threads) {
-            try {
-                thread.join();
-            } catch (final InterruptedException e) {
-                if (exception == null) {
-                    exception = new RuntimeException("Tried to interrupt in close");
-                }
-                exception.addSuppressed(e);
-            }
-        }
-        if (exception != null) {
-            throw exception;
-        }
+        IterativeParallelism.joinThreadsWithSuppressAndTerminate(() -> false, threads);
 
     }
 

@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -121,6 +122,26 @@ public class IterativeParallelism implements AdvancedIP {
         );
     }
 
+    static void joinThreadsWithSuppressAndTerminate(final BooleanSupplier toTerminate, final List<Thread> threadList) {
+        RuntimeException exception = null;
+        for (final Thread thread : threadList) {
+            try {
+                if (toTerminate.getAsBoolean()) {
+                    threadList.forEach(Thread::interrupt);
+                }
+                thread.join();
+            } catch (final InterruptedException e) {
+                if (exception == null) {
+                    exception = new RuntimeException("Tried to interrupt in close");
+                }
+                exception.addSuppressed(e);
+            }
+        }
+        if (exception != null) {
+            throw exception;
+        }
+    }
+
     private static class IterativeParallelismBaseWithMapper extends IterativeParallelismBase {
 
         private final ParallelMapper parallelMapper;
@@ -139,6 +160,15 @@ public class IterativeParallelism implements AdvancedIP {
         ) throws InterruptedException {
             return collectorFunction.apply(
                     parallelMapper.map(threadTask, generateSubValuesStreams(threads, values)).stream());
+        }
+
+        @Override
+        protected <T, R> Stream<R> map(
+                final Function<Stream<T>, R> threadTask,
+                final Predicate<R> terminateExecutionPredicate,
+                final List<Stream<T>> subValuesStreams
+        ) throws InterruptedException {
+            return parallelMapper.map(threadTask, subValuesStreams).stream();
         }
     }
 
@@ -161,7 +191,7 @@ public class IterativeParallelism implements AdvancedIP {
             return subValuesList;
         }
 
-        private static <T, R> Stream<R> map(
+        protected <T, R> Stream<R> map(
                 final Function<Stream<T>, R> threadTask,
                 final Predicate<R> terminateExecutionPredicate,
                 final List<Stream<T>> subValuesStreams
@@ -180,23 +210,7 @@ public class IterativeParallelism implements AdvancedIP {
                     }
                     )).toList();
             threadList.forEach(Thread::start);
-            RuntimeException exception = null;
-            for (final Thread thread : threadList) {
-                try {
-                    if (terminate.isTrue()) {
-                        threadList.forEach(Thread::interrupt);
-                    }
-                    thread.join();
-                } catch (final InterruptedException e) {
-                    if (exception == null) {
-                        exception = new RuntimeException("Tried to interrupt in close");
-                    }
-                    exception.addSuppressed(e);  // :NOTE: join
-                }
-            }
-            if (exception != null) {
-                throw exception;
-            }
+            joinThreadsWithSuppressAndTerminate(terminate::isTrue, threadList);  // :NOTE: join
             return results.stream();
         }
 
