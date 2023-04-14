@@ -7,13 +7,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 /**
  * Implementation of {@link ParallelMapper}
  */
 public class ParallelMapperImpl implements ParallelMapper {
 
-    private static final int MAX_QUEUE_SIZE = 2;
     private final Queue<Runnable> tasksQueue;
     private final List<Thread> threads;
 
@@ -39,13 +39,8 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
     }
 
-    private synchronized void addTask(final Runnable task) throws InterruptedException {
-        while (tasksQueue.size() > MAX_QUEUE_SIZE) {
-            tasksQueue.wait();
-        }
-        synchronized (tasksQueue) {
-            tasksQueue.add(task);
-        }
+    private void addTask(final Runnable task) {
+        tasksQueue.add(task);
         notify();
     }
 
@@ -54,11 +49,7 @@ public class ParallelMapperImpl implements ParallelMapper {
         while (tasksQueue.isEmpty()) {
             wait();
         }
-        synchronized (tasksQueue) {
-            final var res = tasksQueue.poll();
-            tasksQueue.notify();
-            return res;
-        }
+        return tasksQueue.poll();
     }
 
     public <T, R> List<R> map(
@@ -66,16 +57,17 @@ public class ParallelMapperImpl implements ParallelMapper {
             final List<? extends T> args
     ) throws InterruptedException {
         final Results<R> results = new Results<>(args.size());
-        for (int i = 0; i < args.size(); i++) {
-            final int finalI = i;
-            addTask(() -> {
-                try {
-                    results.setResult(finalI, f.apply(args.get(finalI)));
-                } catch (final RuntimeException e) {
-                    results.setException(new RuntimeException("Error on mapping", e));
-                }
-            });
+        synchronized (this) {
+            IntStream.range(0, args.size())
+                    .forEach(index -> addTask(() -> {
+                        try {
+                            results.setResult(index, f.apply(args.get(index)));
+                        } catch (final RuntimeException e) {
+                            results.setException(new RuntimeException("Error on mapping", e));
+                        }
+                    }));
         }
+
         return results.getResults();
     }
 
@@ -85,7 +77,6 @@ public class ParallelMapperImpl implements ParallelMapper {
         RuntimeException exception = null;
         for (final Thread thread : threads) {
             try {
-
                 thread.join();
             } catch (final InterruptedException e) {
                 if (exception == null) {
@@ -115,14 +106,14 @@ public class ParallelMapperImpl implements ParallelMapper {
             synchronized (this) {
                 resultsCount++;
                 if (resultsCount == results.size()) {
-                    this.notify();
+                    notify();
                 }
             }
         }
 
         synchronized List<R> getResults() throws InterruptedException {
             while (resultsCount < results.size() && exception == null) {
-                this.wait();
+                wait();
             }
             if (exception != null) {
                 throw exception;
@@ -132,7 +123,7 @@ public class ParallelMapperImpl implements ParallelMapper {
 
         synchronized void setException(final RuntimeException exception) {
             this.exception = exception;
-            this.notify();
+            notify();
         }
     }
 }
