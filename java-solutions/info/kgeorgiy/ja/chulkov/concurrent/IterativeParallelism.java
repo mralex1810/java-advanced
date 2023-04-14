@@ -193,7 +193,7 @@ public class IterativeParallelism implements AdvancedIP {
                         // :NOTE: action order
                         results.set(it, result);
                         if (terminateExecutionPredicate != null && terminateExecutionPredicate.test(result)) {
-                            terminate.setBool(true);
+                            terminate.set(true);
                         }
                     }
                     )).toList();
@@ -237,15 +237,15 @@ public class IterativeParallelism implements AdvancedIP {
 
         private volatile boolean bool;
 
-        public VolatileBoolean(final boolean b) {
-            bool = b;
+        public VolatileBoolean(final boolean bool) {
+            this.bool = bool;
         }
 
         public boolean isTrue() {
             return bool;
         }
 
-        public void setBool(final boolean bool) {
+        public void set(final boolean bool) {
             this.bool = bool;
         }
     }
