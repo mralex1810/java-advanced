@@ -244,35 +244,4 @@ public class IterativeParallelism implements AdvancedIP {
         }
     }
 
-    private static class IterativeParallelismBaseWithoutTerminating extends IterativeParallelismBase {
-
-        @Override
-        protected <T, R> R taskSchema(
-                final int threads,
-                final List<T> values,
-                final Function<Stream<T>, R> threadTask,
-                final Predicate<R> terminateExecutionPredicate, final
-        Function<Stream<R>, R> collectorFunction)
-                throws InterruptedException {
-            final List<Stream<T>> subValuesStreams = generateSubValuesStreams(threads, values);
-            final List<R> results =
-                    new ArrayList<>(Collections.nCopies(subValuesStreams.size(), null));
-            final List<Thread> threadList = IntStream.range(0, threads)
-                    .mapToObj(it -> new Thread(
-                            () -> results.set(it, threadTask.apply(subValuesStreams.get(it)))
-                    )).toList();
-            threadList.forEach(Thread::start);
-            try {
-                for (final Thread thread : threadList) {
-                    thread.join();
-                }
-            } catch (final InterruptedException e) {
-                threadList.forEach(Thread::interrupt);
-                throw e;
-            }
-
-            return collectorFunction.apply(results.stream());
-        }
-    }
-
 }
