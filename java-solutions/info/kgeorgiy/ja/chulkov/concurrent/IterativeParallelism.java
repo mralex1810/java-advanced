@@ -190,7 +190,7 @@ public class IterativeParallelism implements AdvancedIP {
             final List<Stream<T>> subValuesStreams = generateSubValuesStreams(threads, values);
             final List<OptionalNullable<R>> results =
                     new ArrayList<>(Collections.nCopies(subValuesStreams.size(), OptionalNullable.empty()));
-            final List<Thread> threadList = IntStream.range(0, threads)
+            final List<Thread> threadList = IntStream.range(0, subValuesStreams.size())
                     .mapToObj(it -> new Thread(
                             () -> results.set(it, OptionalNullable.of(threadTask.apply(subValuesStreams.get(it))))
                     )).toList();
