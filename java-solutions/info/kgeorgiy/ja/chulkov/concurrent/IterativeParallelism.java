@@ -173,10 +173,11 @@ public class IterativeParallelism implements AdvancedIP {
             final List<Thread> threadList = IntStream.range(0, subValuesStreams.size())
                     .mapToObj(it -> new Thread(() -> {
                         final var result = threadTask.apply(subValuesStreams.get(it));
+                        // :NOTE: action order
+                        results.set(it, result);
                         if (terminateExecutionPredicate.test(result)) {
                             terminate.setBool(true);
                         }
-                        results.set(it, result);
                     }
                     )).toList();
             threadList.forEach(Thread::start);
@@ -243,5 +244,4 @@ public class IterativeParallelism implements AdvancedIP {
             this.bool = bool;
         }
     }
-
 }

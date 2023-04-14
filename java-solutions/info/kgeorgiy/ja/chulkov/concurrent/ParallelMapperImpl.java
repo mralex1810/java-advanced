@@ -13,7 +13,7 @@ import java.util.function.Function;
  */
 public class ParallelMapperImpl implements ParallelMapper {
 
-    private static final int MAX_QUEUE_SIZE = 1 << 20;
+    private static final int MAX_QUEUE_SIZE = 2;
     private final Queue<Runnable> tasksQueue;
     private final List<Thread> threads;
 
@@ -49,6 +49,7 @@ public class ParallelMapperImpl implements ParallelMapper {
         notify();
     }
 
+    // :NOTE: double synchronization
     private synchronized Runnable getTask() throws InterruptedException {
         while (tasksQueue.isEmpty()) {
             wait();
