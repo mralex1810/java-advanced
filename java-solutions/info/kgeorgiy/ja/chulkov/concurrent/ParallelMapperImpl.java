@@ -67,7 +67,13 @@ public class ParallelMapperImpl implements ParallelMapper {
         final Results<R> results = new Results<>(args.size());
         for (int i = 0; i < args.size(); i++) {
             final int finalI = i;
-            addTask(() -> results.setResult(finalI, f.apply(args.get(finalI))));
+            addTask(() -> {
+                try {
+                    results.setResult(finalI, f.apply(args.get(finalI)));
+                } catch (final RuntimeException e) {
+                    results.setException(new RuntimeException("Error on mapping", e));
+                }
+            });
         }
         return results.getResults();
     }
@@ -80,7 +86,7 @@ public class ParallelMapperImpl implements ParallelMapper {
                 thread.join();
             }
         } catch (final InterruptedException e) {
-            System.err.println("Thread was interrupted on closing: " + e.getMessage());
+            throw new RuntimeException("Thread was interrupted on closing: ", e);
         }
     }
 
@@ -88,6 +94,7 @@ public class ParallelMapperImpl implements ParallelMapper {
 
         private final List<R> results;
         private int resultsCount;
+        private RuntimeException exception = null;
 
         private Results(final int size) {
             results = new ArrayList<>(Collections.nCopies(size, null));
@@ -104,10 +111,18 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
 
         synchronized List<R> getResults() throws InterruptedException {
-            while (resultsCount < results.size()) {
+            while (resultsCount < results.size() && exception == null) {
                 this.wait();
             }
+            if (exception != null) {
+                throw exception;
+            }
             return results;
+        }
+
+        synchronized void setException(final RuntimeException exception) {
+            this.exception = exception;
+            this.notify();
         }
     }
 }
