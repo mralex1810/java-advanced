@@ -67,7 +67,6 @@ public class ParallelMapperImpl implements ParallelMapper {
                         }
                     }));
         }
-
         return results.getResults();
     }
 

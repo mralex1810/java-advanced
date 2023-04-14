@@ -147,15 +147,14 @@ public class IterativeParallelism implements AdvancedIP {
         static <T> List<Stream<T>> generateSubValuesStreams(final int threads, final List<T> values) {
             IterativeParallelism.checkThreads(threads);
             Objects.requireNonNull(values);
-            final int smallBucketSize = values.size() / threads;
-            final int bigBucketSize = smallBucketSize + 1;
-            final int bigBuckets = values.size() % threads;
+            final int bucketSize = values.size() / threads;
+            int rest = values.size() % threads;
             // :NOTE: simplify
-            final int buckets = smallBucketSize == 0 ? bigBuckets : threads;
+            final int buckets = bucketSize == 0 ? rest : threads;
             int start = 0;
             final List<Stream<T>> subValuesList = new ArrayList<>(buckets);
             for (int i = 0; i < buckets; i++) {
-                final int step = (i < bigBuckets ? bigBucketSize : smallBucketSize);
+                final int step = bucketSize + (--rest >= 0 ? 1 : 0);
                 subValuesList.add(values.subList(start, start + step).stream());
                 start += step;
             }
@@ -175,25 +174,29 @@ public class IterativeParallelism implements AdvancedIP {
                         final var result = threadTask.apply(subValuesStreams.get(it));
                         // :NOTE: action order
                         results.set(it, result);
-                        if (terminateExecutionPredicate.test(result)) {
+                        if (terminateExecutionPredicate != null && terminateExecutionPredicate.test(result)) {
                             terminate.setBool(true);
                         }
                     }
                     )).toList();
             threadList.forEach(Thread::start);
+            RuntimeException exception = null;
             for (final Thread thread : threadList) {
-                if (terminate.isTrue()) {
-
-                    threadList.forEach(Thread::interrupt);
-                }
                 try {
+                    if (terminate.isTrue()) {
+                        threadList.forEach(Thread::interrupt);
+                    }
                     thread.join();
                 } catch (final InterruptedException e) {
-                    threadList.forEach(Thread::interrupt); // :NOTE: join
-                    throw e;
+                    if (exception == null) {
+                        exception = new RuntimeException("Tried to interrupt in close");
+                    }
+                    exception.addSuppressed(e);  // :NOTE: join
                 }
             }
-
+            if (exception != null) {
+                throw exception;
+            }
             return results.stream();
         }
 
