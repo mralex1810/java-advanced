@@ -162,6 +162,40 @@ public class IterativeParallelism implements AdvancedIP {
             return subValuesList;
         }
 
+        private static <T, R> Stream<R> map(
+                final Function<Stream<T>, R> threadTask,
+                final Predicate<R> terminateExecutionPredicate,
+                final List<Stream<T>> subValuesStreams
+        ) throws InterruptedException {
+            final VolatileBoolean terminate = new VolatileBoolean(false);
+            final List<R> results =
+                    new ArrayList<>(Collections.nCopies(subValuesStreams.size(), null));
+            final List<Thread> threadList = IntStream.range(0, subValuesStreams.size())
+                    .mapToObj(it -> new Thread(() -> {
+                        final var result = threadTask.apply(subValuesStreams.get(it));
+                        if (terminateExecutionPredicate.test(result)) {
+                            terminate.setBool(true);
+                        }
+                        results.set(it, result);
+                    }
+                    )).toList();
+            threadList.forEach(Thread::start);
+            for (final Thread thread : threadList) {
+                if (terminate.isTrue()) {
+
+                    threadList.forEach(Thread::interrupt);
+                }
+                try {
+                    thread.join();
+                } catch (final InterruptedException e) {
+                    threadList.forEach(Thread::interrupt); // :NOTE: join
+                    throw e;
+                }
+            }
+
+            return results.stream();
+        }
+
         protected <T, R> R taskSchema(
                 final int threads,
                 final List<T> values,
@@ -174,40 +208,6 @@ public class IterativeParallelism implements AdvancedIP {
                     terminateExecutionPredicate,
                     generateSubValuesStreams(threads, values)
             ));
-        }
-
-        private static <T, R> Stream<R> map(
-                final Function<Stream<T>, R> threadTask,
-                final Predicate<R> terminateExecutionPredicate,
-                final List<Stream<T>> subValuesStreams
-        ) throws InterruptedException {
-            final VolatileBoolean terminate = new VolatileBoolean(false);
-            final List<R> results =
-                    new ArrayList<>(Collections.nCopies(subValuesStreams.size(), null));
-            final List<Thread> threadList = IntStream.range(0, subValuesStreams.size())
-                    .mapToObj(it -> new Thread(() -> {
-                                final var result = threadTask.apply(subValuesStreams.get(it));
-                                if (terminateExecutionPredicate.test(result)) {
-                                    terminate.setBool(true);
-                                }
-                                results.set(it, result);
-                            }
-                    )).toList();
-            threadList.forEach(Thread::start);
-            try {
-                for (final Thread thread : threadList) {
-                    if (terminate.isTrue()) {
-                        threadList.forEach(Thread::interrupt);
-                        break;
-                    }
-                    thread.join();
-                }
-            } catch (final InterruptedException e) {
-                threadList.forEach(Thread::interrupt); // :NOTE: join
-                throw e;
-            }
-
-            return results.stream();
         }
 
         protected <T, R> R taskSchemaWithoutTerminating(
@@ -228,6 +228,7 @@ public class IterativeParallelism implements AdvancedIP {
     }
 
     private static class VolatileBoolean {
+
         private volatile boolean bool;
 
         public VolatileBoolean(final boolean b) {
