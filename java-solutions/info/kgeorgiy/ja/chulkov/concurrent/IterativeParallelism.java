@@ -8,7 +8,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -122,26 +121,6 @@ public class IterativeParallelism implements AdvancedIP {
         );
     }
 
-    static void joinThreadsWithSuppressAndTerminate(final BooleanSupplier toTerminate, final List<Thread> threadList) {
-        RuntimeException exception = null;
-        for (final Thread thread : threadList) {
-            try {
-                if (toTerminate.getAsBoolean()) {
-                    threadList.forEach(Thread::interrupt);
-                }
-                thread.join();
-            } catch (final InterruptedException e) {
-                if (exception == null) {
-                    exception = new RuntimeException("Tried to interrupt in close");
-                }
-                exception.addSuppressed(e);
-            }
-        }
-        if (exception != null) {
-            throw exception;
-        }
-    }
-
     private static class IterativeParallelismBaseWithMapper extends IterativeParallelismBase {
 
         private final ParallelMapper parallelMapper;
@@ -198,7 +177,23 @@ public class IterativeParallelism implements AdvancedIP {
                     }
                     )).toList();
             threadList.forEach(Thread::start);
-            joinThreadsWithSuppressAndTerminate(terminate::isTrue, threadList);  // :NOTE: join
+            InterruptedException exception = null;
+            for (final Thread thread : threadList) {
+                try {
+                    if (terminate.isTrue()) {
+                        threadList.forEach(Thread::interrupt);
+                    }
+                    thread.join();
+                } catch (final InterruptedException e) {
+                    if (exception == null) { // :NOTE: join
+                        exception = e;
+                    }
+                    exception.addSuppressed(e);
+                }
+            }
+            if (exception != null) {
+                throw exception;
+            }
             return results.stream();
         }
 
