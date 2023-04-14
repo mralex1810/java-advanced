@@ -164,8 +164,7 @@ public class IterativeParallelism implements AdvancedIP {
                 final List<Stream<T>> subValuesStreams
         ) throws InterruptedException {
             final VolatileBoolean terminate = new VolatileBoolean(false);
-            final List<R> results =
-                    new ArrayList<>(Collections.nCopies(subValuesStreams.size(), null));
+            final List<R> results = new ArrayList<>(Collections.nCopies(subValuesStreams.size(), null));
             final List<Thread> threadList = IntStream.range(0, subValuesStreams.size())
                     .mapToObj(it -> new Thread(() -> {
                         final var result = threadTask.apply(subValuesStreams.get(it));
