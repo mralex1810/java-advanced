@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -52,7 +51,7 @@ public class IterativeParallelism implements AdvancedIP {
         return paralleler.taskSchemaWithoutTerminating(threads, values,
                 stream -> stream.max(comparator).orElseThrow(),
                 // :NOTE: ??
-                stream -> stream.max(comparator).orElseThrow(NoSuchElementException::new));
+                stream -> stream.max(comparator).orElseThrow());
     }
 
     @Override
@@ -163,19 +162,6 @@ public class IterativeParallelism implements AdvancedIP {
             return subValuesList;
         }
 
-        private static <R> Stream<R> getObjectStreamForPresentedValues(final List<OptionalNullable<R>> results) {
-            return results.stream()
-                    .filter(OptionalNullable::isPresent)
-                    .map(OptionalNullable::object);
-        }
-
-        private static <R> boolean checkTerminate(final Predicate<R> terminateExecutionPredicate,
-                final List<OptionalNullable<R>> results) {
-            return terminateExecutionPredicate != null &&
-                    getObjectStreamForPresentedValues(results).anyMatch(
-                            terminateExecutionPredicate);
-        }
-
         protected <T, R> R taskSchema(
                 final int threads,
                 final List<T> values,
@@ -195,16 +181,22 @@ public class IterativeParallelism implements AdvancedIP {
                 final Predicate<R> terminateExecutionPredicate,
                 final List<Stream<T>> subValuesStreams
         ) throws InterruptedException {
-            final List<OptionalNullable<R>> results =
-                    new ArrayList<>(Collections.nCopies(subValuesStreams.size(), OptionalNullable.empty()));
+            final VolatileBoolean terminate = new VolatileBoolean(false);
+            final List<R> results =
+                    new ArrayList<>(Collections.nCopies(subValuesStreams.size(), null));
             final List<Thread> threadList = IntStream.range(0, subValuesStreams.size())
-                    .mapToObj(it -> new Thread(
-                            () -> results.set(it, OptionalNullable.of(threadTask.apply(subValuesStreams.get(it))))
+                    .mapToObj(it -> new Thread(() -> {
+                                final var result = threadTask.apply(subValuesStreams.get(it));
+                                if (terminateExecutionPredicate.test(result)) {
+                                    terminate.setBool(true);
+                                }
+                                results.set(it, result);
+                            }
                     )).toList();
             threadList.forEach(Thread::start);
             try {
                 for (final Thread thread : threadList) {
-                    if (checkTerminate(terminateExecutionPredicate, results)) {
+                    if (terminate.isTrue()) {
                         threadList.forEach(Thread::interrupt);
                         break;
                     }
@@ -215,7 +207,7 @@ public class IterativeParallelism implements AdvancedIP {
                 throw e;
             }
 
-            return getObjectStreamForPresentedValues(results);
+            return results.stream();
         }
 
         protected <T, R> R taskSchemaWithoutTerminating(
@@ -233,21 +225,21 @@ public class IterativeParallelism implements AdvancedIP {
                     stream -> operation.apply(stream).collect(Collectors.toList()),
                     stream -> stream.flatMap(List::stream).collect(Collectors.toList()));
         }
+    }
 
-        // :NOTE: simplify
-        private record OptionalNullable<R>(R object, boolean isPresent) {
+    private static class VolatileBoolean {
+        private volatile boolean bool;
 
-            private static final OptionalNullable<?> EMPTY = new OptionalNullable<>(null, false);
+        public VolatileBoolean(final boolean b) {
+            bool = b;
+        }
 
-            @SuppressWarnings("unchecked")
-            public static <R> OptionalNullable<R> empty() {
-                return (OptionalNullable<R>) EMPTY;
-            }
+        public boolean isTrue() {
+            return bool;
+        }
 
-            public static <R> OptionalNullable<R> of(final R object) {
-                return new OptionalNullable<>(object, true);
-            }
-
+        public void setBool(final boolean bool) {
+            this.bool = bool;
         }
     }
 
