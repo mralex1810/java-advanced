@@ -151,19 +151,7 @@ public class IterativeParallelism implements AdvancedIP {
         }
 
         @Override
-        protected <T, R> R taskSchema(
-                final int threads,
-                final List<T> values,
-                final Function<Stream<T>, R> threadTask,
-                final Predicate<R> terminateExecutionPredicate,
-                final Function<Stream<R>, R> collectorFunction
-        ) throws InterruptedException {
-            return collectorFunction.apply(
-                    parallelMapper.map(threadTask, generateSubValuesStreams(threads, values)).stream());
-        }
-
-        @Override
-        protected <T, R> Stream<R> map(
+        protected <T, R> Stream<R> baseMap(
                 final Function<Stream<T>, R> threadTask,
                 final Predicate<R> terminateExecutionPredicate,
                 final List<Stream<T>> subValuesStreams
@@ -191,7 +179,7 @@ public class IterativeParallelism implements AdvancedIP {
             return subValuesList;
         }
 
-        protected <T, R> Stream<R> map(
+        protected <T, R> Stream<R> baseMap(
                 final Function<Stream<T>, R> threadTask,
                 final Predicate<R> terminateExecutionPredicate,
                 final List<Stream<T>> subValuesStreams
@@ -221,7 +209,7 @@ public class IterativeParallelism implements AdvancedIP {
                 final Predicate<R> terminateExecutionPredicate,
                 final Function<Stream<R>, R> collectorFunction
         ) throws InterruptedException {
-            return collectorFunction.apply(map(
+            return collectorFunction.apply(baseMap(
                     threadTask,
                     terminateExecutionPredicate,
                     generateSubValuesStreams(threads, values)
