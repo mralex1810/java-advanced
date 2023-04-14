@@ -88,7 +88,7 @@ public class ParallelMapperImpl implements ParallelMapper {
                 thread.join();
             } catch (final InterruptedException e) {
                 if (exception == null) {
-                    exception = new RuntimeException("Tryed to interrupt in close");
+                    exception = new RuntimeException("Tried to interrupt in close");
                 }
                 exception.addSuppressed(e);
             }
