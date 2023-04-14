@@ -9,14 +9,27 @@ import java.util.Queue;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
+/**
+ * Implementation of {@link ParallelMapper}
+ */
 public class ParallelMapperImpl implements ParallelMapper {
 
     private final ParallelMapper parallelMapper;
 
+    /**
+     * Constructs new {@code ParallelMapperImpl} as proxy to existing {@code ParallelMapper}.
+     *
+     * @param parallelMapper to proxy
+     */
     public ParallelMapperImpl(final ParallelMapper parallelMapper) {
         this.parallelMapper = parallelMapper;
     }
 
+    /**
+     * Constructs new {@code ParallelMapperImpl} by number of workers threads.
+     *
+     * @param threadsNum number of thread workers in constructing {@code ParallelMapperImpl}
+     */
     public ParallelMapperImpl(final int threadsNum) {
         this.parallelMapper = new ParallelMapperImplInner(threadsNum);
     }
@@ -35,9 +48,9 @@ public class ParallelMapperImpl implements ParallelMapper {
 
     private static class ParallelMapperImplInner implements ParallelMapper {
 
-
-        final Queue<Runnable> tasksQueue;
-        final List<Thread> threads;
+        private static final int MAX_QUEUE_SIZE = 1 << 20;
+        private final Queue<Runnable> tasksQueue;
+        private final List<Thread> threads;
 
         public ParallelMapperImplInner(final int threadsNum) {
             IterativeParallelism.checkThreads(threadsNum);
@@ -57,10 +70,12 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
 
         private synchronized void addTask(final Runnable task) {
-            synchronized (tasksQueue) {
-                tasksQueue.add(task);
+            if (tasksQueue.size() < MAX_QUEUE_SIZE) {
+                synchronized (tasksQueue) {
+                    tasksQueue.add(task);
+                }
+                notify();
             }
-            notify();
         }
 
         private synchronized Runnable getTask() throws InterruptedException {

@@ -22,10 +22,19 @@ public class IterativeParallelism implements AdvancedIP {
 
     private final IterativeParallelismBase paralleler;
 
+    /**
+     * Constructs new {@link IterativeParallelism} by {@link ParallelMapper}. Uses {@link ParallelMapper} to run
+     * parallel tasks.
+     *
+     * @param parallelMapper to run parallel map tasks.
+     */
     public IterativeParallelism(final ParallelMapper parallelMapper) {
         this.paralleler = new IterativeParallelismBaseWithMapper(parallelMapper);
     }
 
+    /**
+     * Creates default realisation of {@link IterativeParallelism}
+     */
     public IterativeParallelism() {
         this.paralleler = new IterativeParallelismBase();
     }
