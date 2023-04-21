@@ -49,6 +49,10 @@ public class IterativeParallelism implements AdvancedIP {
         return stream -> stream.max(comparator).orElseThrow();
     }
 
+    private static <T, R> Function<Stream<T>, R> streamMapReduceReduce(final Monoid<R> monoid, final Function<T, R> f) {
+        return stream -> stream.map(f).reduce(monoid.getIdentity(), monoid.getOperator());
+    }
+
     @Override
     public <T> T maximum(final int threads, final List<? extends T> values, final Comparator<? super T> comparator)
             throws InterruptedException {
@@ -121,8 +125,8 @@ public class IterativeParallelism implements AdvancedIP {
     public <T, R> R mapReduce(final int threads, final List<T> values, final Function<T, R> lift,
             final Monoid<R> monoid) throws InterruptedException {
         return paralleler.taskSchemaWithoutTerminating(threads, values,
-                stream -> stream.map(lift).reduce(monoid.getIdentity(), monoid.getOperator()),
-                stream -> stream.reduce(monoid.getIdentity(), monoid.getOperator())
+                streamMapReduceReduce(monoid, lift),
+                streamMapReduceReduce(monoid, Function.identity())
         );
     }
 
@@ -147,8 +151,7 @@ public class IterativeParallelism implements AdvancedIP {
     private static class IterativeParallelismBase {
 
         static <T> List<Stream<T>> generateSubValuesStreams(final int threads, final List<T> values) {
-            IterativeParallelism.checkThreads(threads);
-            Objects.requireNonNull(values);
+            checkArguments(threads, values);
             final int bucketSize = values.size() / threads;
             int rest = values.size() % threads;
             // :NOTE: simplify
@@ -161,6 +164,11 @@ public class IterativeParallelism implements AdvancedIP {
                 start += step;
             }
             return subValuesList;
+        }
+
+        private static <T> void checkArguments(final int threads, final List<T> values) {
+            IterativeParallelism.checkThreads(threads);
+            Objects.requireNonNull(values);
         }
 
         protected <T, R> Stream<R> baseMap(
@@ -179,13 +187,11 @@ public class IterativeParallelism implements AdvancedIP {
                             terminate.set(true);
                         }
                     }
-                    )).toList();
-            threadList.forEach(Thread::start);
+                    ))
+                    .peek(Thread::start)
+                    .toList();
             InterruptedException exception = null;
             for (final Thread thread : threadList) {
-                if (terminate.isTrue()) {
-                    threadList.forEach(Thread::interrupt);
-                }
                 boolean joined = false;
                 while (!joined) {
                     try {
@@ -195,8 +201,9 @@ public class IterativeParallelism implements AdvancedIP {
                         if (exception == null) { // :NOTE: join
                             threadList.forEach(Thread::interrupt);
                             exception = e;
+                        } else {
+                            exception.addSuppressed(e);
                         }
-                        exception.addSuppressed(e);
                     }
                 }
 

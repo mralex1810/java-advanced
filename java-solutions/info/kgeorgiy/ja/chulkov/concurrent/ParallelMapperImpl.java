@@ -14,7 +14,7 @@ import java.util.stream.IntStream;
  */
 public class ParallelMapperImpl implements ParallelMapper {
 
-    private final Queue<Runnable> tasksQueue;
+    private final Queue<Runnable> tasksQueue = new ArrayDeque<>();
     private final List<Thread> threads;
 
     /**
@@ -24,7 +24,6 @@ public class ParallelMapperImpl implements ParallelMapper {
      */
     public ParallelMapperImpl(final int threadsNum) {
         IterativeParallelism.checkThreads(threadsNum);
-        tasksQueue = new ArrayDeque<>();
         this.threads = new ArrayList<>(threadsNum);
         for (int i = 0; i < threadsNum; i++) {
             threads.add(new Thread(() -> {
@@ -95,18 +94,13 @@ public class ParallelMapperImpl implements ParallelMapper {
             results = new ArrayList<>(Collections.nCopies(size, null));
         }
 
-        void setResult(final int index, final R result) {
+        synchronized void setResult(final int index, final R result) {
             results.set(index, result);
-            synchronized (this) {
-                resultsCount++;
-                if (resultsCount == results.size()) {
-                    notify();
-                }
-            }
+            incrementResultCounter();
         }
 
         synchronized List<R> getResults() throws InterruptedException {
-            while (resultsCount < results.size() && exception == null) {
+            while (resultsCount < results.size()) {
                 wait();
             }
             if (exception != null) {
@@ -118,6 +112,15 @@ public class ParallelMapperImpl implements ParallelMapper {
         synchronized void setException(final RuntimeException exception) {
             if (this.exception == null) {
                 this.exception = exception;
+            } else {
+                this.exception.addSuppressed(exception);
+            }
+            incrementResultCounter();
+        }
+
+        private void incrementResultCounter() {
+            resultsCount++;
+            if (resultsCount == results.size()) {
                 notify();
             }
         }
