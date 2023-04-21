@@ -81,10 +81,7 @@ public class IterativeParallelism implements AdvancedIP {
     @Override
     public <T> boolean any(final int threads, final List<? extends T> values, final Predicate<? super T> predicate)
             throws InterruptedException {
-        return paralleler.taskSchema(threads, values,
-                stream -> stream.anyMatch(predicate),
-                it -> it,
-                stream -> stream.anyMatch(it -> it));
+        return !all(threads, values, predicate.negate());
     }
 
     @Override
