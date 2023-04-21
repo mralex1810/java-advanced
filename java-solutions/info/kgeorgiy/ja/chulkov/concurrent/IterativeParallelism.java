@@ -28,7 +28,6 @@ public class IterativeParallelism implements AdvancedIP {
      * @param parallelMapper to run parallel map tasks.
      */
     public IterativeParallelism(final ParallelMapper parallelMapper) {
-//        this.mapper = new IterativeParallelismBaseWithMapper(parallelMapper);
         this.mapper = new TerminatingMapper() {
             @Override
             public <T, R> List<R> baseMap(final Function<Stream<T>, R> threadTask,
