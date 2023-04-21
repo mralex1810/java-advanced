@@ -64,7 +64,6 @@ public class IterativeParallelism implements AdvancedIP {
         checkArguments(threads, values);
         final int bucketSize = values.size() / threads;
         int rest = values.size() % threads;
-        // :NOTE: simplify
         final int buckets = bucketSize == 0 ? rest : threads;
         int start = 0;
         final List<Stream<T>> subValuesList = new ArrayList<>(buckets);
@@ -198,26 +197,31 @@ public class IterativeParallelism implements AdvancedIP {
                 final Predicate<R> terminateExecutionPredicate,
                 final List<Stream<T>> subValuesStreams
         ) throws InterruptedException {
-            final VolatileBoolean terminate = new VolatileBoolean(false);
+            final VolatileBoolean terminated = new VolatileBoolean(false);
             final List<R> results = new ArrayList<>(Collections.nCopies(subValuesStreams.size(), null));
             final List<Thread> threadList = IntStream.range(0, subValuesStreams.size())
                     .mapToObj(it -> new Thread(() -> {
                         final var result = threadTask.apply(subValuesStreams.get(it));
                         results.set(it, result);
                         if (terminateExecutionPredicate.test(result)) {
-                            terminate.set(true);
+                            terminated.set(true);
                         }
                     }
                     ))
                     .peek(Thread::start)
                     .toList();
 
-            // :NOTE: ??
+            boolean reallyTerminated = false;
+
             InterruptedException exception = null;
             for (final Thread thread : threadList) {
-                if (terminate.isTrue()) {
-                    threadList.forEach(Thread::interrupt);
+                if (!reallyTerminated && terminated.isTrue()) {
+                    if (terminated.isTrue()) {
+                        threadList.forEach(Thread::interrupt);
+                    }
+                    reallyTerminated = true;
                 }
+
                 boolean joined = false;
                 while (!joined) {
                     try {
@@ -225,7 +229,9 @@ public class IterativeParallelism implements AdvancedIP {
                         joined = true;
                     } catch (final InterruptedException e) {
                         if (exception == null) {
-                            threadList.forEach(Thread::interrupt);
+                            if (!reallyTerminated) {
+                                threadList.forEach(Thread::interrupt);
+                            }
                             exception = e;
                         } else {
                             exception.addSuppressed(e);
