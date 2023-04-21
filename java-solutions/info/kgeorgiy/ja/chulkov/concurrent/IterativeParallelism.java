@@ -19,7 +19,7 @@ import java.util.stream.Stream;
  */
 public class IterativeParallelism implements AdvancedIP {
 
-    private final Mapper paralleler;
+    private final Mapper mapper;
 
     /**
      * Constructs new {@link IterativeParallelism} by {@link ParallelMapper}. Uses {@link ParallelMapper} to run
@@ -28,14 +28,22 @@ public class IterativeParallelism implements AdvancedIP {
      * @param parallelMapper to run parallel map tasks.
      */
     public IterativeParallelism(final ParallelMapper parallelMapper) {
-        this.paralleler = new IterativeParallelismBaseWithMapper(parallelMapper);
+//        this.mapper = new IterativeParallelismBaseWithMapper(parallelMapper);
+        this.mapper = new Mapper() {
+            @Override
+            public <T, R> Stream<R> baseMap(final Function<Stream<T>, R> threadTask,
+                    final Predicate<R> terminateExecutionPredicate,
+                    final List<Stream<T>> subValuesStreams) throws InterruptedException {
+                return parallelMapper.map(threadTask, subValuesStreams).stream();
+            }
+        };
     }
 
     /**
      * Creates default realisation of {@link IterativeParallelism}
      */
     public IterativeParallelism() {
-        this.paralleler = new IterativeParallelismBase();
+        this.mapper = new IterativeParallelismBase();
     }
 
     static void checkThreads(final int threads) {
@@ -52,10 +60,20 @@ public class IterativeParallelism implements AdvancedIP {
         return stream -> stream.map(f).reduce(monoid.getIdentity(), monoid.getOperator());
     }
 
-    @Override
-    public <T> T maximum(final int threads, final List<? extends T> values, final Comparator<? super T> comparator)
-            throws InterruptedException {
-        return paralleler.taskSchemaWithoutTerminating(threads, values, maxSupport(comparator), maxSupport(comparator));
+    static <T> List<Stream<T>> generateSubValuesStreams(final int threads, final List<T> values) {
+        checkArguments(threads, values);
+        final int bucketSize = values.size() / threads;
+        int rest = values.size() % threads;
+        // :NOTE: simplify
+        final int buckets = bucketSize == 0 ? rest : threads;
+        int start = 0;
+        final List<Stream<T>> subValuesList = new ArrayList<>(buckets);
+        for (int i = 0; i < buckets; i++) {
+            final int step = bucketSize + (--rest >= 0 ? 1 : 0);
+            subValuesList.add(values.subList(start, start + step).stream());
+            start += step;
+        }
+        return subValuesList;
     }
 
     @Override
@@ -64,13 +82,9 @@ public class IterativeParallelism implements AdvancedIP {
         return maximum(threads, values, comparator.reversed());
     }
 
-    @Override
-    public <T> boolean all(final int threads, final List<? extends T> values, final Predicate<? super T> predicate)
-            throws InterruptedException {
-        return paralleler.taskSchema(threads, values,
-                val -> val.allMatch(predicate),
-                it -> !it,
-                stream -> stream.allMatch(Boolean::booleanValue));
+    static <T> void checkArguments(final int threads, final List<T> values) {
+        IterativeParallelism.checkThreads(threads);
+        Objects.requireNonNull(values);
     }
 
     @Override
@@ -106,13 +120,10 @@ public class IterativeParallelism implements AdvancedIP {
         return flatStreamOperationSchema(threads, values, stream -> stream.map(f));
     }
 
-    private  <T, R> List<R> flatStreamOperationSchema(
-            final int threads, final List<? extends T> values,
-            Function<Stream<? extends T>, Stream<? extends R>> operation
-    ) throws InterruptedException {
-        return paralleler.taskSchemaWithoutTerminating(threads, values,
-                stream -> operation.apply(stream).collect(Collectors.toList()),
-                stream -> stream.flatMap(List::stream).collect(Collectors.toList()));
+    @Override
+    public <T> T maximum(final int threads, final List<? extends T> values, final Comparator<? super T> comparator)
+            throws InterruptedException {
+        return taskSchemaWithoutTerminating(threads, values, maxSupport(comparator), maxSupport(comparator));
     }
 
 
@@ -123,82 +134,61 @@ public class IterativeParallelism implements AdvancedIP {
     }
 
     @Override
+    public <T> boolean all(final int threads, final List<? extends T> values, final Predicate<? super T> predicate)
+            throws InterruptedException {
+        return taskSchema(threads, values,
+                val -> val.allMatch(predicate),
+                it -> !it,
+                stream -> stream.allMatch(Boolean::booleanValue));
+    }
+
+    private  <T, R> List<R> flatStreamOperationSchema(
+            final int threads, final List<? extends T> values,
+            final Function<Stream<? extends T>, Stream<? extends R>> operation
+    ) throws InterruptedException {
+        return taskSchemaWithoutTerminating(threads, values,
+                stream -> operation.apply(stream).collect(Collectors.toList()),
+                stream -> stream.flatMap(List::stream).collect(Collectors.toList()));
+    }
+
+    @Override
     public <T, R> R mapReduce(final int threads, final List<T> values, final Function<T, R> lift,
             final Monoid<R> monoid) throws InterruptedException {
-        return paralleler.taskSchemaWithoutTerminating(threads, values,
+        return taskSchemaWithoutTerminating(threads, values,
                 streamMapReduceReduce(monoid, lift),
                 streamMapReduceReduce(monoid, Function.identity())
         );
     }
 
-    public interface Mapper {
-        static <T> List<Stream<T>> generateSubValuesStreams(int threads, List<T> values) {
-            checkArguments(threads, values);
-            final int bucketSize = values.size() / threads;
-            int rest = values.size() % threads;
-            // :NOTE: simplify
-            final int buckets = bucketSize == 0 ? rest : threads;
-            int start = 0;
-            final List<Stream<T>> subValuesList = new ArrayList<>(buckets);
-            for (int i = 0; i < buckets; i++) {
-                final int step = bucketSize + (--rest >= 0 ? 1 : 0);
-                subValuesList.add(values.subList(start, start + step).stream());
-                start += step;
-            }
-            return subValuesList;
-        }
+    private  <T, R> R taskSchema(
+            final int threads,
+            final List<T> values,
+            final Function<Stream<T>, R> threadTask,
+            final Predicate<R> terminateExecutionPredicate,
+            final Function<Stream<R>, R> collectorFunction
+    ) throws InterruptedException {
+        return collectorFunction.apply(mapper.baseMap(
+                threadTask,
+                terminateExecutionPredicate,
+                generateSubValuesStreams(threads, values)
+        ));
+    }
 
-        static <T> void checkArguments(int threads, List<T> values) {
-            IterativeParallelism.checkThreads(threads);
-            Objects.requireNonNull(values);
-        }
-
+    private  <T, R> R taskSchemaWithoutTerminating(
+            final int threads,
+            final List<T> values,
+            final Function<Stream<T>, R> threadTask,
+            final Function<Stream<R>, R> collectorFunction
+    ) throws InterruptedException {
+        return taskSchema(threads, values, threadTask, r -> false, collectorFunction);
+    }
+    @FunctionalInterface
+    private interface Mapper {
         <T, R> Stream<R> baseMap(
                 Function<Stream<T>, R> threadTask,
                 Predicate<R> terminateExecutionPredicate,
                 List<Stream<T>> subValuesStreams
         ) throws InterruptedException;
-
-        default <T, R> R taskSchema(
-                int threads,
-                List<T> values,
-                Function<Stream<T>, R> threadTask,
-                Predicate<R> terminateExecutionPredicate,
-                Function<Stream<R>, R> collectorFunction
-        ) throws InterruptedException {
-            return collectorFunction.apply(baseMap(
-                    threadTask,
-                    terminateExecutionPredicate,
-                    generateSubValuesStreams(threads, values)
-            ));
-        }
-
-        default <T, R> R taskSchemaWithoutTerminating(
-                int threads,
-                List<T> values,
-                Function<Stream<T>, R> threadTask,
-                Function<Stream<R>, R> collectorFunction
-        ) throws InterruptedException {
-            return taskSchema(threads, values, threadTask, r -> false, collectorFunction);
-        }
-    }
-
-    private static class IterativeParallelismBaseWithMapper implements Mapper {
-
-        private final ParallelMapper parallelMapper;
-
-        public IterativeParallelismBaseWithMapper(final ParallelMapper parallelMapper) {
-            this.parallelMapper = parallelMapper;
-        }
-
-        @Override
-        public  <T, R> Stream<R> baseMap(
-                final Function<Stream<T>, R> threadTask,
-                final Predicate<R> terminateExecutionPredicate,
-                final List<Stream<T>> subValuesStreams
-        ) throws InterruptedException {
-            return parallelMapper.map(threadTask, subValuesStreams).stream();
-        }
     }
 
     private static class IterativeParallelismBase implements Mapper {
@@ -225,6 +215,9 @@ public class IterativeParallelism implements AdvancedIP {
             // :NOTE: ??
             InterruptedException exception = null;
             for (final Thread thread : threadList) {
+                if (terminate.isTrue()) {
+                    threadList.forEach(Thread::interrupt);
+                }
                 boolean joined = false;
                 while (!joined) {
                     try {
