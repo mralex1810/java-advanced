@@ -74,12 +74,15 @@ public class ParallelMapperImpl implements ParallelMapper {
     public void close() {
         threads.forEach(Thread::interrupt);
         for (final Thread thread : threads) {
-            try {
-                thread.join();
-            } catch (final InterruptedException ignored) {
+            boolean joined = false;
+            while (!joined) {
+                try {
+                    thread.join();
+                    joined = true;
+                } catch (final InterruptedException ignored) {
+                }
             }
         }
-
     }
 
     private static class Results<R> {
@@ -113,8 +116,10 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
 
         synchronized void setException(final RuntimeException exception) {
-            this.exception = exception;
-            notify();
+            if (this.exception == null) {
+                this.exception = exception;
+                notify();
+            }
         }
     }
 }

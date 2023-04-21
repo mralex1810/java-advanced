@@ -44,14 +44,19 @@ public class IterativeParallelism implements AdvancedIP {
         }
     }
 
+    private static <T> Function<Stream<T>, T> maxSupport(
+            final Comparator<? super T> comparator) {
+        return stream -> stream.max(comparator).orElseThrow();
+    }
+
     @Override
     public <T> T maximum(final int threads, final List<? extends T> values, final Comparator<? super T> comparator)
             throws InterruptedException {
         // :NOTE: .orElse(null)
         return paralleler.taskSchemaWithoutTerminating(threads, values,
-                stream -> stream.max(comparator).orElseThrow(),
+                maxSupport(comparator),
                 // :NOTE: ??
-                stream -> stream.max(comparator).orElseThrow());
+                maxSupport(comparator));
     }
 
     @Override
@@ -87,7 +92,7 @@ public class IterativeParallelism implements AdvancedIP {
     @Override
     public String join(final int threads, final List<?> values) throws InterruptedException {
         return mapReduce(threads, values,
-                Object::toString,
+                Objects::toString,
                 new Monoid<>("", String::concat)
         );
     }
@@ -178,17 +183,23 @@ public class IterativeParallelism implements AdvancedIP {
             threadList.forEach(Thread::start);
             InterruptedException exception = null;
             for (final Thread thread : threadList) {
-                try {
-                    if (terminate.isTrue()) {
-                        threadList.forEach(Thread::interrupt);
-                    }
-                    thread.join();
-                } catch (final InterruptedException e) {
-                    if (exception == null) { // :NOTE: join
-                        exception = e;
-                    }
-                    exception.addSuppressed(e);
+                if (terminate.isTrue()) {
+                    threadList.forEach(Thread::interrupt);
                 }
+                boolean joined = false;
+                while (!joined) {
+                    try {
+                        thread.join();
+                        joined = true;
+                    } catch (final InterruptedException e) {
+                        if (exception == null) { // :NOTE: join
+                            threadList.forEach(Thread::interrupt);
+                            exception = e;
+                        }
+                        exception.addSuppressed(e);
+                    }
+                }
+
             }
             if (exception != null) {
                 throw exception;
