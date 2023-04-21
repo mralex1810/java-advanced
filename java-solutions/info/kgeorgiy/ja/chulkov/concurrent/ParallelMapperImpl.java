@@ -13,8 +13,8 @@ import java.util.stream.IntStream;
  * Implementation of {@link ParallelMapper}
  */
 public class ParallelMapperImpl implements ParallelMapper {
+    private final SynchronizedQueue tasks = new SynchronizedQueue();
 
-    private final Queue<Runnable> tasksQueue = new ArrayDeque<>();
     private final List<Thread> threads;
 
     /**
@@ -29,7 +29,7 @@ public class ParallelMapperImpl implements ParallelMapper {
             threads.add(new Thread(() -> {
                 try {
                     while (!Thread.interrupted()) {
-                        getTask().run();
+                        tasks.getTask().run();
                     }
                 } catch (final InterruptedException ignored) {
                 }
@@ -38,27 +38,14 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
     }
 
-    private void addTask(final Runnable task) {
-        tasksQueue.add(task);
-        notify();
-    }
-
-    // :NOTE: double synchronization
-    private synchronized Runnable getTask() throws InterruptedException {
-        while (tasksQueue.isEmpty()) {
-            wait();
-        }
-        return tasksQueue.poll();
-    }
-
     public <T, R> List<R> map(
             final Function<? super T, ? extends R> f,
             final List<? extends T> args
     ) throws InterruptedException {
         final Results<R> results = new Results<>(args.size());
-        synchronized (this) {
+        synchronized (tasks) {
             IntStream.range(0, args.size())
-                    .forEach(index -> addTask(() -> {
+                    .forEach(index -> tasks.addTask(() -> {
                         try {
                             results.setResult(index, f.apply(args.get(index)));
                         } catch (final RuntimeException e) {
@@ -82,6 +69,25 @@ public class ParallelMapperImpl implements ParallelMapper {
                 }
             }
         }
+    }
+
+    private static class SynchronizedQueue {
+
+        private final Queue<Runnable> tasksQueue = new ArrayDeque<>();
+
+        private void addTask(final Runnable task) {
+            tasksQueue.add(task);
+            notify();
+        }
+
+        // :NOTE: double synchronization
+        private synchronized Runnable getTask() throws InterruptedException {
+            while (tasksQueue.isEmpty()) {
+                wait();
+            }
+            return tasksQueue.poll();
+        }
+
     }
 
     private static class Results<R> {

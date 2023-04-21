@@ -19,7 +19,7 @@ import java.util.stream.Stream;
  */
 public class IterativeParallelism implements AdvancedIP {
 
-    private final Mapper mapper;
+    private final TerminatingMapper mapper;
 
     /**
      * Constructs new {@link IterativeParallelism} by {@link ParallelMapper}. Uses {@link ParallelMapper} to run
@@ -29,12 +29,12 @@ public class IterativeParallelism implements AdvancedIP {
      */
     public IterativeParallelism(final ParallelMapper parallelMapper) {
 //        this.mapper = new IterativeParallelismBaseWithMapper(parallelMapper);
-        this.mapper = new Mapper() {
+        this.mapper = new TerminatingMapper() {
             @Override
-            public <T, R> Stream<R> baseMap(final Function<Stream<T>, R> threadTask,
+            public <T, R> List<R> baseMap(final Function<Stream<T>, R> threadTask,
                     final Predicate<R> terminateExecutionPredicate,
                     final List<Stream<T>> subValuesStreams) throws InterruptedException {
-                return parallelMapper.map(threadTask, subValuesStreams).stream();
+                return parallelMapper.map(threadTask, subValuesStreams);
             }
         };
     }
@@ -171,7 +171,7 @@ public class IterativeParallelism implements AdvancedIP {
                 threadTask,
                 terminateExecutionPredicate,
                 generateSubValuesStreams(threads, values)
-        ));
+        ).stream());
     }
 
     private  <T, R> R taskSchemaWithoutTerminating(
@@ -183,17 +183,17 @@ public class IterativeParallelism implements AdvancedIP {
         return taskSchema(threads, values, threadTask, r -> false, collectorFunction);
     }
     @FunctionalInterface
-    private interface Mapper {
-        <T, R> Stream<R> baseMap(
+    private interface TerminatingMapper {
+        <T, R> List<R> baseMap(
                 Function<Stream<T>, R> threadTask,
                 Predicate<R> terminateExecutionPredicate,
                 List<Stream<T>> subValuesStreams
         ) throws InterruptedException;
     }
 
-    private static class IterativeParallelismBase implements Mapper {
+    private static class IterativeParallelismBase implements TerminatingMapper {
 
-        public  <T, R> Stream<R> baseMap(
+        public  <T, R> List<R> baseMap(
                 final Function<Stream<T>, R> threadTask,
                 final Predicate<R> terminateExecutionPredicate,
                 final List<Stream<T>> subValuesStreams
@@ -237,7 +237,7 @@ public class IterativeParallelism implements AdvancedIP {
             if (exception != null) {
                 throw exception;
             }
-            return results.stream();
+            return results;
         }
 
     }
