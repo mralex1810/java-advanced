@@ -24,16 +24,20 @@ public class ParallelMapperImpl implements ParallelMapper {
      */
     public ParallelMapperImpl(final int threadsNum) {
         IterativeParallelism.checkThreads(threadsNum);
+
+        final Runnable worker = () -> {
+            try {
+                while (!Thread.interrupted()) {
+                    tasks.take().run();
+                }
+            } catch (final InterruptedException ignored) {
+            }
+        };
+
+        // :NOTE: (Int)Stream
         this.threads = new ArrayList<>(threadsNum);
         for (int i = 0; i < threadsNum; i++) {
-            threads.add(new Thread(() -> {
-                try {
-                    while (!Thread.interrupted()) {
-                        tasks.getTask().run();
-                    }
-                } catch (final InterruptedException ignored) {
-                }
-            }));
+            threads.add(new Thread(worker));
             threads.get(i).start();
         }
     }
@@ -45,10 +49,11 @@ public class ParallelMapperImpl implements ParallelMapper {
         final Results<R> results = new Results<>(args.size());
         synchronized (tasks) {
             IntStream.range(0, args.size())
-                    .forEach(index -> tasks.addTask(() -> {
+                    .forEach(index -> tasks.put(() -> {
                         try {
                             results.setResult(index, f.apply(args.get(index)));
                         } catch (final RuntimeException e) {
+                            // :NOTE: RuntimeException
                             results.setException(new RuntimeException("Error on mapping", e));
                         }
                     }));
@@ -58,6 +63,7 @@ public class ParallelMapperImpl implements ParallelMapper {
 
     @Override
     public void close() {
+        // :NOTE: hang map
         threads.forEach(Thread::interrupt);
         for (final Thread thread : threads) {
             boolean joined = false;
@@ -75,19 +81,17 @@ public class ParallelMapperImpl implements ParallelMapper {
 
         private final Queue<Runnable> tasksQueue = new ArrayDeque<>();
 
-        private void addTask(final Runnable task) {
+        private void put(final Runnable task) {
             tasksQueue.add(task);
             notify();
         }
 
-        // :NOTE: double synchronization
-        private synchronized Runnable getTask() throws InterruptedException {
+        private synchronized Runnable take() throws InterruptedException {
             while (tasksQueue.isEmpty()) {
                 wait();
             }
             return tasksQueue.poll();
         }
-
     }
 
     private static class Results<R> {
@@ -105,16 +109,6 @@ public class ParallelMapperImpl implements ParallelMapper {
             incrementResultCounter();
         }
 
-        synchronized List<R> getResults() throws InterruptedException {
-            while (resultsCount < results.size()) {
-                wait();
-            }
-            if (exception != null) {
-                throw exception;
-            }
-            return results;
-        }
-
         synchronized void setException(final RuntimeException exception) {
             if (this.exception == null) {
                 this.exception = exception;
@@ -125,10 +119,20 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
 
         private void incrementResultCounter() {
-            resultsCount++;
+            resultsCount++; // :NOTE: -> 0
             if (resultsCount == results.size()) {
                 notify();
             }
+        }
+
+        synchronized List<R> getResults() throws InterruptedException {
+            while (resultsCount < results.size()) {
+                wait();
+            }
+            if (exception != null) {
+                throw exception;
+            }
+            return results;
         }
     }
 }
