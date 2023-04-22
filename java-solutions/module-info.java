@@ -8,6 +8,7 @@ module info.kgeorgiy.ja.chulkov {
     requires info.kgeorgiy.java.advanced.implementor;
     requires info.kgeorgiy.java.advanced.concurrent;
     requires info.kgeorgiy.java.advanced.mapper;
+    requires info.kgeorgiy.java.advanced.crawler;
     requires java.compiler;
 
     exports info.kgeorgiy.ja.chulkov.concurrent;
