@@ -15,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.Future;
 import java.util.concurrent.RecursiveTask;
@@ -24,13 +23,15 @@ import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
 public class WebCrawler implements Crawler {
+
+    public static final Result EMPTY_RESULT = new Result(List.of(), Map.of());
     private final ConcurrentHashMap<String, Semaphore> hostLimit = new ConcurrentHashMap<>();
 
     private final ExecutorService downoloadExecutorService;
     private final ExecutorService extractorExecutorService;
     private final Downloader downloader;
     private final int perHost;
-    private final ConcurrentHashMap<String, Future<Result>> resultsCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Future<List<String>>> linkCache = new ConcurrentHashMap<>();
 
     public WebCrawler(final Downloader downloader,
             final int downloaders,
@@ -42,10 +43,10 @@ public class WebCrawler implements Crawler {
         this.downloader = downloader;
     }
 
+
     @Override
     public Result download(final String url, final int depth) {
         final RecursiveDownloader recursiveDownloader = new RecursiveDownloader(url, depth);
-        ForkJoinPool.commonPool().execute(recursiveDownloader);
         try {
             return recursiveDownloader.get();
         } catch (final InterruptedException | ExecutionException e) {
@@ -59,6 +60,15 @@ public class WebCrawler implements Crawler {
         downoloadExecutorService.shutdownNow();
     }
 
+
+    private Result getResult(final Future<Result> result) {
+        try {
+            return result.get();
+        } catch (final InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private class RecursiveDownloader extends RecursiveTask<Result> {
 
         private final String url;
@@ -69,55 +79,8 @@ public class WebCrawler implements Crawler {
             this.depth = depth;
         }
 
-        @Override
-        public Result compute() {
-            if (depth == 0) {
-                return new Result(List.of(), Map.of());
-            }
-            if (resultsCache.containsKey(url)) {
-                return getResult(resultsCache.get(url));
-            }
-            final var future = CompletableFuture.supplyAsync(() -> {
-                final List<String> downloaded = new ArrayList<>();
-                final Map<String, IOException> errors = new HashMap<>();
-                try {
-                    final Document document = downoloadExecutorService
-                            .submit(this::download)
-                            .get();
-                    final List<String> subLinks = extractorExecutorService
-                            .submit(document::extractLinks)
-                            .get();
-                    downloaded.add(url);
-                    final var recursives = subLinks.stream()
-                            .map(link -> new RecursiveDownloader(link, depth - 1))
-                            .toList();
-                    if (recursives.size() > 0) {
-                        recursives.subList(1, recursives.size()).forEach(ForkJoinTask::fork);
-                        Stream.concat(
-                                        Stream.of(recursives.get(0).compute()),
-                                        recursives.subList(1, recursives.size()).stream().map(ForkJoinTask::join))
-                                .forEach(result -> {
-                                    downloaded.addAll(result.getDownloaded());
-                                    errors.putAll(result.getErrors());
-                                });
-                    }
-                } catch (final InterruptedException e) {
-                    throw new RuntimeException(e);
-                } catch (final ExecutionException e) {
-                    if (e.getCause() instanceof final IOException cause) {
-                        errors.put(url, cause);
-                    } else {
-                        throw new RuntimeException(e);
-                    }
-                }
-                return new Result(downloaded, errors);
-            });
-            resultsCache.put(url, future);
-            return getResult(future);
-
-        }
-
         private Document download() throws IOException {
+
             final String host = URLUtils.getHost(url);
             hostLimit.computeIfAbsent(host, (ignore) -> new Semaphore(perHost));
             try {
@@ -132,12 +95,57 @@ public class WebCrawler implements Crawler {
             }
         }
 
-        private Result getResult(final Future<Result> result) {
-            try {
-                return result.get();
-            } catch (final InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
+        @Override
+        public Result compute() {
+            if (depth == 0) {
+                return EMPTY_RESULT;
             }
+            final List<String> downloaded = new ArrayList<>();
+            final Map<String, IOException> errors = new HashMap<>();
+            try {
+                synchronized (linkCache) {
+                    linkCache.computeIfAbsent(url, (ignore) -> CompletableFuture.supplyAsync(() -> {
+                        try {
+                            final Document document = downoloadExecutorService
+                                    .submit(this::download)
+                                    .get();
+                            return extractorExecutorService
+                                    .submit(document::extractLinks)
+                                    .get();
+                        } catch (final InterruptedException | ExecutionException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                    ));
+                }
+
+                downloaded.add(url);
+                final var recursives = linkCache.get(url).get().stream()
+                        .distinct()
+                        .map(link -> new RecursiveDownloader(link, depth - 1))
+                        .toList();
+                if (recursives.size() > 0 && depth > 1) {
+                    recursives.subList(1, recursives.size()).forEach(ForkJoinTask::fork);
+                    Stream.concat(
+                                    Stream.of(recursives.get(0).compute()),
+                                    recursives.subList(1, recursives.size()).stream().map(ForkJoinTask::join))
+                            .forEach(result -> {
+                                downloaded.addAll(result.getDownloaded());
+                                errors.putAll(result.getErrors());
+                            });
+                }
+            } catch (final InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (final ExecutionException e) {
+                if (e.getCause() instanceof final IOException cause) {
+                    errors.put(url, cause);
+                } else {
+                    throw new RuntimeException(e);
+                }
+            }
+            return new Result(downloaded, errors);
         }
+
     }
 }
