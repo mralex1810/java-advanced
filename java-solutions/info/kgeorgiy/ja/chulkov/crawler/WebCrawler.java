@@ -11,23 +11,17 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-@SuppressWarnings("unused")
 public class WebCrawler implements Crawler {
 
-    public static final Result EMPTY_RESULT = new Result(List.of(), Map.of());
     private final ConcurrentHashMap<String, Semaphore> hostLimit = new ConcurrentHashMap<>();
 
     private final ExecutorService downoloadExecutorService;
@@ -67,70 +61,10 @@ public class WebCrawler implements Crawler {
                 .toList();
     }
 
-    private static Result concatResults(final Result a, final Result b) {
-        return new Result(
-                Stream.concat(a.getDownloaded().stream(), b.getDownloaded().stream()).toList(),
-                Stream.concat(a.getErrors().entrySet().stream(), b.getErrors().entrySet().stream())
-                        .collect(Collectors.toMap(Entry::getKey, Entry::getValue))
-        );
-    }
-
-    private UrlDocument downloadDocument(final String url, final Map<String, IOException> errors) {
-        synchronized (used) {
-            used.add(url);
-        }
-        try {
-            final String host = URLUtils.getHost(url);
-            hostLimit.computeIfAbsent(host, (ignore) -> new Semaphore(perHost));
-            hostLimit.get(host).acquire();
-            try {
-                return new UrlDocument(url, downloader.download(url));
-            } finally {
-                hostLimit.get(host).release();
-            }
-        } catch (final InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (final IOException e) {
-            errors.put(url, e);
-            return null;
-        }
-    }
-
-    private List<String> parseDocument(final UrlDocument urlDocument, final Map<String, IOException> errors) {
-        try {
-            return urlDocument.document.extractLinks();
-        } catch (final IOException e) {
-            errors.put(urlDocument.url, e);
-            return null;
-        }
-    }
-
-    private Result download(final List<String> urls, final int depth) throws InterruptedException {
-        if (depth == 0) {
-            return EMPTY_RESULT;
-        }
-        final List<String> downloaded = new ArrayList<>();
-        final Map<String, IOException> errors = new ConcurrentHashMap<>();
-        final List<UrlDocument> urlDocuments = executeAll(downoloadExecutorService, urls,
-                (url) -> () -> downloadDocument(url, errors));
-        urlDocuments.stream().map(UrlDocument::url).forEach(downloaded::add);
-        final List<String> nextUrls = executeAll(extractorExecutorService, urlDocuments,
-                (urlDocument) -> () -> parseDocument(urlDocument, errors))
-                .stream()
-                .flatMap(Collection::stream)
-                .distinct()
-                .filter(o -> !used.contains(o))
-                .toList();
-        return concatResults(new Result(downloaded, errors), download(nextUrls, depth - 1));
-    }
 
     @Override
     public Result download(final String url, final int depth) {
-        try {
-            return download(List.of(url), depth);
-        } catch (final InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        return new DownloadAction().download(url, depth);
     }
 
     @Override
@@ -139,12 +73,66 @@ public class WebCrawler implements Crawler {
         downoloadExecutorService.shutdownNow();
     }
 
-    private Result getResult(final Future<Result> result) {
-        try {
-            return result.get();
-        } catch (final InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+    private class DownloadAction {
+        private final List<String> downloaded = new ArrayList<>();
+        private final Map<String, IOException> errors = new ConcurrentHashMap<>();
+
+        private UrlDocument downloadDocument(final String url) {
+            synchronized (used) {
+                used.add(url);
+            }
+            try {
+                final String host = URLUtils.getHost(url);
+                hostLimit.computeIfAbsent(host, (ignore) -> new Semaphore(perHost));
+                hostLimit.get(host).acquire();
+                try {
+                    return new UrlDocument(url, downloader.download(url));
+                } finally {
+                    hostLimit.get(host).release();
+                }
+            } catch (final InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (final IOException e) {
+                errors.put(url, e);
+                return null;
+            }
         }
+
+        private List<String> parseDocument(final UrlDocument urlDocument) {
+            try {
+                return urlDocument.document.extractLinks();
+            } catch (final IOException e) {
+                errors.put(urlDocument.url, e);
+                return null;
+            }
+        }
+
+        private void download(final List<String> urls, final int depth) throws InterruptedException {
+            if (depth == 0) {
+                return;
+            }
+            final List<UrlDocument> urlDocuments = executeAll(downoloadExecutorService, urls,
+                    (url) -> () -> downloadDocument(url));
+            urlDocuments.stream().map(UrlDocument::url).forEach(downloaded::add);
+            final List<String> nextUrls = executeAll(extractorExecutorService, urlDocuments,
+                    (urlDocument) -> () -> parseDocument(urlDocument))
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .distinct()
+                    .filter(o -> !used.contains(o))
+                    .toList();
+            download(nextUrls, depth - 1);
+        }
+
+        private Result download(final String url, final int depth) {
+            try {
+                download(List.of(url), depth);
+                return new Result(downloaded, errors);
+            } catch (final InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
     }
 
     private record UrlDocument(String url, Document document) {
