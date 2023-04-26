@@ -7,18 +7,21 @@ import info.kgeorgiy.java.advanced.crawler.Result;
 import info.kgeorgiy.java.advanced.crawler.URLUtils;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.Future;
-import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.Semaphore;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
@@ -31,7 +34,7 @@ public class WebCrawler implements Crawler {
     private final ExecutorService extractorExecutorService;
     private final Downloader downloader;
     private final int perHost;
-    private final ConcurrentHashMap<String, Future<List<String>>> linkCache = new ConcurrentHashMap<>();
+    private final HashSet<String> used = new HashSet<>();
 
     public WebCrawler(final Downloader downloader,
             final int downloaders,
@@ -43,13 +46,89 @@ public class WebCrawler implements Crawler {
         this.downloader = downloader;
     }
 
+    private static <T, R> List<R> executeAll(
+            final ExecutorService executorService,
+            final List<T> src,
+            final Function<T, Callable<R>> callableGen)
+            throws InterruptedException {
+        return executorService.invokeAll(src.stream()
+                        .map(callableGen)
+                        .toList())
+                .stream()
+                .map(it -> {
+                            try {
+                                return it.get();
+                            } catch (final InterruptedException | ExecutionException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                )
+                .filter(obj -> !Objects.isNull(obj))
+                .toList();
+    }
+
+    private static Result concatResults(final Result a, final Result b) {
+        return new Result(
+                Stream.concat(a.getDownloaded().stream(), b.getDownloaded().stream()).toList(),
+                Stream.concat(a.getErrors().entrySet().stream(), b.getErrors().entrySet().stream())
+                        .collect(Collectors.toMap(Entry::getKey, Entry::getValue))
+        );
+    }
+
+    private UrlDocument downloadDocument(final String url, final Map<String, IOException> errors) {
+        synchronized (used) {
+            used.add(url);
+        }
+        try {
+            final String host = URLUtils.getHost(url);
+            hostLimit.computeIfAbsent(host, (ignore) -> new Semaphore(perHost));
+            hostLimit.get(host).acquire();
+            try {
+                return new UrlDocument(url, downloader.download(url));
+            } finally {
+                hostLimit.get(host).release();
+            }
+        } catch (final InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (final IOException e) {
+            errors.put(url, e);
+            return null;
+        }
+    }
+
+    private List<String> parseDocument(final UrlDocument urlDocument, final Map<String, IOException> errors) {
+        try {
+            return urlDocument.document.extractLinks();
+        } catch (final IOException e) {
+            errors.put(urlDocument.url, e);
+            return null;
+        }
+    }
+
+    private Result download(final List<String> urls, final int depth) throws InterruptedException {
+        if (depth == 0) {
+            return EMPTY_RESULT;
+        }
+        final List<String> downloaded = new ArrayList<>();
+        final Map<String, IOException> errors = new ConcurrentHashMap<>();
+        final List<UrlDocument> urlDocuments = executeAll(downoloadExecutorService, urls,
+                (url) -> () -> downloadDocument(url, errors));
+        urlDocuments.stream().map(UrlDocument::url).forEach(downloaded::add);
+        final List<String> nextUrls = executeAll(extractorExecutorService, urlDocuments,
+                (urlDocument) -> () -> parseDocument(urlDocument, errors))
+                .stream()
+                .flatMap(Collection::stream)
+                .distinct()
+                .filter(o -> !used.contains(o))
+                .toList();
+        return concatResults(new Result(downloaded, errors), download(nextUrls, depth - 1));
+    }
 
     @Override
     public Result download(final String url, final int depth) {
-        final RecursiveDownloader recursiveDownloader = new RecursiveDownloader(url, depth);
         try {
-            return recursiveDownloader.get();
-        } catch (final InterruptedException | ExecutionException e) {
+            return download(List.of(url), depth);
+        } catch (final InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
@@ -60,7 +139,6 @@ public class WebCrawler implements Crawler {
         downoloadExecutorService.shutdownNow();
     }
 
-
     private Result getResult(final Future<Result> result) {
         try {
             return result.get();
@@ -69,83 +147,8 @@ public class WebCrawler implements Crawler {
         }
     }
 
-    private class RecursiveDownloader extends RecursiveTask<Result> {
-
-        private final String url;
-        private final int depth;
-
-        RecursiveDownloader(final String url, final int depth) {
-            this.url = url;
-            this.depth = depth;
-        }
-
-        private Document download() throws IOException {
-
-            final String host = URLUtils.getHost(url);
-            hostLimit.computeIfAbsent(host, (ignore) -> new Semaphore(perHost));
-            try {
-                hostLimit.get(host).acquire();
-                try {
-                    return downloader.download(url);
-                } finally {
-                    hostLimit.get(host).release();
-                }
-            } catch (final InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        @Override
-        public Result compute() {
-            if (depth == 0) {
-                return EMPTY_RESULT;
-            }
-            final List<String> downloaded = new ArrayList<>();
-            final Map<String, IOException> errors = new HashMap<>();
-            try {
-                synchronized (linkCache) {
-                    linkCache.computeIfAbsent(url, (ignore) -> CompletableFuture.supplyAsync(() -> {
-                        try {
-                            final Document document = downoloadExecutorService
-                                    .submit(this::download)
-                                    .get();
-                            return extractorExecutorService
-                                    .submit(document::extractLinks)
-                                    .get();
-                        } catch (final InterruptedException | ExecutionException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    ));
-                }
-
-                downloaded.add(url);
-                final var recursives = linkCache.get(url).get().stream()
-                        .distinct()
-                        .map(link -> new RecursiveDownloader(link, depth - 1))
-                        .toList();
-                if (recursives.size() > 0 && depth > 1) {
-                    recursives.subList(1, recursives.size()).forEach(ForkJoinTask::fork);
-                    Stream.concat(
-                                    Stream.of(recursives.get(0).compute()),
-                                    recursives.subList(1, recursives.size()).stream().map(ForkJoinTask::join))
-                            .forEach(result -> {
-                                downloaded.addAll(result.getDownloaded());
-                                errors.putAll(result.getErrors());
-                            });
-                }
-            } catch (final InterruptedException e) {
-                throw new RuntimeException(e);
-            } catch (final ExecutionException e) {
-                if (e.getCause() instanceof final IOException cause) {
-                    errors.put(url, cause);
-                } else {
-                    throw new RuntimeException(e);
-                }
-            }
-            return new Result(downloaded, errors);
-        }
+    private record UrlDocument(String url, Document document) {
 
     }
+
 }
