@@ -24,10 +24,26 @@ import java.util.function.Function;
 
 public class WebCrawler implements Crawler {
 
+    private final ConcurrentHashMap<String, Semaphore> hostLimit = new ConcurrentHashMap<>();
+    private final ExecutorService downoloadExecutorService;
+    private final ExecutorService extractorExecutorService;
+    private final Downloader downloader;
+    private final int perHost;
+    private final HashSet<String> used = new HashSet<>();
+    public WebCrawler(final Downloader downloader,
+            final int downloaders,
+            final int extractors,
+            final int perHost) {
+        extractorExecutorService = Executors.newFixedThreadPool(extractors);
+        downoloadExecutorService = Executors.newFixedThreadPool(downloaders);
+        this.perHost = perHost;
+        this.downloader = downloader;
+    }
+
     private static int getPositiveInt(final String[] args, final int index, final int defaultValue, final String name) {
         if (index < args.length) {
             try {
-                final int res =  Integer.parseInt(args[index]);
+                final int res = Integer.parseInt(args[index]);
                 if (res <= 0) {
                     throw new RuntimeException(name + " must be positive");
                 }
@@ -80,24 +96,6 @@ public class WebCrawler implements Crawler {
         System.out.println("WebCrawler url [depth [downloads [extractors [perHost]]]]");
     }
 
-    private final ConcurrentHashMap<String, Semaphore> hostLimit = new ConcurrentHashMap<>();
-
-    private final ExecutorService downoloadExecutorService;
-    private final ExecutorService extractorExecutorService;
-    private final Downloader downloader;
-    private final int perHost;
-    private final HashSet<String> used = new HashSet<>();
-
-    public WebCrawler(final Downloader downloader,
-            final int downloaders,
-            final int extractors,
-            final int perHost) {
-        extractorExecutorService = Executors.newFixedThreadPool(extractors);
-        downoloadExecutorService = Executors.newFixedThreadPool(downloaders);
-        this.perHost = perHost;
-        this.downloader = downloader;
-    }
-
     private static <T, R> List<R> executeAll(
             final ExecutorService executorService,
             final List<T> src,
@@ -131,7 +129,12 @@ public class WebCrawler implements Crawler {
         downoloadExecutorService.shutdownNow();
     }
 
+    private record UrlDocument(String url, Document document) {
+
+    }
+
     private class DownloadAction {
+
         private final List<String> downloaded = new ArrayList<>();
         private final Map<String, IOException> errors = new ConcurrentHashMap<>();
 
@@ -190,10 +193,6 @@ public class WebCrawler implements Crawler {
                 throw new RuntimeException(e);
             }
         }
-
-    }
-
-    private record UrlDocument(String url, Document document) {
 
     }
 
