@@ -1,5 +1,6 @@
 package info.kgeorgiy.ja.chulkov.crawler;
 
+import info.kgeorgiy.java.advanced.crawler.CachingDownloader;
 import info.kgeorgiy.java.advanced.crawler.Crawler;
 import info.kgeorgiy.java.advanced.crawler.Document;
 import info.kgeorgiy.java.advanced.crawler.Downloader;
@@ -7,6 +8,7 @@ import info.kgeorgiy.java.advanced.crawler.Result;
 import info.kgeorgiy.java.advanced.crawler.URLUtils;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -21,6 +23,62 @@ import java.util.concurrent.Semaphore;
 import java.util.function.Function;
 
 public class WebCrawler implements Crawler {
+
+    private static int getPositiveInt(final String[] args, final int index, final int defaultValue, final String name) {
+        if (index < args.length) {
+            try {
+                final int res =  Integer.parseInt(args[index]);
+                if (res <= 0) {
+                    throw new RuntimeException(name + " must be positive");
+                }
+                return res;
+            } catch (final NumberFormatException e) {
+                throw new RuntimeException(name + " must be integer");
+            }
+        } else {
+            return defaultValue;
+        }
+    }
+
+    public static void main(final String[] args) {
+        Objects.requireNonNull(args);
+        Arrays.stream(args).forEach(Objects::requireNonNull);
+        if (args.length < 1) {
+            printUsage();
+            return;
+        }
+        final var url = args[0];
+        try {
+            final var depth = getPositiveInt(args, 1, 1, "depth");
+            final var downloaders = getPositiveInt(args, 2, Integer.MAX_VALUE, "downloaders");
+            final var extractors = getPositiveInt(args, 3, Integer.MAX_VALUE, "extractors");
+            final var perHost = getPositiveInt(args, 4, Integer.MAX_VALUE, "perHost");
+            try (final WebCrawler webCrawler =
+                    new WebCrawler(new CachingDownloader(), downloaders, extractors, perHost)) {
+                try {
+                    printResult(webCrawler.download(url, depth));
+                } catch (final RuntimeException e) {
+                    System.err.println("Error on executing process: " + e.getMessage());
+                }
+            } catch (final IOException e) {
+                System.err.println("Error on creating CachingDownloader " + e.getMessage());
+            }
+        } catch (final RuntimeException e) {
+            System.err.println(e.getMessage());
+            printUsage();
+        }
+    }
+
+    private static void printResult(final Result download) {
+        System.out.println("Downloaded:");
+        download.getDownloaded().forEach(System.out::println);
+        System.out.println("Errors:");
+        download.getErrors().forEach((url, exception) -> System.out.println(url + ": " + exception.getMessage()));
+    }
+
+    private static void printUsage() {
+        System.out.println("WebCrawler url [depth [downloads [extractors [perHost]]]]");
+    }
 
     private final ConcurrentHashMap<String, Semaphore> hostLimit = new ConcurrentHashMap<>();
 
