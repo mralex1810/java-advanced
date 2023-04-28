@@ -1,13 +1,11 @@
 package info.kgeorgiy.ja.chulkov.concurrent;
 
 import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Queue;
+
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 /**
@@ -36,13 +34,13 @@ public class ParallelMapperImpl implements ParallelMapper {
             }
         };
 
-        // :NOTE: (Int)Stream
         this.threads = IntStream.range(0, threadsNum)
                 .mapToObj(it -> new Thread(worker))
                 .peek(Thread::start)
                 .toList();
     }
 
+    @Override
     public <T, R> List<R> map(
             final Function<? super T, ? extends R> f,
             final List<? extends T> args
@@ -50,14 +48,17 @@ public class ParallelMapperImpl implements ParallelMapper {
         checkClosed();
         final Results<R> results = new Results<>(args.size());
         tasks.putAll(IntStream.range(0, args.size())
-                .<Task<?>>mapToObj(index -> new Task<>(() -> {
-                    try {
-                        results.setResult(index, f.apply(args.get(index)));
-                    } catch (final RuntimeException e) {
-                        // :NOTE: RuntimeException
-                        results.setException(e);
-                    }
-                }, results))
+                .<Task<?>>mapToObj(index -> new Task<>(
+                        () -> {
+                            final Supplier<R> supplier = () -> f.apply(args.get(index));
+                            try { // :NOTE: -> result
+                                results.setResult(index, supplier.get());
+                            } catch (final RuntimeException e) {
+                                results.setException(e);
+                            }
+                        },
+                        results
+                ))
                 .toList()
         );
         return results.getResults();
@@ -65,14 +66,9 @@ public class ParallelMapperImpl implements ParallelMapper {
 
     @Override
     public void close() {
-        // :NOTE: hang map
         closed = true;
         threads.forEach(Thread::interrupt);
-        tasks.forEach(it -> {
-            synchronized (it.result) {
-                it.result.notify();
-            }
-        });
+        tasks.forEach(it -> it.result().cancel());
         for (final Thread thread : threads) {
             boolean joined = false;
             while (!joined) {
@@ -92,20 +88,17 @@ public class ParallelMapperImpl implements ParallelMapper {
     }
 
     private record Task<R>(Runnable runnable, Results<R> result) {
-
     }
 
     private static class SynchronizedQueue<T> {
 
         private final Queue<T> queue = new ArrayDeque<>();
 
-        private void put(final T obj) {
-            queue.add(obj);
-            notify();
-        }
-
         public synchronized void putAll(final List<T> list) {
-            list.forEach(this::put);
+            list.forEach(obj -> {
+                queue.add(obj);
+                notify();
+            });
         }
 
         public synchronized T take() throws InterruptedException {
@@ -146,8 +139,7 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
 
         private void incrementResultCounter() {
-            resultsCountRest--; // :NOTE: -> 0
-            if (resultsCountRest == 0) {
+            if (--resultsCountRest == 0) {
                 notify();
             }
         }
@@ -161,6 +153,10 @@ public class ParallelMapperImpl implements ParallelMapper {
                 throw exception;
             }
             return results;
+        }
+
+        synchronized void cancel() {
+            this.notify();
         }
     }
 }
