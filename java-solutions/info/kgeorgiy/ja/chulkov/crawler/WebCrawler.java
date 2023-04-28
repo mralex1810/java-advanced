@@ -108,7 +108,7 @@ public class WebCrawler implements AdvancedCrawler {
     public Result download(final String url, final int depth, final List<String> hosts) {
         Objects.requireNonNull(hosts);
         hosts.forEach(Objects::requireNonNull);
-        return new DownloadAction(Set.copyOf(hosts)).download(url, depth);
+        return new DownloadAction(hosts).download(url, depth);
     }
 
     @Override
@@ -132,7 +132,7 @@ public class WebCrawler implements AdvancedCrawler {
 
     private class DownloadAction {
 
-        private final Set<String> hosts;
+        private final List<String> hosts;
         private final Set<String> downloaded = new HashSet<>();
         private final Map<String, IOException> errors = new ConcurrentHashMap<>();
 
@@ -140,7 +140,7 @@ public class WebCrawler implements AdvancedCrawler {
             this.hosts = null;
         }
 
-        private DownloadAction(final Set<String> hosts) {
+        private DownloadAction(final List<String> hosts) {
             this.hosts = hosts;
         }
 
