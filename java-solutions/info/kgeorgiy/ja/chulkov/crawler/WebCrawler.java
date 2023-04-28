@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class WebCrawler implements AdvancedCrawler {
@@ -186,8 +185,7 @@ public class WebCrawler implements AdvancedCrawler {
                 return;
             }
             final Set<String> nextUrls = urls.stream()
-                    .<Supplier<Optional<UrlDocument>>>map((url) -> () -> downloadDocument(url))
-                    .map(it -> CompletableFuture.supplyAsync(it, downoloadExecutorService))
+                    .map(url -> CompletableFuture.supplyAsync(() -> downloadDocument(url), downoloadExecutorService))
                     .map(it -> it.thenApplyAsync(this::parseDocument, extractorExecutorService))
                     .toList()
                     .stream()
