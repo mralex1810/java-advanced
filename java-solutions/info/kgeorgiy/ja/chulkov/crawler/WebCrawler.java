@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -189,13 +190,7 @@ public class WebCrawler implements AdvancedCrawler {
                     .map(it -> it.thenApplyAsync(this::parseDocument, extractorExecutorService))
                     .toList()
                     .stream()
-                    .map(it -> {
-                        try {
-                            return it.get();
-                        } catch (final InterruptedException | ExecutionException e) {
-                            throw new RuntimeException(e);
-                        }
-                    })
+                    .map(this::getAndSuppress)
                     .toList()
                     .stream()
                     .filter(Optional::isPresent)
@@ -205,6 +200,14 @@ public class WebCrawler implements AdvancedCrawler {
                     .collect(Collectors.toSet());
 
             download(nextUrls, depth - 1);
+        }
+
+        private <T> T getAndSuppress(final Future<T> it) {
+            try {
+                return it.get();
+            } catch (final InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         private Result download(final String url, final int depth) {
