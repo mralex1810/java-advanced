@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -13,10 +14,10 @@ import java.util.stream.IntStream;
  * Implementation of {@link ParallelMapper}
  */
 public class ParallelMapperImpl implements ParallelMapper {
-    private final SynchronizedQueue<Task<?>> tasks = new SynchronizedQueue<>();
-    private volatile boolean closed = false;
 
+    private final SynchronizedQueue<Task<?>> tasks = new SynchronizedQueue<>();
     private final List<Thread> threads;
+    private volatile boolean closed = false;
 
     /**
      * Constructs new {@code ParallelMapperImpl} by number of workers threads.
@@ -62,18 +63,16 @@ public class ParallelMapperImpl implements ParallelMapper {
         return results.getResults();
     }
 
-    private void checkClosed() {
-        if (closed) {
-            throw new IllegalStateException("Mapper was closed");
-        }
-    }
-
     @Override
     public void close() {
         // :NOTE: hang map
         closed = true;
-        tasks.queue.forEach(it -> it.result.notify());
         threads.forEach(Thread::interrupt);
+        tasks.forEach(it -> {
+            synchronized (it.result) {
+                it.result.notify();
+            }
+        });
         for (final Thread thread : threads) {
             boolean joined = false;
             while (!joined) {
@@ -86,7 +85,15 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
     }
 
-    private record Task<R>(Runnable runnable, Results<R> result) {}
+    private void checkClosed() {
+        if (closed) {
+            throw new IllegalStateException("Mapper was closed");
+        }
+    }
+
+    private record Task<R>(Runnable runnable, Results<R> result) {
+
+    }
 
     private static class SynchronizedQueue<T> {
 
@@ -97,19 +104,24 @@ public class ParallelMapperImpl implements ParallelMapper {
             notify();
         }
 
-        private synchronized void putAll(final List<T> list) {
+        public synchronized void putAll(final List<T> list) {
             list.forEach(this::put);
         }
 
-        private synchronized T take() throws InterruptedException {
+        public synchronized T take() throws InterruptedException {
             while (queue.isEmpty()) {
                 wait();
             }
             return queue.poll();
         }
+
+        public synchronized void forEach(final Consumer<T> consumer) {
+            queue.forEach(consumer);
+        }
     }
 
-    private class Results<R>  {
+    private class Results<R> {
+
         private final List<R> results;
         private int resultsCountRest;
         private RuntimeException exception = null;
