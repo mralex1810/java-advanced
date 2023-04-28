@@ -169,6 +169,7 @@ public class WebCrawler implements AdvancedCrawler {
             }
         }
 
+        @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
         private Optional<List<String>> parseDocument(final Optional<UrlDocument> urlDocumentOpt) {
             return urlDocumentOpt.map(urlDocument -> {
                 try {
