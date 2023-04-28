@@ -1,7 +1,7 @@
 package info.kgeorgiy.ja.chulkov.crawler;
 
+import info.kgeorgiy.java.advanced.crawler.AdvancedCrawler;
 import info.kgeorgiy.java.advanced.crawler.CachingDownloader;
-import info.kgeorgiy.java.advanced.crawler.Crawler;
 import info.kgeorgiy.java.advanced.crawler.Document;
 import info.kgeorgiy.java.advanced.crawler.Downloader;
 import info.kgeorgiy.java.advanced.crawler.Result;
@@ -23,8 +23,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
-public class WebCrawler implements Crawler {
+public class WebCrawler implements AdvancedCrawler {
 
     private final ConcurrentHashMap<String, Semaphore> hostLimit = new ConcurrentHashMap<>();
     private final ExecutorService downoloadExecutorService;
@@ -104,6 +105,12 @@ public class WebCrawler implements Crawler {
         return new DownloadAction().download(url, depth);
     }
 
+    public Result download(final String url, final int depth, final List<String> hosts) {
+        Objects.requireNonNull(hosts);
+        hosts.forEach(Objects::requireNonNull);
+        return new DownloadAction(Set.copyOf(hosts)).download(url, depth);
+    }
+
     @Override
     public void close() {
         final var services = List.of(extractorExecutorService, downoloadExecutorService);
@@ -125,13 +132,24 @@ public class WebCrawler implements Crawler {
 
     private class DownloadAction {
 
+        private final Set<String> hosts;
         private final Set<String> downloaded = new HashSet<>();
         private final Map<String, IOException> errors = new ConcurrentHashMap<>();
 
+        private DownloadAction() {
+            this.hosts = null;
+        }
+
+        private DownloadAction(final Set<String> hosts) {
+            this.hosts = hosts;
+        }
 
         private Optional<UrlDocument> downloadDocument(final String url) {
             try {
                 final String host = URLUtils.getHost(url);
+                if (hosts != null && !hosts.contains(host)) {
+                    return Optional.empty();
+                }
                 hostLimit.computeIfAbsent(host, (ignore) -> new Semaphore(perHost));
                 hostLimit.get(host).acquire();
                 try {
@@ -162,11 +180,11 @@ public class WebCrawler implements Crawler {
             });
         }
 
-        private void download(final List<String> urls, final int depth) throws InterruptedException {
+        private void download(final Set<String> urls, final int depth) throws InterruptedException {
             if (depth == 0) {
                 return;
             }
-            final List<String> nextUrls = urls.stream()
+            final Set<String> nextUrls = urls.stream()
                     .<Supplier<Optional<UrlDocument>>>map((url) -> () -> downloadDocument(url))
                     .map(it -> CompletableFuture.supplyAsync(it, downoloadExecutorService))
                     .map(it -> it.thenApplyAsync(this::parseDocument, extractorExecutorService))
@@ -184,16 +202,15 @@ public class WebCrawler implements Crawler {
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .flatMap(Collection::stream)
-                    .distinct()
                     .filter(o -> !downloaded.contains(o) && !errors.containsKey(o))
-                    .toList();
+                    .collect(Collectors.toSet());
 
             download(nextUrls, depth - 1);
         }
 
         private Result download(final String url, final int depth) {
             try {
-                download(List.of(url), depth);
+                download(Set.of(url), depth);
                 return new Result(List.copyOf(downloaded), errors);
             } catch (final InterruptedException e) {
                 throw new RuntimeException(e);
