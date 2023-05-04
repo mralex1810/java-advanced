@@ -7,14 +7,22 @@ import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 public class HelloUDPServer implements HelloServer {
 
     public static final int LENGTH_LIMIT = 1024;
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final Function<DatagramPacket, Supplier<byte[]>> taskGenerator = (it) -> () ->
+            String.format("Hello, %s", HelloUDPClient.getDecodedData(it)).getBytes(StandardCharsets.UTF_8);
     private DatagramSocket datagramSocket;
     private List<Thread> threadsList;
-
 
     @Override
     public void start(final int port, final int threads) {
@@ -28,15 +36,21 @@ public class HelloUDPServer implements HelloServer {
                 try {
                     final var datagramPacketForReceive = new DatagramPacket(new byte[LENGTH_LIMIT], LENGTH_LIMIT);
                     datagramSocket.receive(datagramPacketForReceive);
-                    final var ans = String.format("Hello, %s", HelloUDPClient.getDecodedData(datagramPacketForReceive))
-                            .getBytes(StandardCharsets.UTF_8);
-                    final var datagramPacketToSend = new DatagramPacket(
-                            ans,
-                            ans.length,
-                            datagramPacketForReceive.getAddress(),
-                            datagramPacketForReceive.getPort());
-                    datagramSocket.send(datagramPacketToSend);
-                } catch (final IOException e) {
+                    CompletableFuture.supplyAsync(taskGenerator.apply(datagramPacketForReceive))
+                            .thenAcceptAsync((ans) -> {
+                                        final var datagramPacketToSend = new DatagramPacket(
+                                                ans,
+                                                ans.length,
+                                                datagramPacketForReceive.getAddress(),
+                                                datagramPacketForReceive.getPort());
+                                        try {
+                                            datagramSocket.send(datagramPacketToSend);
+                                        } catch (final IOException e) {
+                                            throw new RuntimeException(e);
+                                        }
+                                    }
+                            ).get();
+                } catch (final IOException | InterruptedException | ExecutionException e) {
                     throw new RuntimeException(e);
                 }
             }

@@ -9,14 +9,15 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
+import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 public class HelloUDPClient implements HelloClient {
 
+    public static final int TIMEOUT = 50;
     private static final List<String> ANSWERS =
             List.of("Hello, %s", "%s ආයුබෝවන්", "Բարեւ, %s", "مرحبا %s", "Салом %s", "Здраво %s", "Здравейте %s",
                     "Прывітанне %s", "Привіт %s", "Привет, %s", "Поздрав %s", "سلام به %s", "שלום %s", "Γεια σας %s",
@@ -27,121 +28,128 @@ public class HelloUDPClient implements HelloClient {
                     "Sveiki %s", "Tere %s", "Witaj %s", "Xin chào %s", "ສະບາຍດີ %s", "สวัสดี %s", "ഹലോ %s", "ಹಲೋ %s",
                     "హలో %s", "हॅलो %s", "नमस्कार%sको", "হ্যালো %s", "ਹੈਲੋ %s", "હેલો %s", "வணக்கம் %s",
                     "ကို %s မင်္ဂလာပါ", "გამარჯობა %s", "ជំរាបសួរ %s បាន", "こんにちは%s", "你好%s", "안녕하세요  %s");
-
-    private static final List<Function<String, String>> MODIFICATION = List.of(
-            s -> s,
-            s -> s.replaceAll("([^0-9])", "$1$1"),
-            (s) -> s.replaceAll("[^0-9]", "_"),
-            (s) -> s.replaceAll("[^0-9]", "-")
-//            (s) -> {
-//
-//                var it = Pattern.compile("([^0-9]+)").matcher(s);
-//                for (int i = 0; i < it.groupCount() * it.groupCount(); i++) {
-//                    it.replaceAll(it -> it.)
-//                }
-//            }
-    );
-
-
-    private static Stream<IntInt> requestsForThread(final int requests, final int thread) {
-        return IntStream.range(0, requests)
-                .mapToObj(it -> new IntInt(thread, it));
-    }
-
-    private static String toString(final DatagramPacketPairAnswer it) {
-        return getDecodedData(it.packetToSend) + " " + getDecodedData(it.packetForReceive);
-    }
+    public static final String ANSWER_JOIN = String.join("|", ANSWERS);
+    public static final String DELIMITER_PATTERN = "(_|__|-|" + ANSWER_JOIN + ")";
 
     public static String getDecodedData(final DatagramPacket it) {
         return StandardCharsets.UTF_8.decode(ByteBuffer.wrap(it.getData(), 0, it.getLength())).toString();
     }
 
-    private static Runnable getRunnable(final int port, final DatagramSocket datagramSocket, final ReentrantLock lock,
-            final InetAddress address, final String it) {
-        return () -> {
-            final var bytes = it.getBytes(StandardCharsets.UTF_8);
-            final var packetToSend = new DatagramPacket(bytes, bytes.length, address, port);
-            final var packetForReceive = new DatagramPacket(new byte[1024], 1024);
-            while (true) {
-                try {
-                    lock.lock();
-                    try {
-                        datagramSocket.send(packetToSend);
-                        datagramSocket.receive(packetForReceive);
-                    } finally {
-                        lock.unlock();
-                    }
-                    final var ans = getDecodedData(packetForReceive);
-                    if (isGood(it, ans)) {
-                        System.out.println(it + " " + ans);
-                        break;
-                    } else {
-                        System.err.println("Bad response:" + it + " " + ans);
-                    }
-                } catch (final IOException e) {
-                    System.err.println(it + " "
-                            + e.getMessage());
-                }
+    public static void main(final String[] args) {
+        Objects.requireNonNull(args);
+        Arrays.stream(args).forEach(Objects::requireNonNull);
+        if (args.length != 5) {
+            printUsage();
+            return;
+        }
+        try {
+            final int port = parsePositiveInt(args[1], "port");
+            final int threads = parsePositiveInt(args[3], "threads");
+            final int requests = parsePositiveInt(args[4], "requests");
+            try {
+                new HelloUDPClient().run(args[0], port, args[2], threads, requests);
+            } catch (final RuntimeException e) {
+                System.err.println(e.getMessage());
             }
-        };
+        } catch (final RuntimeException ignored) {
+        }
     }
 
-    private static boolean isGood(final String it, final String ans) {
-        for (final var answer : ANSWERS) {
-            for (final var modify : MODIFICATION) {
-                if (ans.equals(String.format(answer, modify.apply(it)))) {
-                    return true;
-                }
+    private static int parsePositiveInt(final String it, final String name) {
+        try {
+            final int res = Integer.parseInt(it);
+            if (res <= 0) {
+                System.err.println(name + " must be positive");
             }
+            return res;
+        } catch (final NumberFormatException e) {
+            System.err.println(name + " incorrect int: " + e.getMessage());
+            throw new RuntimeException(e);
         }
-        return false;
     }
+
+    private static void printUsage() {
+        System.err.println("""
+                    Usage: HelloClient host port prefix threads requests
+                    host -- the name or ip address of the computer running the server
+                    port -- port number to send requests to
+                    prefix -- request prefix
+                    threads -- number of parallel request threads
+                    requests -- number of requests per thread
+                """);
+    }
+
 
     @Override
     public void run(final String host, final int port, final String prefix, final int threads, final int requests) {
-        try (
-                final var datagramSocket = new DatagramSocket()
-        ) {
-            final ReentrantLock lock = new ReentrantLock();
-            datagramSocket.setSoTimeout(200);
-            final var address = InetAddress.getByName(host);
-            final var threadsList = IntStream.range(0, threads)
-                    .mapToObj(threadNum ->
-                            requestsForThread(requests, threadNum)
-                                    .map(it -> prefix + it.a + "_" + it.b)
-                                    .map(it -> getRunnable(port, datagramSocket, lock, address, it))
-                                    .toList()
-                    )
-                    .map(runnables -> new Thread(() -> runnables.forEach(Runnable::run)))
-                    .peek(Thread::start)
-                    .toList();
-            threadsList.forEach(thread -> {
-                while (true) {
-                    try {
-                        thread.join();
-                        break;
-                    } catch (final InterruptedException ignored) {
-                    }
-                }
-            });
+        final String prefixPattern = "(" + prefix
+                + "|" + prefix.replaceAll("(.)", "$1$1")
+                + "|" + "_".repeat(prefix.length())
+                + "|" + "-".repeat(prefix.length())
+                + "|" + ANSWER_JOIN + ")";
 
-        } catch (final UnknownHostException | SocketException e) {
+        final InetAddress address;
+        try {
+            address = InetAddress.getByName(host);
+        } catch (final UnknownHostException e) {
             throw new RuntimeException(e);
         }
 
-
+        final var threadsList = IntStream.range(0, threads)
+                .mapToObj(threadNum ->
+                        new Thread(() -> {
+                            try (
+                                    final var datagramSocket = new DatagramSocket()
+                            ) {
+                                final int receiveBufferSize = datagramSocket.getReceiveBufferSize();
+                                datagramSocket.setSoTimeout(TIMEOUT);
+                                for (int requestNum = 0; requestNum < requests; requestNum++) {
+                                    while (!Thread.interrupted()) {
+                                        final String request = prefix + threadNum + "_" + requestNum;
+                                        final var bytes = request.getBytes(StandardCharsets.UTF_8);
+                                        final var packetToSend = new DatagramPacket(bytes, bytes.length, address, port);
+                                        try {
+                                            datagramSocket.send(packetToSend);
+                                            final var packetForReceive = new DatagramPacket(new byte[receiveBufferSize],
+                                                    receiveBufferSize);
+                                            datagramSocket.receive(packetForReceive);
+                                            final var ans = getDecodedData(packetForReceive);
+                                            if (validateAnswer(ans, prefixPattern,
+                                                    threadNum,
+                                                    requestNum)) {
+                                                break;
+                                            } else {
+                                                System.err.println("Bad answer: " + ans);
+                                            }
+                                        } catch (final IOException e) {
+                                            System.err.println(threadNum + " " + e.getMessage());
+                                        }
+                                    }
+                                }
+                            } catch (final SocketException e) {
+                                throw new RuntimeException(e);
+                            }
+                        })
+                )
+                .peek(Thread::start)
+                .toList();
+        threadsList.forEach(thread -> {
+            while (true) {
+                try {
+                    thread.join();
+                    break;
+                } catch (final InterruptedException ignored) {
+                }
+            }
+        });
     }
 
-    private record DatagramPacketPairAnswer(DatagramPacket packetToSend, DatagramPacket packetForReceive,
-                                            String expected) {
-
-    }
-
-    private record BytesString(byte[] bytes, String string) {
-
-    }
-
-    private record IntInt(int a, int b) {
-
+    private boolean validateAnswer(final String ans, final String prefixPattern, final int threadNum,
+            final int request) {
+        return ANSWERS.stream()
+                .map(it -> it.replaceAll("%s", prefixPattern + threadNum + DELIMITER_PATTERN + request))
+                .map(Pattern::compile)
+                .map(Pattern::asMatchPredicate)
+                .anyMatch(it -> it.test(ans));
     }
 }
