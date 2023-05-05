@@ -71,12 +71,12 @@ public class HelloUDPClient implements HelloClient {
                 """);
     }
 
-    private static boolean checkFail(final boolean bool, final String error) {
+    private static boolean checkNotFail(final boolean bool, final String error) {
         if (bool) {
             System.err.println(error);
-            return true;
+            return false;
         }
-        return false;
+        return true;
     }
 
     private static List<Integer> parseIntsFromString(final String string) {
@@ -182,8 +182,8 @@ public class HelloUDPClient implements HelloClient {
     private boolean validateAnswer(final String ans, final int threadNum,
             final int request) {
         final var numbers = parseIntsFromString(ans);
-        return !checkFail(numbers.size() != 2, "Not two numbers in string")
-                && !checkFail(numbers.get(0) != threadNum, "First numbers isn't thread num")
-                && !checkFail(numbers.get(1) != request, "Second numbers isn't request");
+        return checkNotFail(numbers.size() != 2, "Not two numbers in string")
+                && checkNotFail(numbers.get(0) != threadNum, "First numbers isn't thread num")
+                && checkNotFail(numbers.get(1) != request, "Second numbers isn't request");
     }
 }
