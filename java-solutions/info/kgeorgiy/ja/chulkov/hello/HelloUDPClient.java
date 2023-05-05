@@ -1,5 +1,6 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
+import info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils;
 import info.kgeorgiy.java.advanced.hello.HelloClient;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -56,28 +57,15 @@ public class HelloUDPClient implements HelloClient {
             return;
         }
         try {
-            final int port = parsePositiveInt(args[1], "port");
-            final int threads = parsePositiveInt(args[3], "threads");
-            final int requests = parsePositiveInt(args[4], "requests");
+            final int port = ArgumentsUtils.parseNonNegativeInt(args[1], "port");
+            final int threads = ArgumentsUtils.parseNonNegativeInt(args[3], "threads");
+            final int requests = ArgumentsUtils.parseNonNegativeInt(args[4], "requests");
             try {
                 new HelloUDPClient().run(args[0], port, args[2], threads, requests);
             } catch (final RuntimeException e) {
                 System.err.println(e.getMessage());
             }
         } catch (final RuntimeException ignored) {
-        }
-    }
-
-    private static int parsePositiveInt(final String it, final String name) {
-        try {
-            final int res = Integer.parseInt(it);
-            if (res <= 0) {
-                System.err.println(name + " must be positive");
-            }
-            return res;
-        } catch (final NumberFormatException e) {
-            System.err.println(name + " incorrect int: " + e.getMessage());
-            throw new RuntimeException(e);
         }
     }
 
