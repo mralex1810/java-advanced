@@ -12,12 +12,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
+/**
+ * Implementation of {@link HelloClient} with main method
+ */
 public class HelloUDPClient implements HelloClient {
 
-    public static final int TIMEOUT = 50;
+    private static final int TIMEOUT = 50;
     private static final List<String> ANSWERS =
             List.of("Hello, %s", "%s ආයුබෝවන්", "Բարեւ, %s", "مرحبا %s", "Салом %s", "Здраво %s", "Здравейте %s",
                     "Прывітанне %s", "Привіт %s", "Привет, %s", "Поздрав %s", "سلام به %s", "שלום %s", "Γεια σας %s",
@@ -28,13 +32,22 @@ public class HelloUDPClient implements HelloClient {
                     "Sveiki %s", "Tere %s", "Witaj %s", "Xin chào %s", "ສະບາຍດີ %s", "สวัสดี %s", "ഹലോ %s", "ಹಲೋ %s",
                     "హలో %s", "हॅलो %s", "नमस्कार%sको", "হ্যালো %s", "ਹੈਲੋ %s", "હેલો %s", "வணக்கம் %s",
                     "ကို %s မင်္ဂလာပါ", "გამარჯობა %s", "ជំរាបសួរ %s បាន", "こんにちは%s", "你好%s", "안녕하세요  %s");
-    public static final String ANSWER_JOIN = String.join("|", ANSWERS);
-    public static final String DELIMITER_PATTERN = "(_|__|-|" + ANSWER_JOIN + ")";
+    private static final String ANSWER_JOIN = String.join("|", ANSWERS);
+    private static final String DELIMITER_PATTERN = "(_|__|-|" + ANSWER_JOIN + ")";
 
-    public static String getDecodedData(final DatagramPacket it) {
-        return StandardCharsets.UTF_8.decode(ByteBuffer.wrap(it.getData(), 0, it.getLength())).toString();
+    /**
+     * Get UTF-8 data from {@link DatagramPacket}
+     * @param packet packet with encoded data
+     * @return decoded string
+     */
+    public static String getDecodedData(final DatagramPacket packet) {
+        return StandardCharsets.UTF_8.decode(ByteBuffer.wrap(packet.getData(), 0, packet.getLength())).toString();
     }
 
+    /**
+     * Method to run {@link HelloUDPClient#run(String, int, String, int, int)} from CLI
+     * @param args array of string {host, port, prefix, threads, requests}
+     */
     public static void main(final String[] args) {
         Objects.requireNonNull(args);
         Arrays.stream(args).forEach(Objects::requireNonNull);
@@ -89,6 +102,7 @@ public class HelloUDPClient implements HelloClient {
                 + "|" + ANSWER_JOIN + ")";
 
         final InetAddress address;
+        final AtomicReference<RuntimeException> exception = new AtomicReference<>(null);
         try {
             address = InetAddress.getByName(host);
         } catch (final UnknownHostException e) {
@@ -121,27 +135,39 @@ public class HelloUDPClient implements HelloClient {
                                             } else {
                                                 System.err.println("Bad answer: " + ans);
                                             }
-                                        } catch (final IOException e) {
-                                            System.err.println(threadNum + " " + e.getMessage());
+                                        } catch (final IOException | RuntimeException e) {
+                                            System.err.println("Error on " + request + " " + e.getMessage());
                                         }
                                     }
                                 }
-                            } catch (final SocketException e) {
-                                throw new RuntimeException(e);
+                            } catch (final SocketException | RuntimeException e) {
+                                if (exception.get() == null) {
+                                    exception.set(
+                                            new RuntimeException("Error on executing client functions in thread"));
+                                }
+                                exception.get().addSuppressed(e);
                             }
                         })
                 )
                 .peek(Thread::start)
                 .toList();
-        threadsList.forEach(thread -> {
+        boolean interrupted = false;
+        for (final Thread thread : threadsList) {
             while (true) {
                 try {
                     thread.join();
                     break;
                 } catch (final InterruptedException ignored) {
+                    if (exception.get() != null && !interrupted) {
+                        threadsList.forEach(Thread::interrupt);
+                        interrupted = true;
+                    }
                 }
             }
-        });
+        }
+        if (exception.get() != null) {
+            throw exception.get();
+        }
     }
 
     private boolean validateAnswer(final String ans, final String prefixPattern, final int threadNum,

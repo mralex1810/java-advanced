@@ -14,15 +14,27 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+
+/**
+ * Implementation of {@link HelloServer} with main method
+ */
 public class HelloUDPServer implements HelloServer {
 
-    public static final int LENGTH_LIMIT = 1024;
+    public static final int MAX_TASKS = 1024;
     private final Function<DatagramPacket, Supplier<byte[]>> taskGenerator = (it) -> () ->
             String.format("Hello, %s", HelloUDPClient.getDecodedData(it)).getBytes(StandardCharsets.UTF_8);
-    private final Semaphore semaphore = new Semaphore(1024);
+    private final Semaphore semaphore = new Semaphore(MAX_TASKS);
     private Thread getterThread;
     private ExecutorService taskExecutorService;
     private DatagramSocket datagramSocket;
+
+    /**
+     * Method to run {@link HelloUDPServer} from CLI
+     * @param args array of string {port, threads}
+     */
+    public static void main(final String[] args) {
+
+    }
 
     @Override
     public void start(final int port, final int threads) {
@@ -35,25 +47,24 @@ public class HelloUDPServer implements HelloServer {
         getterThread = new Thread(() -> {
             while (!Thread.interrupted()) {
                 try {
-                    final var datagramPacketForReceive = new DatagramPacket(new byte[LENGTH_LIMIT], LENGTH_LIMIT);
+                    final var datagramPacketForReceive = new DatagramPacket(
+                            new byte[datagramSocket.getReceiveBufferSize()],
+                            datagramSocket.getReceiveBufferSize()
+                    );
                     datagramSocket.receive(datagramPacketForReceive);
                     semaphore.acquire();
                     CompletableFuture
                             .supplyAsync(taskGenerator.apply(datagramPacketForReceive), taskExecutorService)
                             .thenAccept((ans) -> {
+                                final var datagramPacketToSend = new DatagramPacket(
+                                        ans,
+                                        ans.length,
+                                        datagramPacketForReceive.getAddress(),
+                                        datagramPacketForReceive.getPort());
                                 try {
-                                    final var datagramPacketToSend = new DatagramPacket(
-                                            ans,
-                                            ans.length,
-                                            datagramPacketForReceive.getAddress(),
-                                            datagramPacketForReceive.getPort());
-                                    try {
-                                        datagramSocket.send(datagramPacketToSend);
-                                    } catch (final IOException e) {
-                                        System.err.println("Error on executing task");
-                                    }
-                                } finally {
-                                    semaphore.release();
+                                    datagramSocket.send(datagramPacketToSend);
+                                } catch (final IOException e) {
+                                    System.err.println("Error on executing task");
                                 }
                             })
                             .handle((ans, e) -> {
@@ -73,9 +84,9 @@ public class HelloUDPServer implements HelloServer {
 
     @Override
     public void close() {
-        getterThread.interrupt();
-        taskExecutorService.shutdownNow();
         datagramSocket.close();
+        getterThread.interrupt();
+        taskExecutorService.shutdown();
         while (true) {
             try {
                 getterThread.join();
