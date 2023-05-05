@@ -38,6 +38,7 @@ public class HelloUDPClient implements HelloClient {
 
     /**
      * Get UTF-8 data from {@link DatagramPacket}
+     *
      * @param packet packet with encoded data
      * @return decoded string
      */
@@ -47,6 +48,7 @@ public class HelloUDPClient implements HelloClient {
 
     /**
      * Method to run {@link HelloUDPClient#run(String, int, String, int, int)} from CLI
+     *
      * @param args array of string {host, port, prefix, threads, requests}
      */
     public static void main(final String[] args) {
@@ -96,46 +98,10 @@ public class HelloUDPClient implements HelloClient {
         } catch (final UnknownHostException e) {
             throw new RuntimeException(e);
         }
-
+        final Thread mainThread = Thread.currentThread();
         final var threadsList = IntStream.range(0, threads)
-                .mapToObj(threadNum ->
-                        new Thread(() -> {
-                            try (
-                                    final var datagramSocket = new DatagramSocket()
-                            ) {
-                                final int receiveBufferSize = datagramSocket.getReceiveBufferSize();
-                                datagramSocket.setSoTimeout(TIMEOUT);
-                                for (int requestNum = 0; requestNum < requests; requestNum++) {
-                                    while (!Thread.interrupted()) {
-                                        final String request = prefix + threadNum + "_" + requestNum;
-                                        final var bytes = request.getBytes(StandardCharsets.UTF_8);
-                                        final var packetToSend = new DatagramPacket(bytes, bytes.length, address, port);
-                                        try {
-                                            datagramSocket.send(packetToSend);
-                                            final var packetForReceive = new DatagramPacket(new byte[receiveBufferSize],
-                                                    receiveBufferSize);
-                                            datagramSocket.receive(packetForReceive);
-                                            final var ans = getDecodedData(packetForReceive);
-                                            if (validateAnswer(ans, prefixPattern,
-                                                    threadNum,
-                                                    requestNum)) {
-                                                break;
-                                            } else {
-                                                System.err.println("Bad answer: " + ans);
-                                            }
-                                        } catch (final IOException | RuntimeException e) {
-                                            System.err.println("Error on " + request + " " + e.getMessage());
-                                        }
-                                    }
-                                }
-                            } catch (final SocketException | RuntimeException e) {
-                                if (exception.get() == null) {
-                                    exception.set(
-                                            new RuntimeException("Error on executing client functions in thread"));
-                                }
-                                exception.get().addSuppressed(e);
-                            }
-                        })
+                .mapToObj(threadNum -> new Thread(() ->
+                        threadAction(port, prefix, requests, prefixPattern, address, exception, threadNum, mainThread))
                 )
                 .peek(Thread::start)
                 .toList();
@@ -155,6 +121,46 @@ public class HelloUDPClient implements HelloClient {
         }
         if (exception.get() != null) {
             throw exception.get();
+        }
+    }
+
+    private void threadAction(final int port, final String prefix, final int requests, final String prefixPattern,
+            final InetAddress address, final AtomicReference<RuntimeException> exception, final int threadNum,
+            final Thread mainThread) {
+        try (
+                final var datagramSocket = new DatagramSocket()
+        ) {
+            datagramSocket.setSoTimeout(TIMEOUT);
+            for (int requestNum = 0; requestNum < requests; requestNum++) {
+                while (!Thread.interrupted()) {
+                    final String request = prefix + threadNum + "_" + requestNum;
+                    final var bytes = request.getBytes(StandardCharsets.UTF_8);
+                    final var packetToSend = new DatagramPacket(bytes, bytes.length, address, port);
+                    try {
+                        datagramSocket.send(packetToSend);
+                        final var packetForReceive = new DatagramPacket(new byte[datagramSocket.getReceiveBufferSize()],
+                                datagramSocket.getReceiveBufferSize());
+                        datagramSocket.receive(packetForReceive);
+                        final var ans = getDecodedData(packetForReceive);
+                        if (validateAnswer(ans, prefixPattern,
+                                threadNum,
+                                requestNum)) {
+                            break;
+                        } else {
+                            System.err.println("Bad answer: " + ans);
+                        }
+                    } catch (final IOException | RuntimeException e) {
+                        System.err.println("Error on " + request + " " + e.getMessage());
+                    }
+                }
+            }
+        } catch (final SocketException | RuntimeException e) {
+            if (exception.get() == null) {
+                exception.set(
+                        new RuntimeException("Error on executing client functions in thread"));
+                mainThread.interrupt();
+            }
+            exception.get().addSuppressed(e);
         }
     }
 
