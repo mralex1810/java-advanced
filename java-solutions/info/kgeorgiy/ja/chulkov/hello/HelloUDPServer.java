@@ -23,8 +23,8 @@ import java.util.function.Supplier;
  * Implementation of {@link HelloServer} with main method
  */
 public class HelloUDPServer implements HelloServer {
-
     public static final int MAX_TASKS = 1024;
+
     private final Function<DatagramPacket, Supplier<byte[]>> taskGenerator = (it) -> () ->
             String.format("Hello, %s", HelloUDPClient.getDecodedData(it)).getBytes(StandardCharsets.UTF_8);
     private final Semaphore semaphore = new Semaphore(MAX_TASKS);

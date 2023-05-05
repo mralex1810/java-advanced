@@ -3,6 +3,7 @@ package info.kgeorgiy.ja.chulkov.hello;
 import info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils;
 import info.kgeorgiy.java.advanced.hello.HelloClient;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -104,7 +106,7 @@ public class HelloUDPClient implements HelloClient {
         try {
             address = InetAddress.getByName(host);
         } catch (final UnknownHostException e) {
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
         final Thread mainThread = Thread.currentThread();
         final var threadsList = IntStream.range(1, threads + 1)
