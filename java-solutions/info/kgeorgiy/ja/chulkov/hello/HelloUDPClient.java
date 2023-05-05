@@ -1,7 +1,9 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
 import info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils;
+import info.kgeorgiy.ja.chulkov.utils.Scanner;
 import info.kgeorgiy.java.advanced.hello.HelloClient;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -81,19 +83,10 @@ public class HelloUDPClient implements HelloClient {
 
     private static List<Integer> parseIntsFromString(final String string) {
         final List<Integer> ans = new ArrayList<>();
-        for (int i = 0; i < string.length(); i++) {
-            if (Character.isDigit(string.charAt(i))) {
-                final int numberBeginIndex = i;
-
-                while (i < string.length() && Character.isDigit(string.charAt(i)) ) {
-                    i++;
-                }
-
-                final String numberString = string.substring(numberBeginIndex, i);
-                ans.add(Integer.parseInt(numberString));
-            }
+        final var scanner = new Scanner(new ByteArrayInputStream(string.getBytes()));
+        while (scanner.cachNext(Character::isDigit)) {
+            ans.add(Integer.parseInt(scanner.next()));
         }
-
         return ans;
     }
 
@@ -156,9 +149,7 @@ public class HelloUDPClient implements HelloClient {
                                 datagramSocket.getReceiveBufferSize());
                         datagramSocket.receive(packetForReceive);
                         final var ans = getDecodedData(packetForReceive);
-                        if (validateAnswer(ans,
-                                threadNum,
-                                requestNum)) {
+                        if (validateAnswer(ans, threadNum, requestNum)) {
                             System.out.println(request + " " + ans);
                             break;
                         } else {
