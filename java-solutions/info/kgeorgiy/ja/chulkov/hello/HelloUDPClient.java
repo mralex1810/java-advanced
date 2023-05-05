@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
@@ -101,7 +102,9 @@ public class HelloUDPClient implements HelloClient {
         final Thread mainThread = Thread.currentThread();
         final var threadsList = IntStream.range(0, threads)
                 .mapToObj(threadNum -> new Thread(() ->
-                        threadAction(port, prefix, requests, prefixPattern, address, exception, threadNum, mainThread))
+                        threadAction(port, (requestNum) -> prefix + threadNum + "_" + requestNum,
+                                requests, prefixPattern, address, exception, threadNum,
+                                mainThread))
                 )
                 .peek(Thread::start)
                 .toList();
@@ -124,16 +127,14 @@ public class HelloUDPClient implements HelloClient {
         }
     }
 
-    private void threadAction(final int port, final String prefix, final int requests, final String prefixPattern,
-            final InetAddress address, final AtomicReference<RuntimeException> exception, final int threadNum,
-            final Thread mainThread) {
-        try (
-                final var datagramSocket = new DatagramSocket()
-        ) {
+    private void threadAction(final int port, final Function<Integer, String> requestGenerator, final int requests,
+            final String prefixPattern, final InetAddress address, final AtomicReference<RuntimeException> exception,
+            final int threadNum, final Thread mainThread) {
+        try (final var datagramSocket = new DatagramSocket()) {
             datagramSocket.setSoTimeout(TIMEOUT);
             for (int requestNum = 0; requestNum < requests; requestNum++) {
                 while (!Thread.interrupted()) {
-                    final String request = prefix + threadNum + "_" + requestNum;
+                    final String request = requestGenerator.apply(requestNum);
                     final var bytes = request.getBytes(StandardCharsets.UTF_8);
                     final var packetToSend = new DatagramPacket(bytes, bytes.length, address, port);
                     try {
@@ -145,6 +146,7 @@ public class HelloUDPClient implements HelloClient {
                         if (validateAnswer(ans, prefixPattern,
                                 threadNum,
                                 requestNum)) {
+                            System.out.println(request + " " + ans);
                             break;
                         } else {
                             System.err.println("Bad answer: " + ans);
