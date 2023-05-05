@@ -23,7 +23,7 @@ import java.util.stream.IntStream;
  */
 public class HelloUDPClient implements HelloClient {
 
-    private static final int TIMEOUT = 50;
+    private static final int TIMEOUT = 100;
     private static final List<String> ANSWERS =
             List.of("Hello, %s", "%s ආයුබෝවන්", "Բարեւ, %s", "مرحبا %s", "Салом %s", "Здраво %s", "Здравейте %s",
                     "Прывітанне %s", "Привіт %s", "Привет, %s", "Поздрав %s", "سلام به %s", "שלום %s", "Γεια σας %s",
@@ -127,9 +127,16 @@ public class HelloUDPClient implements HelloClient {
         }
     }
 
-    private void threadAction(final int port, final Function<Integer, String> requestGenerator, final int requests,
-            final String prefixPattern, final InetAddress address, final AtomicReference<RuntimeException> exception,
-            final int threadNum, final Thread mainThread) {
+    private void threadAction(
+            final int port,
+            final Function<Integer, String> requestGenerator,
+            final int requests,
+            final String prefixPattern,
+            final InetAddress address,
+            final AtomicReference<RuntimeException> exception,
+            final int threadNum,
+            final Thread mainThread
+    ) {
         try (final var datagramSocket = new DatagramSocket()) {
             datagramSocket.setSoTimeout(TIMEOUT);
             for (int requestNum = 0; requestNum < requests; requestNum++) {
