@@ -56,7 +56,7 @@ public class BankTests {
         if (!result.wasSuccessful()) {
             System.exit(1);
         } else {
-            System.exit(1);
+            System.exit(0);
         }
     }
 
