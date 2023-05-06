@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -164,8 +163,7 @@ public class HelloUDPClient implements HelloClient {
             }
         } catch (final SocketException | RuntimeException e) {
             if (exception.get() == null) {
-                exception.set(
-                        new RuntimeException("Error on executing client functions in thread"));
+                exception.set(new RuntimeException("Error on executing client functions in thread"));
                 mainThread.interrupt();
             }
             exception.get().addSuppressed(e);
