@@ -11,6 +11,7 @@ module info.kgeorgiy.ja.chulkov {
     requires info.kgeorgiy.java.advanced.crawler;
     requires info.kgeorgiy.java.advanced.hello;
     requires java.compiler;
+    requires java.rmi;
 
     exports info.kgeorgiy.ja.chulkov.concurrent;
     exports info.kgeorgiy.ja.chulkov.implementor;
