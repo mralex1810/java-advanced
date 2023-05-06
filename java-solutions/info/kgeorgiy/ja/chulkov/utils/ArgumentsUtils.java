@@ -1,5 +1,8 @@
 package info.kgeorgiy.ja.chulkov.utils;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 /**
  * Utils class for working with arguments of main
  */
@@ -22,5 +25,10 @@ public class ArgumentsUtils {
             throw new NumberFormatException(name + " must be positive");
         }
         return res;
+    }
+
+    public static void checkNonNullsArgs(final String[] args) {
+        Objects.requireNonNull(args);
+        Arrays.stream(args).forEach(Objects::requireNonNull);
     }
 }

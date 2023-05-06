@@ -12,12 +12,16 @@ module info.kgeorgiy.ja.chulkov {
     requires info.kgeorgiy.java.advanced.hello;
     requires java.compiler;
     requires java.rmi;
+    requires jdk.httpserver;
 
     exports info.kgeorgiy.ja.chulkov.concurrent;
     exports info.kgeorgiy.ja.chulkov.implementor;
     exports info.kgeorgiy.ja.chulkov.arrayset;
     exports info.kgeorgiy.ja.chulkov.student;
     exports info.kgeorgiy.ja.chulkov.walk;
+    exports info.kgeorgiy.ja.chulkov.bank;
+    exports info.kgeorgiy.ja.chulkov.bank.person;
+    exports info.kgeorgiy.ja.chulkov.bank.account;
 
     opens info.kgeorgiy.ja.chulkov.concurrent to info.kgeorgiy.java.advanced.concurrent,
             info.kgeorgiy.java.advanced.base;
@@ -26,4 +30,7 @@ module info.kgeorgiy.ja.chulkov {
     opens info.kgeorgiy.ja.chulkov.student to info.kgeorgiy.java.advanced.student, info.kgeorgiy.java.advanced.base;
     opens info.kgeorgiy.ja.chulkov.arrayset to info.kgeorgiy.java.advanced.arrayset, info.kgeorgiy.java.advanced.base;
     opens info.kgeorgiy.ja.chulkov.walk to info.kgeorgiy.java.advanced.walk, info.kgeorgiy.java.advanced.base;
+    opens info.kgeorgiy.ja.chulkov.bank.person;
+    opens info.kgeorgiy.ja.chulkov.bank.account;
+
 }
