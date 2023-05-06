@@ -55,6 +55,8 @@ public class BankTests {
         final Result result = new JUnitCore().run(BankTests.class);
         if (!result.wasSuccessful()) {
             System.exit(1);
+        } else {
+            System.exit(1);
         }
     }
 
