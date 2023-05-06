@@ -1,7 +1,7 @@
 package info.kgeorgiy.ja.chulkov.bank;
 
 import info.kgeorgiy.ja.chulkov.bank.person.LocalPerson;
-import info.kgeorgiy.ja.chulkov.bank.person.Person.PersonData;
+import info.kgeorgiy.ja.chulkov.bank.person.PersonData;
 import info.kgeorgiy.ja.chulkov.bank.person.RemotePerson;
 import info.kgeorgiy.ja.chulkov.bank.person.RemotePersonImpl;
 import java.rmi.RemoteException;

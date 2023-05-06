@@ -13,6 +13,7 @@ module info.kgeorgiy.ja.chulkov {
     requires java.compiler;
     requires java.rmi;
     requires jdk.httpserver;
+    requires transitive junit;
 
     exports info.kgeorgiy.ja.chulkov.concurrent;
     exports info.kgeorgiy.ja.chulkov.implementor;

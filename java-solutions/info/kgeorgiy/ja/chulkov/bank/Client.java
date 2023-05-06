@@ -3,8 +3,8 @@ package info.kgeorgiy.ja.chulkov.bank;
 
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
 import info.kgeorgiy.ja.chulkov.bank.account.NegativeAccountAmountAfterOperation;
-import info.kgeorgiy.ja.chulkov.bank.person.Person.PersonData;
-import info.kgeorgiy.ja.chulkov.bank.person.RemotePerson;
+import info.kgeorgiy.ja.chulkov.bank.person.LocalPerson;
+import info.kgeorgiy.ja.chulkov.bank.person.PersonData;
 import info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
@@ -12,6 +12,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 
 public final class Client {
+
 
     /**
      * Utility class.
@@ -37,7 +38,7 @@ public final class Client {
         }
         final Bank bank;
         try {
-            bank = (Bank) Naming.lookup("//localhost/bank");
+            bank = (Bank) Naming.lookup(Server.BANK);
         } catch (final NotBoundException e) {
             System.out.println("Bank is not bound");
             return;
@@ -48,10 +49,11 @@ public final class Client {
 
         final PersonData personData = new PersonData(args[0], args[1], args[2]);
 
-        RemotePerson person = bank.getRemotePerson(personData);
+        LocalPerson person = bank.getLocalPerson(personData);
         if (person == null) {
             System.out.println("Creating person");
-            person = bank.createPerson(personData);
+            bank.createPerson(personData);
+            person = bank.getLocalPerson(personData);
         } else {
             System.out.println("Person already exists");
         }

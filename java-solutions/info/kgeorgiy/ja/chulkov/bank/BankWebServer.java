@@ -108,12 +108,13 @@ public final class BankWebServer {
             '>', "&gt;",
             '&', "&amp;"
     ).entrySet().stream().collect(Collectors.toMap(e -> (int) e.getKey(), Map.Entry::getValue));
+    public static final String CLIENT = "info.kgeorgiy.ja.chulkov.bank.Client";
+    public static final String SERVER = "info.kgeorgiy.ja.chulkov.bank.Server";
     private final Map<String, App> apps = Map.ofEntries(
-            app("Client 1", "java", "-cp", CLASSPATH, "info.kgeorgiy.ja.chulkov.bank.Client", "Георгий", "Назаров", "242216", "Точка", "10"),
-            app("Client 2", "java", "-cp", CLASSPATH, "rmi.Client", "client-2"),
-            app("Client 3", "java", "-cp", CLASSPATH, "rmi.Client", "client-3"),
-            app("Server 1", "java", "-cp", CLASSPATH, "info.kgeorgiy.ja.chulkov.bank.Server", "8881"),
-            app("Server 2", "java", "-cp", CLASSPATH, "info.kgeorgiy.ja.chulkov.bank.Server", "8882"),
+            app("Gera+10", "java", "-cp", CLASSPATH, CLIENT, "Георгий", "Назаров", "242216", "Точка", "10"),
+            app("Gera-10", "java", "-cp", CLASSPATH, CLIENT, "Георгий", "Назаров", "242216", "Точка", "-10"),
+            app("Server 1", "java", "-cp", CLASSPATH, SERVER, "8881"),
+            app("Server 2", "java", "-cp", CLASSPATH, SERVER, "8882"),
             app("Registry", "rmiregistry"),
             app("Registry CP", "rmiregistry", "-J--class-path=" + CLASSPATH)
     );

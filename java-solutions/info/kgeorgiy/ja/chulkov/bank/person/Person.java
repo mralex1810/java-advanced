@@ -1,12 +1,10 @@
 package info.kgeorgiy.ja.chulkov.bank.person;
 
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
-import java.io.Serializable;
-import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.Map;
 
-public interface Person extends Remote {
+public interface Person {
 
     String getFirstName() throws RemoteException;
 
@@ -33,7 +31,4 @@ public interface Person extends Remote {
     Map<String, ? extends Account> getAccounts() throws RemoteException;
 
 
-    record PersonData(String firstName, String secondName, String passport) implements Serializable {
-
-    }
 }
