@@ -17,6 +17,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,14 +34,18 @@ public class BankTests {
             new PersonData("Георгий", "Корнеев", "105590"),
             new PersonData("Георгий", "Назаров", "242216"),
             new PersonData("Донат", "Соколов", "242555"),
-            new PersonData("Анастасия", "Тушканова", "284669")
+            new PersonData("Анастасия", "Тушканова", "284669"),
+            new PersonData("جورج", "كورنييف", "১০৫৫৮০"),
+            new PersonData("👉👌🤘👈", "👶🧒👦🧑🧑👩‍🦲", "1⃣0⃣5⃣5⃣9⃣0⃣")
     );
 
     private static final List<String> ACCOUNTS = List.of(
             "Математический анализ",
             "Линейная алгебра",
             "Архитектура ЭВМ",
-            "Введение в программирование"
+            "Введение в программирование",
+            "جافا المتقدمة",
+            "😆🤣🤣🤣🔞🔞"
     );
     private static final Random random = new Random(42);
     private static Registry registry;
@@ -185,77 +190,100 @@ public class BankTests {
         }
     }
 
-    @Test
-    public void twoLocalPersonForOneTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+    private void twoSequentialPersonForOneTest(
+            final RemoteFunction<PersonData, Person> gen1,
+            final RemoteFunction<PersonData, Person> gen2,
+            final boolean isSecondAffected) throws RemoteException, NegativeAccountAmountAfterOperation {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
             for (final var accountId : ACCOUNTS) {
-                final var account = bank.getLocalPerson(personData).createAccount(accountId);
-                checkSetAmount(account, random.nextInt(1, Integer.MAX_VALUE));
-                checkSetAmount(account, random.nextInt(1, Integer.MAX_VALUE));
-                Assert.assertNull(bank.getLocalPerson(personData).getAccount(accountId));
-            }
-            for (final var accountId : ACCOUNTS) {
-                Assert.assertNull(bank.getLocalPerson(personData).getAccount(accountId));
-            }
-        }
-    }
-
-    @Test
-    public void twoRemotePersonForOneTest() throws RemoteException, NegativeAccountAmountAfterOperation {
-        for (final var personData : PERSON_DATA) {
-            bank.createPerson(personData);
-            for (final var accountId : ACCOUNTS) {
-                final var account1 = bank.getRemotePerson(personData).createAccount(accountId);
-                final int set = random.nextInt(0, Integer.MAX_VALUE);
+                final var account1 = gen1.apply(personData).createAccount(accountId);
+                final int set = random.nextInt(1, Integer.MAX_VALUE);
                 checkSetAmount(account1, set);
-                final var account2 = bank.getRemotePerson(personData).getAccount(accountId);
-                Assert.assertNotNull(account2);
-                Assert.assertEquals(account2.getAmount(), set);
+                final var account2 = gen2.apply(personData).getAccount(accountId);
+                if (isSecondAffected) {
+                    Assert.assertNotNull(account2);
+                    Assert.assertEquals(account2.getAmount(), set);
+                } else {
+                    Assert.assertNull(account2);
+
+                }
             }
+        }
+    }
+
+    private void twoParallelPersonForOneTest(
+            final RemoteFunction<PersonData, Person> gen1,
+            final RemoteFunction<PersonData, Person> gen2,
+            final Function<Integer, Integer> expected) throws RemoteException, NegativeAccountAmountAfterOperation {
+        for (final var personData : PERSON_DATA) {
+            bank.createPerson(personData);
             for (final var accountId : ACCOUNTS) {
-                Assert.assertNotNull(bank.getRemotePerson(personData).getAccount(accountId));
+                final var account1 = gen1.apply(personData).createAccount(accountId);
+                final var account2 = gen2.apply(personData).getAccount(accountId);
+                final int set = random.nextInt(1, Integer.MAX_VALUE);
+                checkSetAmount(account1, set);
+                final var ans = expected.apply(set);
+                if (ans != null) {
+                    Assert.assertNotNull(account2);
+                    Assert.assertEquals(account2.getAmount(), ans.intValue());
+                } else {
+                    Assert.assertNull(account2);
+
+                }
             }
         }
     }
 
     @Test
-    public void RemoteAndLocalPersonsForOneTest() throws RemoteException, NegativeAccountAmountAfterOperation {
-        for (final var personData : PERSON_DATA) {
-            bank.createPerson(personData);
-            for (final var accountId : ACCOUNTS) {
-                final var account1 = bank.getRemotePerson(personData).createAccount(accountId);
-                final int set = random.nextInt(0, Integer.MAX_VALUE);
-                checkSetAmount(account1, set);
-                final var account2 = bank.getLocalPerson(personData).getAccount(accountId);
-                Assert.assertNotNull(account2);
-                Assert.assertEquals(account2.getAmount(), set);
-            }
-            for (final var accountId : ACCOUNTS) {
-                Assert.assertNotNull(bank.getRemotePerson(personData).getAccount(accountId));
-            }
-        }
+    public void twoLocalSeqTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+        twoSequentialPersonForOneTest(bank::getLocalPerson, bank::getLocalPerson, false);
     }
 
     @Test
-    public void LocalAndRemotePersonsForOneTest() throws RemoteException, NegativeAccountAmountAfterOperation {
-        for (final var personData : PERSON_DATA) {
-            bank.createPerson(personData);
-            for (final var accountId : ACCOUNTS) {
-                final var account1 = bank.getLocalPerson(personData).createAccount(accountId);
-                final int set = random.nextInt(0, Integer.MAX_VALUE);
-                checkSetAmount(account1, set);
-                final var account2 = bank.getRemotePerson(personData).getAccount(accountId);
-                Assert.assertNull(account2);
-            }
-        }
+    public void twoLocalParTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+        twoParallelPersonForOneTest(bank::getLocalPerson, bank::getLocalPerson, (set) -> null);
     }
 
+    @Test
+    public void twoRemoteSeqTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+        twoSequentialPersonForOneTest(bank::getRemotePerson, bank::getRemotePerson, true);
+    }
+
+    @Test
+    public void twoRemoteParTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+        twoParallelPersonForOneTest(bank::getRemotePerson, bank::getRemotePerson, (set) -> set);
+    }
+
+    @Test
+    public void RemoteAndLocalSeqTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+        twoSequentialPersonForOneTest(bank::getRemotePerson, bank::getLocalPerson, true);
+    }
+    @Test
+    public void RemoteAndLocalParTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+        twoParallelPersonForOneTest(bank::getRemotePerson, bank::getLocalPerson, (set) -> 0);
+    }
+
+
+    @Test
+    public void LocalAndRemoteSeqTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+        twoSequentialPersonForOneTest(bank::getLocalPerson, bank::getRemotePerson, false);
+    }
+    @Test
+    public void LocalAndRemoteParTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+        twoParallelPersonForOneTest(bank::getLocalPerson, bank::getRemotePerson, (set) -> null);
+    }
 
     private void checkPerson(final Person person, final PersonData personData) throws RemoteException {
         Assert.assertEquals(person.getFirstName(), personData.firstName());
         Assert.assertEquals(person.getSecondName(), personData.secondName());
         Assert.assertEquals(person.getPassport(), personData.passport());
+    }
+
+
+    private interface RemoteFunction<T, V> {
+
+        V apply(T it) throws RemoteException;
     }
 
 
