@@ -1,20 +1,25 @@
 package info.kgeorgiy.ja.chulkov.bank.person;
 
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
-import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.Map;
+import java.rmi.server.UnicastRemoteObject;
 
-public interface RemotePerson extends Person, Remote {
-    String getFirstName() throws RemoteException;
+public class RemotePerson extends AbstractPerson implements Person {
 
-    String getSecondName() throws RemoteException;
+    private final int port;
 
-    String getPassport() throws RemoteException;
+    public RemotePerson(final String firstName, final String secondName, final String passport, final int port) {
+        super(firstName, secondName, passport);
+        this.port = port;
+    }
 
-    Account createAccount(String id) throws RemoteException;
+    public RemotePerson(final PersonData personData, final int port) {
+        this(personData.firstName(), personData.secondName(), personData.passport(), port);
+    }
 
-    Account getAccount(String id) throws RemoteException;
 
-    Map<String, ? extends Account> getAccounts() throws RemoteException;
+    @Override
+    protected void export(final Account account) throws RemoteException {
+        UnicastRemoteObject.exportObject(account, port);
+    }
 }

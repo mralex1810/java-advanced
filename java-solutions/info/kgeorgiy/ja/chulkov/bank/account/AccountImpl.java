@@ -1,16 +1,25 @@
 package info.kgeorgiy.ja.chulkov.bank.account;
 
-public class AbstractAccount implements Account {
+import java.io.Serializable;
+import java.rmi.RemoteException;
+import java.util.Objects;
+
+public class AccountImpl implements Account, Serializable {
 
     protected final String id;
     protected int amount;
 
-    public AbstractAccount(final String id) {
-        this.id = id;
-        amount = 0;
+
+    public AccountImpl(final Account account) throws RemoteException {
+        this(account.getId(), account.getAmount());
     }
 
-    public AbstractAccount(final String id, final int amount) {
+    public AccountImpl(final String id) {
+        this(id, 0);
+    }
+
+    public AccountImpl(final String id, final int amount) {
+        Objects.requireNonNull(id);
         this.id = id;
         this.amount = amount;
     }

@@ -3,7 +3,7 @@ package info.kgeorgiy.ja.chulkov.bank;
 
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
 import info.kgeorgiy.ja.chulkov.bank.account.NegativeAccountAmountAfterOperation;
-import info.kgeorgiy.ja.chulkov.bank.person.LocalPerson;
+import info.kgeorgiy.ja.chulkov.bank.person.Person;
 import info.kgeorgiy.ja.chulkov.bank.person.PersonData;
 import info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils;
 import java.net.MalformedURLException;
@@ -49,7 +49,7 @@ public final class Client {
 
         final PersonData personData = new PersonData(args[0], args[1], args[2]);
 
-        LocalPerson person = bank.getLocalPerson(personData);
+        Person person = bank.getRemotePerson(personData);
         if (person == null) {
             System.out.println("Creating person");
             bank.createPerson(personData);

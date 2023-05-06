@@ -3,7 +3,6 @@ package info.kgeorgiy.ja.chulkov.bank;
 import info.kgeorgiy.ja.chulkov.bank.person.LocalPerson;
 import info.kgeorgiy.ja.chulkov.bank.person.PersonData;
 import info.kgeorgiy.ja.chulkov.bank.person.RemotePerson;
-import info.kgeorgiy.ja.chulkov.bank.person.RemotePersonImpl;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,8 +30,9 @@ public class RemoteBank implements Bank {
 
     @Override
     public RemotePerson createPerson(final PersonData personData) throws RemoteException {
-        System.out.println("Creating person " + personData);
-        final RemotePersonImpl person = new RemotePersonImpl(personData, port);
+        System.out.printf("Creating person: %s %s %s%n",
+                personData.firstName(), personData.secondName(), personData.passport());
+        final RemotePerson person = new RemotePerson(personData, port);
         if (persons.putIfAbsent(personData, person) == null) {
             UnicastRemoteObject.exportObject(person, port);
             return person;

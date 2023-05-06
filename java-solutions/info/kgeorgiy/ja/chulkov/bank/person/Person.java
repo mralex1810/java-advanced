@@ -1,10 +1,11 @@
 package info.kgeorgiy.ja.chulkov.bank.person;
 
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.Map;
 
-public interface Person {
+public interface Person extends Remote {
 
     String getFirstName() throws RemoteException;
 
