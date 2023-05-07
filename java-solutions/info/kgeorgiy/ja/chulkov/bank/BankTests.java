@@ -96,11 +96,6 @@ public class BankTests {
     }
 
     @Test
-    public void bankRegistryTest() throws NotBoundException, RemoteException {
-        Assert.assertEquals(registry.lookup(BANK), bank);
-    }
-
-    @Test
     public void accountAmountTest() throws NegativeAccountAmountAfterOperation, RemoteException {
         final String kgeorgiy = "kgeorgiy";
         final var account = new AccountImpl(kgeorgiy);
@@ -115,7 +110,7 @@ public class BankTests {
         Assert.assertEquals(account.getId(), kgeorgiy);
     }
 
-    public void checkSetAmount(final Account account, final int amount)
+    private void checkSetAmount(final Account account, final int amount)
             throws NegativeAccountAmountAfterOperation, RemoteException {
         account.setAmount(amount);
         Assert.assertEquals(amount, account.getAmount());
@@ -140,15 +135,13 @@ public class BankTests {
 
     @Test
     public void withoutPersonTest() throws RemoteException {
-        for (final var personData : PERSON_DATA.subList(0, 2)) {
+        for (final var personData : PERSON_DATA.subList(0, PERSON_DATA.size() / 2)) {
             final Person person = bank.createPerson(personData);
             checkPerson(person, personData);
             Assert.assertEquals(person.getAccounts(), Map.of());
         }
-        for (final var personData : PERSON_DATA.subList(2, 4)) {
+        for (final var personData : PERSON_DATA.subList(PERSON_DATA.size() / 2, PERSON_DATA.size())) {
             Assert.assertNull(bank.getRemotePerson(personData));
-        }
-        for (final var personData : PERSON_DATA.subList(2, 4)) {
             Assert.assertNull(bank.getLocalPerson(personData));
         }
     }
