@@ -253,7 +253,7 @@ public class Implementor implements JarImpler {
         Objects.requireNonNull(token);
         Objects.requireNonNull(jarFile);
         try {
-            final Path tempDir = Files.createTempDirectory("temp");
+            final Path tempDir = Files.createDirectories(Path.of("temp"));
             try {
                 final Path javaFilePath = implementAndReturnFilePath(token, tempDir);
                 // :NOTE: передавать компилятору кодировку
