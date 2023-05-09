@@ -1,8 +1,11 @@
 package info.kgeorgiy.ja.chulkov.concurrent;
 
 import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
-
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Queue;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -95,10 +98,8 @@ public class ParallelMapperImpl implements ParallelMapper {
         private final Queue<T> queue = new ArrayDeque<>();
 
         public synchronized void putAll(final List<T> list) {
-            list.forEach(obj -> {
-                queue.add(obj);
-                notify();
-            });
+            queue.addAll(list);
+            list.forEach(it -> this.notify());
         }
 
         public synchronized T take() throws InterruptedException {
