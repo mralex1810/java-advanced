@@ -9,9 +9,9 @@ import java.rmi.RemoteException;
 
 public interface Bank extends Remote {
 
-    LocalPerson getLocalPerson(PersonData personData) throws RemoteException;
+    LocalPerson getLocalPerson(String passport) throws RemoteException;
 
-    Person getRemotePerson(PersonData personData) throws RemoteException;
+    Person getRemotePerson(String passport) throws RemoteException;
     Person createPerson(PersonData personData) throws RemoteException;
 
 }

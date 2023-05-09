@@ -11,21 +11,21 @@ import java.util.concurrent.ConcurrentMap;
 public class RemoteBank implements Bank {
 
     private final int port;
-    private final ConcurrentMap<PersonData, RemotePerson> persons = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, RemotePerson> persons = new ConcurrentHashMap<>();
 
     public RemoteBank(final int port) {
         this.port = port;
     }
 
     @Override
-    public LocalPerson getLocalPerson(final PersonData personData) throws RemoteException {
-        final var remotePerson = getRemotePerson(personData);
+    public LocalPerson getLocalPerson(final String passport) throws RemoteException {
+        final var remotePerson = getRemotePerson(passport);
         return remotePerson == null ? null : new LocalPerson(remotePerson);
     }
 
     @Override
-    public RemotePerson getRemotePerson(final PersonData personData) throws RemoteException {
-        return persons.get(personData);
+    public RemotePerson getRemotePerson(final String passport) throws RemoteException {
+        return persons.get(passport);
     }
 
     @Override
@@ -33,11 +33,11 @@ public class RemoteBank implements Bank {
         System.out.printf("Creating person: %s %s %s%n",
                 personData.firstName(), personData.secondName(), personData.passport());
         final RemotePerson person = new RemotePerson(personData, port);
-        if (persons.putIfAbsent(personData, person) == null) {
+        if (persons.putIfAbsent(personData.passport(), person) == null) {
             UnicastRemoteObject.exportObject(person, port);
             return person;
         } else {
-            return getRemotePerson(personData);
+            return getRemotePerson(personData.passport());
         }
     }
 }

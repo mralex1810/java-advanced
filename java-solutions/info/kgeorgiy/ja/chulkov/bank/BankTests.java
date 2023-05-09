@@ -142,8 +142,8 @@ public class BankTests {
             Assert.assertEquals(person.getAccounts(), Map.of());
         }
         for (final var personData : PERSON_DATA.subList(PERSON_DATA.size() / 2, PERSON_DATA.size())) {
-            Assert.assertNull(bank.getRemotePerson(personData));
-            Assert.assertNull(bank.getLocalPerson(personData));
+            Assert.assertNull(bank.getRemotePerson(personData.passport()));
+            Assert.assertNull(bank.getLocalPerson(personData.passport()));
         }
     }
 
@@ -151,7 +151,7 @@ public class BankTests {
     public void localPersonGetTest() throws RemoteException {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
-            final Person person = bank.getLocalPerson(personData);
+            final Person person = bank.getLocalPerson(personData.passport());
             checkPerson(person, personData);
             Assert.assertEquals(person.getAccounts(), Map.of());
         }
@@ -168,7 +168,7 @@ public class BankTests {
             }
         }
         for (final var personData : PERSON_DATA) {
-            final Person person = bank.getRemotePerson(personData);
+            final Person person = bank.getRemotePerson(personData.passport());
             Assert.assertEquals(person.getAccounts().keySet(),
                     ACCOUNTS.stream().map(it -> getAccountId(personData, it)).collect(Collectors.toSet()));
         }
@@ -187,16 +187,16 @@ public class BankTests {
     }
 
     private void twoSequentialPersonForOneTest(
-            final RemoteFunction<PersonData, Person> gen1,
-            final RemoteFunction<PersonData, Person> gen2,
+            final RemoteFunction<String, Person> gen1,
+            final RemoteFunction<String, Person> gen2,
             final Function<Integer, Integer> expected) throws RemoteException, NegativeAccountAmountAfterOperation {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
             for (final var accountId : ACCOUNTS) {
-                final var account1 = gen1.apply(personData).createAccount(accountId);
+                final var account1 = gen1.apply(personData.passport()).createAccount(accountId);
                 final int set = random.nextInt(1, Integer.MAX_VALUE);
                 checkSetAmount(account1, set);
-                final var account2 = gen2.apply(personData).getAccount(accountId);
+                final var account2 = gen2.apply(personData.passport()).getAccount(accountId);
                 final var ans = expected.apply(set);
                 if (ans != null) {
                     Assert.assertNotNull(account2);
@@ -209,14 +209,14 @@ public class BankTests {
     }
 
     private void twoParallelPersonForOneTest(
-            final RemoteFunction<PersonData, Person> gen1,
-            final RemoteFunction<PersonData, Person> gen2,
+            final RemoteFunction<String, Person> gen1,
+            final RemoteFunction<String, Person> gen2,
             final Function<Integer, Integer> expected) throws RemoteException, NegativeAccountAmountAfterOperation {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
             for (final var accountId : ACCOUNTS) {
-                final var account1 = gen1.apply(personData).createAccount(accountId);
-                final var account2 = gen2.apply(personData).getAccount(accountId);
+                final var account1 = gen1.apply(personData.passport()).createAccount(accountId);
+                final var account2 = gen2.apply(personData.passport()).getAccount(accountId);
                 final int set = random.nextInt(1, Integer.MAX_VALUE);
                 checkSetAmount(account1, set);
                 final var ans = expected.apply(set);
@@ -284,12 +284,12 @@ public class BankTests {
             bank.createPerson(personData);
         }
         for (final var personData : PERSON_DATA) {
-            Assert.assertNotNull(bank.getRemotePerson(personData));
+            Assert.assertNotNull(bank.getRemotePerson(personData.passport()));
         }
         setupBank();
         for (final var personData : PERSON_DATA) {
-            Assert.assertNull(bank.getRemotePerson(personData));
-            Assert.assertNull(bank.getLocalPerson(personData));
+            Assert.assertNull(bank.getRemotePerson(personData.passport()));
+            Assert.assertNull(bank.getLocalPerson(personData.passport()));
         }
     }
 
@@ -305,12 +305,12 @@ public class BankTests {
             checkPerson(bank2.createPerson(personData), personData);
         }
         for (final var personData : PERSON_DATA.subList(0, PERSON_DATA.size() / 2)) {
-            Assert.assertNotNull(bank1.getRemotePerson(personData));
-            Assert.assertNull(bank2.getRemotePerson(personData));
+            Assert.assertNotNull(bank1.getRemotePerson(personData.passport()));
+            Assert.assertNull(bank2.getRemotePerson(personData.passport()));
         }
         for (final var personData : PERSON_DATA.subList(PERSON_DATA.size() / 2, PERSON_DATA.size())) {
-            Assert.assertNull(bank1.getRemotePerson(personData));
-            Assert.assertNotNull(bank2.getRemotePerson(personData));
+            Assert.assertNull(bank1.getRemotePerson(personData.passport()));
+            Assert.assertNotNull(bank2.getRemotePerson(personData.passport()));
         }
     }
 
@@ -324,8 +324,8 @@ public class BankTests {
             bank1.createPerson(personData);
             bank2.createPerson(personData);
             for (final var accountId : ACCOUNTS) {
-                final var account1 = bank1.getRemotePerson(personData).createAccount(accountId);
-                final var account2 = bank2.getRemotePerson(personData).createAccount(accountId);
+                final var account1 = bank1.getRemotePerson(personData.passport()).createAccount(accountId);
+                final var account2 = bank2.getRemotePerson(personData.passport()).createAccount(accountId);
                 checkSetAmount(account1, 10);
                 Assert.assertEquals(account2.getAmount(), 0);
                 checkSetAmount(account2, 20);

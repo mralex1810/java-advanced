@@ -49,11 +49,11 @@ public final class Client {
 
         final PersonData personData = new PersonData(args[0], args[1], args[2]);
 
-        Person person = bank.getRemotePerson(personData);
+        Person person = bank.getLocalPerson(personData.passport());
         if (person == null) {
             System.out.println("Creating person");
             bank.createPerson(personData);
-            person = bank.getLocalPerson(personData);
+            person = bank.getLocalPerson(personData.passport());
         } else {
             System.out.println("Person already exists");
         }
