@@ -6,7 +6,7 @@ import java.rmi.RemoteException;
 
 public class LocalPerson extends AbstractPerson  {
 
-    public LocalPerson(final Person person) throws RemoteException {
+    public LocalPerson(final RemotePerson person) {
         super(person.getFirstName(), person.getSecondName(), person.getPassport());
         for (final var idAccount : person.getAccounts().entrySet()) {
             accounts.put(idAccount.getKey(), new AccountImpl(idAccount.getValue()));
@@ -18,7 +18,7 @@ public class LocalPerson extends AbstractPerson  {
         try {
             return super.createAccount(id);
         } catch (final RemoteException ignored) {
-            throw new AssertionError("Local create account can't throw RemoteException");
+            throw new AssertionError("Create local account can't throw RemoteException");
         }
     }
 

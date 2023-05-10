@@ -18,13 +18,13 @@ public class RemoteBank implements Bank {
     }
 
     @Override
-    public LocalPerson getLocalPerson(final String passport) throws RemoteException {
+    public LocalPerson getLocalPerson(final String passport) {
         final var remotePerson = getRemotePerson(passport);
         return remotePerson == null ? null : new LocalPerson(remotePerson);
     }
 
     @Override
-    public RemotePerson getRemotePerson(final String passport) throws RemoteException {
+    public RemotePerson getRemotePerson(final String passport) {
         return persons.get(passport);
     }
 

@@ -3,7 +3,7 @@ package info.kgeorgiy.ja.chulkov.bank;
 
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
 import info.kgeorgiy.ja.chulkov.bank.account.NegativeAccountAmountAfterOperation;
-import info.kgeorgiy.ja.chulkov.bank.person.Person;
+import info.kgeorgiy.ja.chulkov.bank.person.LocalPerson;
 import info.kgeorgiy.ja.chulkov.bank.person.PersonData;
 import info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils;
 import java.net.MalformedURLException;
@@ -22,7 +22,7 @@ public final class Client {
 
 
     // firstName, secondName, passport, accountId, delta
-    public static void main(final String... args) throws RemoteException {
+    public static void main(final String... args) {
         ArgumentsUtils.checkNonNullsArgs(args);
         if (args.length != 5) {
             printUsage();
@@ -40,22 +40,30 @@ public final class Client {
         try {
             bank = (Bank) Naming.lookup(Server.BANK);
         } catch (final NotBoundException e) {
-            System.out.println("Bank is not bound");
+            System.err.println("Bank is not bound");
             return;
         } catch (final MalformedURLException e) {
-            System.out.println("Bank URL is invalid");
+            System.err.println("Bank URL is invalid");
+            return;
+        } catch (final RemoteException e) {
+            System.err.println("Bank is not found");
             return;
         }
 
         final PersonData personData = new PersonData(args[0], args[1], args[2]);
-
-        Person person = bank.getLocalPerson(personData.passport());
-        if (person == null) {
-            System.out.println("Creating person");
-            bank.createPerson(personData);
+        LocalPerson person;
+        try {
             person = bank.getLocalPerson(personData.passport());
-        } else {
-            System.out.println("Person already exists");
+            if (person == null) {
+                System.out.println("Creating person");
+                bank.createPerson(personData);
+                person = bank.getLocalPerson(personData.passport());
+            } else {
+                System.out.println("Person already exists");
+            }
+        } catch (final RemoteException e) {
+            System.err.println("Error on getting person");
+            return;
         }
         final var accountId = args[3];
         Account account = person.getAccount(accountId);
@@ -65,15 +73,19 @@ public final class Client {
         } else {
             System.out.println("Account already exists");
         }
-        System.out.println("Account id: " + account.getId());
-        System.out.println("Money: " + account.getAmount());
-        System.out.println("Adding money");
         try {
-            account.setAmount(account.getAmount() + delta);
-        } catch (final NegativeAccountAmountAfterOperation e) {
-            System.err.println(e.getMessage());
+            System.out.println("Account id: " + account.getId());
+            System.out.println("Money: " + account.getAmount());
+            System.out.println("Adding money");
+            try {
+                account.setAmount(account.getAmount() + delta);
+            } catch (final NegativeAccountAmountAfterOperation e) {
+                System.err.println(e.getMessage());
+            }
+            System.out.println("Money: " + account.getAmount());
+        } catch (final RemoteException e) {
+            System.err.println("Error on manipulations with account");
         }
-        System.out.println("Money: " + account.getAmount());
     }
 
     private static void printUsage() {

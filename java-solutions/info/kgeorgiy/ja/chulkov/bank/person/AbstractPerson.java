@@ -13,7 +13,7 @@ public abstract class AbstractPerson implements Person, Serializable {
     protected final String firstName;
     protected final String secondName;
     protected final String passport;
-    protected final ConcurrentMap<String, Account> accounts = new ConcurrentHashMap<>();
+    protected final ConcurrentMap<String, AccountImpl> accounts = new ConcurrentHashMap<>();
 
 
     protected AbstractPerson(final String firstName, final String secondName, final String passport) {
@@ -43,7 +43,7 @@ public abstract class AbstractPerson implements Person, Serializable {
     }
 
     @Override
-    public Map<String, Account> getAccounts() {
+    public Map<String, AccountImpl> getAccounts() {
         return accounts;
     }
 
@@ -51,7 +51,7 @@ public abstract class AbstractPerson implements Person, Serializable {
     public Account createAccount(final String id) throws RemoteException {
         final var accountId = passport + ":" + id;
         System.out.println("Creating remote account " + accountId);
-        final Account account = new AccountImpl(accountId);
+        final AccountImpl account = new AccountImpl(accountId);
         if (accounts.putIfAbsent(accountId, account) == null) {
             export(account);
             return account;

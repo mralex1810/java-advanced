@@ -1,16 +1,15 @@
 package info.kgeorgiy.ja.chulkov.bank.account;
 
 import java.io.Serializable;
-import java.rmi.RemoteException;
 import java.util.Objects;
 
 public class AccountImpl implements Account, Serializable {
 
-    protected final String id;
-    protected int amount;
+    private final String id;
+    private int amount;
 
 
-    public AccountImpl(final Account account) throws RemoteException {
+    public AccountImpl(final AccountImpl account) {
         this(account.getId(), account.getAmount());
     }
 
