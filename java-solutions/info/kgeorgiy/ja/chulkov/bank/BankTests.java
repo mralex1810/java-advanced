@@ -14,11 +14,17 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
+import java.text.NumberFormat;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -333,6 +339,161 @@ public class BankTests {
         }
     }
 
+    /**
+     * Однажды КТ-шники решили открыть свой международный банк "Aksёnov Financial Transatlantic Co. Ltd.". Жили-жили
+     * себе спокойно, до тех пор пока в какой-то день в офис для открытия счёта не пришёл некто كورنييف جورج
+     * الكسندروفيتش
+     * <p>
+     * Сначала на его счету было 0 рублей.
+     * <p>
+     * Перевёл со своего счёта 100 рублей самому себе
+     */
+    @Test
+    public void test1() {
+        final var person = PERSON_DATA.get(4);
+        Client.main(person.firstName(), person.secondName(), person.passport(), ACCOUNTS.get(4), Integer.toString(100));
+    }
+
+    /**
+     * Перевёл со своего счёта 999223372036854775807 рублей самому себе
+     */
+    @Test
+    public void test2() {
+        final var person = PERSON_DATA.get(4);
+        Client.main(person.firstName(), person.secondName(), person.passport(), ACCOUNTS.get(4),
+                "999223372036854775807");
+    }
+
+    /**
+     * Перевёл 0 рублей самому себе
+     */
+    @Test
+    public void test3() {
+        final var person = PERSON_DATA.get(4);
+        Client.main(person.firstName(), person.secondName(), person.passport(), ACCOUNTS.get(4), "0");
+    }
+
+    /**
+     * С 1000 компьютеров переводил 0 рублей самому себе
+     */
+    @Test
+    public void test4() {
+        final var person = PERSON_DATA.get(4);
+        try (final ExecutorService executorService = Executors.newCachedThreadPool()) {
+            IntStream.range(0, 1000)
+                    .<Runnable>mapToObj((ignore) -> () ->
+                            Client.main(person.firstName(), person.secondName(), person.passport(),
+                                    ACCOUNTS.get(4), "0"))
+                    .forEach(executorService::submit);
+        }
+    }
+
+    /**
+     * Перевёл NaN рублей أندريه ستانكيفيتش
+     */
+    @Test
+    public void test5() {
+        Client.main("ستانكيفيتش", "أندريه", "116501", ACCOUNTS.get(2), Float.toString(Float.NaN));
+    }
+
+    /**
+     * Перевёл 100 рублей через дорогу на финский язык
+     */
+    @Test
+    public void test6() {
+        final var person = PERSON_DATA.get(4);
+        Client.main(person.firstName(), person.secondName(), person.passport(), "через дорогу",
+                NumberFormat.getNumberInstance(Locale.forLanguageTag("fi")).format(100));
+    }
+
+    /**
+     * Отправил на сервер ёжика в стакане
+     */
+    @Test
+    public void testMinus1() {
+        Server.main("Ежик в стакане");
+    }
+
+    @Test(expected = NullPointerException.class)
+    // null null null
+    public void testMinus2() {
+        Client.main(null, null, null);
+    }
+
+    @Test
+    // Кинул Number("100") рублей себе на телефон
+    public void test10() {
+        final var person = PERSON_DATA.get(4);
+        Client.main(person.firstName(), person.secondName(), person.passport(), "телефон",
+                ((Number) 100).toString());
+    }
+
+    @Test
+    // Попробовал заплатить "1000" рублей за ЖКХ
+    public void test11() {
+        final var person = PERSON_DATA.get(4);
+        Client.main(person.firstName(), person.secondName(), person.passport(), "ЖКХ", "\"1000\"");
+    }
+
+    @Test
+    // Привязал к своему аккаунту номер телефона ""'`;,.;DROP TABLE USERS"
+    public void test12() {
+        final var person = PERSON_DATA.get(4);
+        Client.main(person.firstName(), person.secondName(), person.passport(), "\"'`;,.;DROP TABLE USERS", "0");
+    }
+
+    @Test
+    //  В поле "адрес для доставки корреспонденции" указал kgeorgiy.info
+    public void test13() {
+        final var person = PERSON_DATA.get(4);
+        Client.main(person.firstName(), person.secondName(), person.passport(), "kgeorgiy.info", "0");
+    }
+
+
+    @Test
+    // В поле "Отображаемое имя" указал "() -> {console.log("Georgiy Korneev");}"
+    public void test14() {
+        final var person = PERSON_DATA.get(4);
+        Client.main("() -> {console.log(\"Georgiy Korneev\");}", person.secondName(), person.passport(),
+                ACCOUNTS.get(4), "0");
+    }
+
+
+    @Test
+    // В качестве суммы автоплатежа указал SLEEPING_COMPARATOR.for(10000000000000LL, "ms")
+    public void test15() {
+        final Comparator<Integer> SLEEP_COMPARATOR = (o1, o2) -> {
+            try {
+                Thread.sleep(100);
+            } catch (final InterruptedException e) {
+                e.printStackTrace();
+                Thread.currentThread().interrupt();
+            }
+            return Integer.compare(o1, o2);
+        };
+        final var person = PERSON_DATA.get(4);
+        Client.main("() -> {console.log(\"Georgiy Korneev\");}", person.secondName(), person.passport(),
+                ACCOUNTS.get(4), SLEEP_COMPARATOR.toString());
+    }
+
+    /**
+     * При помощи reflections и API Excel вызвал редактор встроеных функций и подменил РАВНОКЧЕК так, чтобы она считала
+     * не эквивалентный облигации доход по казначейскому векселю, а накопленный процент по ценным бумагам, процент по
+     * которым выплачивается в срок погашения, то есть НАКОПДОХОДПОГАШ.
+     * <p>
+     * После этого рыночная стоимость акций банка стала сначала комплексной, а потом мнимой, и во избежании
+     * RuntimeException было принято решение банк принудительно закрыть.
+     * <p>
+     * ɿoɿɿƎʏɿomɘMᎸOƚuO.ǫᴎɒ|.ɒvɒꞁ
+     * <p>
+     * j̸́à̸v̴͝  a̷̎.̵̆l̵͠a̸͐n̶̑ǧ̷.̴̄O̸ ủ̶t̸̔Ǒ̵f̶͂M̶̉ě̸m̶̈o̴̍ṙ̵ y̸͋É̵r̴͌r̴̂õ̷r̶̕
+     * <p>
+     * 🅹
+     */
+    @Test(expected = RuntimeException.class)
+    public void testR12() {
+        throw new RuntimeException(bank.toString());
+    }
 
 
     @FunctionalInterface
