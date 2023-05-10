@@ -9,10 +9,10 @@ import info.kgeorgiy.ja.chulkov.bank.person.Person;
 import info.kgeorgiy.ja.chulkov.bank.person.PersonData;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 import java.util.Map;
@@ -41,14 +41,13 @@ public class BankTests {
 
     private static final List<String> ACCOUNTS = List.of(
             "Математический анализ",
-            "Линейная алгебра",
+            "Дискретная математика",
             "Архитектура ЭВМ",
             "Введение в программирование",
             "جافا المتقدمة",
             "😆🤣🤣🤣🔞🔞"
     );
     private static final Random random = new Random(42);
-    private static Registry registry;
     private Bank bank;
 
     public static void main(final String[] args) {
@@ -62,7 +61,7 @@ public class BankTests {
 
     @BeforeClass
     public static void setupRegistry() throws IOException {
-        registry = LocateRegistry.createRegistry(getFreePort());
+        LocateRegistry.createRegistry(1099);
     }
 
     private static int getFreePort() throws IOException {
@@ -85,8 +84,8 @@ public class BankTests {
         bank = new RemoteBank(bankPort);
         try {
             UnicastRemoteObject.exportObject(bank, bankPort);
-            registry.rebind(BANK, bank);
-            bank = (Bank) registry.lookup(BANK);
+            Naming.rebind(BANK, bank);
+            bank = (Bank) Naming.lookup(BANK);
             System.out.println("Server started");
         } catch (final RemoteException e) {
             System.out.println("Cannot export object: " + e.getMessage());
@@ -333,6 +332,7 @@ public class BankTests {
             }
         }
     }
+
 
 
     @FunctionalInterface
