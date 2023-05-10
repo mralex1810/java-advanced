@@ -32,8 +32,9 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
+import org.junit.runners.MethodSorters;
 
-@FixMethodOrder()
+@FixMethodOrder(MethodSorters.JVM)
 public class BankTests {
 
     private static final List<PersonData> PERSON_DATA = List.of(
@@ -340,9 +341,8 @@ public class BankTests {
     }
 
     /**
-     * Однажды КТ-шники решили открыть свой международный банк "Aksёnov Financial Transatlantic Co. Ltd.". Жили-жили
-     * себе спокойно, до тех пор пока в какой-то день в офис для открытия счёта не пришёл некто كورنييف جورج
-     * الكسندروفيتش
+     * Однажды КТ-шники решили открыть свой международный банк "Aksёnov Financial Transatlantic Co Ltd", жили-жили себе
+     * спокойно, до тех пор пока в какой-то день в офис для открытия счёта не пришёл некто كورنييف جورج الكسندروفيتش
      * <p>
      * Сначала на его счету было 0 рублей.
      * <p>
@@ -393,7 +393,9 @@ public class BankTests {
      */
     @Test
     public void test5() {
-        Client.main("ستانكيفيتش", "أندريه", "116501", ACCOUNTS.get(2), Float.toString(Float.NaN));
+        final var stankevich = new PersonData("ستانكيفيتش", "أندريه", "116501");
+        Client.main(stankevich.firstName(), stankevich.secondName(), stankevich.passport(),
+                ACCOUNTS.get(2), Float.toString(Float.NaN));
     }
 
     /**
@@ -407,6 +409,17 @@ public class BankTests {
     }
 
     /**
+     * Обменял undefined рублей на десять ClassCastException
+     */
+    @Test
+    public void testNull() {
+        final var person = PERSON_DATA.get(4);
+        Client.main(person.firstName(), person.secondName(), person.passport(),
+                new ClassCastException().toString().repeat(10),
+                "undefined");
+    }
+
+    /**
      * Отправил на сервер ёжика в стакане
      */
     @Test
@@ -414,44 +427,56 @@ public class BankTests {
         Server.main("Ежик в стакане");
     }
 
+    /**
+     * null null null
+     */
     @Test(expected = NullPointerException.class)
-    // null null null
     public void testMinus2() {
         Client.main(null, null, null);
     }
 
+    /**
+     * Кинул Number("100") рублей себе на телефон
+     */
     @Test
-    // Кинул Number("100") рублей себе на телефон
     public void test10() {
         final var person = PERSON_DATA.get(4);
         Client.main(person.firstName(), person.secondName(), person.passport(), "телефон",
                 ((Number) 100).toString());
     }
 
+    /**
+     * Попробовал заплатить "1000" рублей за ЖКХ
+     */
     @Test
-    // Попробовал заплатить "1000" рублей за ЖКХ
     public void test11() {
         final var person = PERSON_DATA.get(4);
         Client.main(person.firstName(), person.secondName(), person.passport(), "ЖКХ", "\"1000\"");
     }
 
+    /**
+     * Привязал к своему аккаунту номер телефона ""'`;,.;DROP TABLE USERS"
+     */
     @Test
-    // Привязал к своему аккаунту номер телефона ""'`;,.;DROP TABLE USERS"
     public void test12() {
         final var person = PERSON_DATA.get(4);
         Client.main(person.firstName(), person.secondName(), person.passport(), "\"'`;,.;DROP TABLE USERS", "0");
     }
 
+    /**
+     * В поле "адрес для доставки корреспонденции" указал kgeorgiy.info
+     */
     @Test
-    //  В поле "адрес для доставки корреспонденции" указал kgeorgiy.info
     public void test13() {
         final var person = PERSON_DATA.get(4);
         Client.main(person.firstName(), person.secondName(), person.passport(), "kgeorgiy.info", "0");
     }
 
 
+    /**
+     * В поле "Отображаемое имя" указал "() -> {console.log("Georgiy Korneev");}"
+     */
     @Test
-    // В поле "Отображаемое имя" указал "() -> {console.log("Georgiy Korneev");}"
     public void test14() {
         final var person = PERSON_DATA.get(4);
         Client.main("() -> {console.log(\"Georgiy Korneev\");}", person.secondName(), person.passport(),
@@ -459,8 +484,10 @@ public class BankTests {
     }
 
 
+    /**
+     * В качестве суммы автоплатежа указал SLEEPING_COMPARATOR.for(10000000000000LL, "ms")
+     */
     @Test
-    // В качестве суммы автоплатежа указал SLEEPING_COMPARATOR.for(10000000000000LL, "ms")
     public void test15() {
         final Comparator<Integer> SLEEP_COMPARATOR = (o1, o2) -> {
             try {
@@ -472,7 +499,7 @@ public class BankTests {
             return Integer.compare(o1, o2);
         };
         final var person = PERSON_DATA.get(4);
-        Client.main("() -> {console.log(\"Georgiy Korneev\");}", person.secondName(), person.passport(),
+        Client.main(person.firstName(), person.secondName(), person.passport(),
                 ACCOUNTS.get(4), SLEEP_COMPARATOR.toString());
     }
 
