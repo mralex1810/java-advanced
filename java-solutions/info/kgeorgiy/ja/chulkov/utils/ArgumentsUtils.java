@@ -17,7 +17,7 @@ public class ArgumentsUtils {
      * @param src  string to parse int from
      * @param name name of parsing field
      * @return int from src string
-     * @throws NumberFormatException if string isn't integer or integer < 0
+     * @throws NumberFormatException if string isn't integer or integer below 0
      */
     public static int parseNonNegativeInt(final String src, final String name) throws NumberFormatException {
         final int res = Integer.parseInt(src);
