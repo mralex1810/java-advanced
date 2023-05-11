@@ -8,18 +8,18 @@ public class RemotePerson extends AbstractPerson implements Person {
 
     private final int port;
 
-    public RemotePerson(final String firstName, final String secondName, final String passport, final int port) {
-        super(firstName, secondName, passport);
-        this.port = port;
-    }
-
+    /**
+     * Creates {@link RemotePerson} class by person data and port
+     *
+     */
     public RemotePerson(final PersonData personData, final int port) {
-        this(personData.firstName(), personData.secondName(), personData.passport(), port);
+        super(personData.firstName(), personData.secondName(), personData.passport());
+        this.port = port;
     }
 
 
     @Override
-    protected void export(final Account account) throws RemoteException {
+    void export(final Account account) throws RemoteException {
         UnicastRemoteObject.exportObject(account, port);
     }
 }

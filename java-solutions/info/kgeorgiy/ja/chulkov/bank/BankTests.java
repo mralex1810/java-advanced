@@ -18,12 +18,10 @@ import java.text.NumberFormat;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.Assert;
 import org.junit.Before;
@@ -136,7 +134,6 @@ public class BankTests {
         for (final var personData : PERSON_DATA) {
             final Person person = bank.createPerson(personData);
             checkPerson(person, personData);
-            Assert.assertEquals(person.getAccounts(), Map.of());
         }
     }
 
@@ -145,7 +142,6 @@ public class BankTests {
         for (final var personData : PERSON_DATA.subList(0, PERSON_DATA.size() / 2)) {
             final Person person = bank.createPerson(personData);
             checkPerson(person, personData);
-            Assert.assertEquals(person.getAccounts(), Map.of());
         }
         for (final var personData : PERSON_DATA.subList(PERSON_DATA.size() / 2, PERSON_DATA.size())) {
             Assert.assertNull(bank.getRemotePerson(personData.passport()));
@@ -159,7 +155,6 @@ public class BankTests {
             bank.createPerson(personData);
             final Person person = bank.getLocalPerson(personData.passport());
             checkPerson(person, personData);
-            Assert.assertEquals(person.getAccounts(), Map.of());
         }
     }
 
@@ -175,8 +170,9 @@ public class BankTests {
         }
         for (final var personData : PERSON_DATA) {
             final Person person = bank.getRemotePerson(personData.passport());
-            Assert.assertEquals(person.getAccounts().keySet(),
-                    ACCOUNTS.stream().map(it -> getAccountId(personData, it)).collect(Collectors.toSet()));
+            for (final var accountId : ACCOUNTS) {
+                Assert.assertNotNull(person.getAccount(accountId));
+            }
         }
     }
 
@@ -340,6 +336,19 @@ public class BankTests {
         }
     }
 
+    private void checkClientFail(final PersonData personData, final String accountId) throws RemoteException {
+        Assert.assertNull(bank.getRemotePerson(personData.passport()));
+    }
+
+    private void checkClientOk(final PersonData personData, final String subAccountId, final int amount)
+            throws RemoteException {
+        final Person person = bank.getRemotePerson(personData.passport());
+        Assert.assertNotNull(person);
+        final Account account = person.getAccount(subAccountId);
+        Assert.assertNotNull(account);
+        Assert.assertEquals(account.getAmount(), amount);
+    }
+
     /**
      * Однажды КТ-шники решили открыть свой международный банк "Aksёnov Financial Transatlantic Co Ltd", жили-жили себе
      * спокойно, до тех пор пока в какой-то день в офис для открытия счёта не пришёл некто كورنييف جورج الكسندروفيتش
@@ -349,19 +358,21 @@ public class BankTests {
      * Перевёл со своего счёта 100 рублей самому себе
      */
     @Test
-    public void test1() {
+    public void test1() throws RemoteException {
         final var person = PERSON_DATA.get(4);
         Client.main(person.firstName(), person.secondName(), person.passport(), ACCOUNTS.get(4), Integer.toString(100));
+        checkClientOk(person, ACCOUNTS.get(4), 100);
     }
 
     /**
      * Перевёл со своего счёта 999223372036854775807 рублей самому себе
      */
     @Test
-    public void test2() {
+    public void test2() throws RemoteException {
         final var person = PERSON_DATA.get(4);
         Client.main(person.firstName(), person.secondName(), person.passport(), ACCOUNTS.get(4),
                 "999223372036854775807");
+        checkClientFail(person, ACCOUNTS.get(4));
     }
 
     /**

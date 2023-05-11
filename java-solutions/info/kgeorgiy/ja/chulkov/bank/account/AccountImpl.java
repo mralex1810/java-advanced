@@ -9,14 +9,29 @@ public class AccountImpl implements Account, Serializable {
     private int amount;
 
 
+    /**
+     * Creates a copy of another {@link AccountImpl}
+     *
+     * @param account to copy
+     */
     public AccountImpl(final AccountImpl account) {
         this(account.getId(), account.getAmount());
     }
 
+    /**
+     * Creates a new account with specified id and zero amount
+     *
+     * @param id of account
+     */
     public AccountImpl(final String id) {
         this(id, 0);
     }
-
+    /**
+     * Creates a new account with specified id and amount
+     *
+     * @param id of account
+     * @param amount of account
+     */
     public AccountImpl(final String id, final int amount) {
         Objects.requireNonNull(id);
         this.id = id;

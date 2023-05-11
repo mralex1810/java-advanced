@@ -3,7 +3,7 @@ package info.kgeorgiy.ja.chulkov.bank;
 
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
 import info.kgeorgiy.ja.chulkov.bank.account.NegativeAccountAmountAfterOperation;
-import info.kgeorgiy.ja.chulkov.bank.person.LocalPerson;
+import info.kgeorgiy.ja.chulkov.bank.person.Person;
 import info.kgeorgiy.ja.chulkov.bank.person.PersonData;
 import info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils;
 import java.net.MalformedURLException;
@@ -21,7 +21,11 @@ public final class Client {
     }
 
 
-    // firstName, secondName, passport, accountId, delta
+    /**
+     * Creates a connection to bank and set money on account
+     *
+     * @param args array of firstName, secondName, passport, accountId, delta
+     */
     public static void main(final String... args) {
         ArgumentsUtils.checkNonNullsArgs(args);
         if (args.length != 5) {
@@ -51,13 +55,13 @@ public final class Client {
         }
 
         final PersonData personData = new PersonData(args[0], args[1], args[2]);
-        LocalPerson person;
+        Person person;
         try {
-            person = bank.getLocalPerson(personData.passport());
+            person = bank.getRemotePerson(personData.passport());
             if (person == null) {
                 System.out.println("Creating person");
                 bank.createPerson(personData);
-                person = bank.getLocalPerson(personData.passport());
+                person = bank.getRemotePerson(personData.passport());
             } else {
                 System.out.println("Person already exists");
             }
@@ -66,14 +70,16 @@ public final class Client {
             return;
         }
         final var accountId = args[3];
-        Account account = person.getAccount(accountId);
-        if (account == null) {
-            System.out.println("Creating account");
-            account = person.createAccount(accountId);
-        } else {
-            System.out.println("Account already exists");
-        }
         try {
+            Account account = null;
+            account = person.getAccount(accountId);
+            if (account == null) {
+                System.out.println("Creating account");
+                account = person.createAccount(accountId);
+            } else {
+                System.out.println("Account already exists");
+            }
+
             System.out.println("Account id: " + account.getId());
             System.out.println("Money: " + account.getAmount());
             System.out.println("Adding money");
@@ -90,6 +96,7 @@ public final class Client {
 
     private static void printUsage() {
         System.err.println("""
+                Usage:
                 Client firstName, secondName, passport, accountId, delta
                 """);
     }

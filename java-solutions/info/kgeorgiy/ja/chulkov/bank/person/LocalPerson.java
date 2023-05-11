@@ -6,6 +6,11 @@ import java.rmi.RemoteException;
 
 public class LocalPerson extends AbstractPerson  {
 
+    /**
+     * Creates {@link LocalPerson} copy of {@link RemotePerson}
+     *
+     * @param person remote person to copy
+     */
     public LocalPerson(final RemotePerson person) {
         super(person.getFirstName(), person.getSecondName(), person.getPassport());
         for (final var idAccount : person.getAccounts().entrySet()) {
@@ -24,5 +29,5 @@ public class LocalPerson extends AbstractPerson  {
 
 
     @Override
-    protected void export(final Account account) {}
+    void export(final Account account) {}
 }

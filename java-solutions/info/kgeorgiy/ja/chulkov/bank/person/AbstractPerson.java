@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public abstract class AbstractPerson implements Person, Serializable {
+abstract class AbstractPerson implements Person, Serializable {
 
     protected final String firstName;
     protected final String secondName;
@@ -16,7 +16,7 @@ public abstract class AbstractPerson implements Person, Serializable {
     protected final ConcurrentMap<String, AccountImpl> accounts = new ConcurrentHashMap<>();
 
 
-    protected AbstractPerson(final String firstName, final String secondName, final String passport) {
+    AbstractPerson(final String firstName, final String secondName, final String passport) {
         this.firstName = firstName;
         this.secondName = secondName;
         this.passport = passport;
@@ -42,8 +42,7 @@ public abstract class AbstractPerson implements Person, Serializable {
         return accounts.get(passport + ":" + id);
     }
 
-    @Override
-    public Map<String, AccountImpl> getAccounts() {
+    Map<String, AccountImpl> getAccounts() {
         return accounts;
     }
 
@@ -60,5 +59,5 @@ public abstract class AbstractPerson implements Person, Serializable {
         }
     }
 
-    protected abstract void export(final Account account) throws RemoteException;
+    abstract void export(final Account account) throws RemoteException;
 }

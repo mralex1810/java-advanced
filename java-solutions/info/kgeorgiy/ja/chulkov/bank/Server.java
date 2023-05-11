@@ -8,8 +8,17 @@ import java.rmi.server.UnicastRemoteObject;
 
 public final class Server {
 
-    private final static int DEFAULT_PORT = 8888;
+    /**
+     * Name of bank in registry lookup
+     */
     public static final String BANK = "//localhost/bank";
+    private final static int DEFAULT_PORT = 8888;
+
+    /**
+     * Creates a bank on specified port
+     *
+     * @param args contains port
+     */
 
     public static void main(final String... args) {
         ArgumentsUtils.checkNonNullsArgs(args);

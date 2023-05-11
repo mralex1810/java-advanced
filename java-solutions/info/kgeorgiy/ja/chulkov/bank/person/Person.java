@@ -3,14 +3,23 @@ package info.kgeorgiy.ja.chulkov.bank.person;
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.Map;
 
 public interface Person extends Remote {
 
+    /**
+     * @return first name of this person
+     * @throws RemoteException if something went wrong with RMI
+     */
     String getFirstName() throws RemoteException;
-
+    /**
+     * @return second name of this person
+     * @throws RemoteException if something went wrong with RMI
+     */
     String getSecondName() throws RemoteException;
-
+    /**
+     * @return passport of this person
+     * @throws RemoteException if something went wrong with RMI
+     */
     String getPassport() throws RemoteException;
 
     /**
@@ -28,8 +37,5 @@ public interface Person extends Remote {
      * @return account with specified identifier or {@code null} if such account does not exist.
      */
     Account getAccount(String id) throws RemoteException;
-
-    Map<String, ? extends Account> getAccounts() throws RemoteException;
-
 
 }

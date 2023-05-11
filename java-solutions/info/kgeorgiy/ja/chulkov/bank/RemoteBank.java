@@ -13,6 +13,11 @@ public class RemoteBank implements Bank {
     private final int port;
     private final ConcurrentMap<String, RemotePerson> persons = new ConcurrentHashMap<>();
 
+    /**
+     * Creates {@link RemoteBank} on specified port
+     *
+     * @param port for export persons
+     */
     public RemoteBank(final int port) {
         this.port = port;
     }
