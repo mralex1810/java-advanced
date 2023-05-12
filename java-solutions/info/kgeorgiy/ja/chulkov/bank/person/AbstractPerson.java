@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-abstract class AbstractPerson implements Person, Serializable {
+abstract class AbstractPerson implements Serializable {
 
     protected final String firstName;
     protected final String secondName;
@@ -22,22 +22,18 @@ abstract class AbstractPerson implements Person, Serializable {
         this.passport = passport;
     }
 
-    @Override
     public String getFirstName() {
         return firstName;
     }
 
-    @Override
     public String getSecondName() {
         return secondName;
     }
 
-    @Override
     public String getPassport() {
         return passport;
     }
 
-    @Override
     public Account getAccount(final String id) {
         return accounts.get(passport + ":" + id);
     }
@@ -46,7 +42,6 @@ abstract class AbstractPerson implements Person, Serializable {
         return accounts;
     }
 
-    @Override
     public Account createAccount(final String id) throws RemoteException {
         final var accountId = passport + ":" + id;
         System.out.println("Creating remote account " + accountId);

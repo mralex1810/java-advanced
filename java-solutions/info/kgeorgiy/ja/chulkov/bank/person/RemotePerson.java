@@ -1,25 +1,38 @@
 package info.kgeorgiy.ja.chulkov.bank.person;
 
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 
-public class RemotePerson extends AbstractPerson implements Person {
-
-    private final int port;
+public interface RemotePerson extends Remote {
 
     /**
-     * Creates {@link RemotePerson} class by person data and port
-     *
+     * @return first name of this person
      */
-    public RemotePerson(final PersonData personData, final int port) {
-        super(personData.firstName(), personData.secondName(), personData.passport());
-        this.port = port;
-    }
+    String getFirstName() throws RemoteException;
+    /**
+     * @return second name of this person
+     */
+    String getSecondName() throws RemoteException;
+    /**
+     * @return passport of this person
+     */
+    String getPassport() throws RemoteException;
 
+    /**
+     * Creates a new account with specified identifier if it does not already exist.
+     *
+     * @param id account id
+     * @return created or existing account.
+     */
+    Account createAccount(String id) throws RemoteException;
 
-    @Override
-    void export(final Account account) throws RemoteException {
-        UnicastRemoteObject.exportObject(account, port);
-    }
+    /**
+     * Returns account by identifier.
+     *
+     * @param id account id
+     * @return account with specified identifier or {@code null} if such account does not exist.
+     */
+    Account getAccount(String id) throws RemoteException;
+
 }

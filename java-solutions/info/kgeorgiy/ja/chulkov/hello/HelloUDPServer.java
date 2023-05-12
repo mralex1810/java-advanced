@@ -14,7 +14,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -113,15 +112,6 @@ public class HelloUDPServer implements HelloServer {
     public void close() {
         datagramSocket.close();
         getterThread.interrupt();
-        taskExecutorService.shutdown();
-        while (true) {
-            try {
-                getterThread.join();
-                if (taskExecutorService.awaitTermination(1, TimeUnit.DAYS)) {
-                    break;
-                }
-            } catch (final InterruptedException ignored) {
-            }
-        }
+        taskExecutorService.close();
     }
 }

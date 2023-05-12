@@ -5,8 +5,8 @@ import static info.kgeorgiy.ja.chulkov.bank.Server.BANK;
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
 import info.kgeorgiy.ja.chulkov.bank.account.AccountImpl;
 import info.kgeorgiy.ja.chulkov.bank.account.NegativeAccountAmountAfterOperation;
-import info.kgeorgiy.ja.chulkov.bank.person.Person;
 import info.kgeorgiy.ja.chulkov.bank.person.PersonData;
+import info.kgeorgiy.ja.chulkov.bank.person.RemotePerson;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.rmi.Naming;
@@ -66,7 +66,7 @@ public class BankTests {
 
     @BeforeClass
     public static void setupRegistry() throws IOException {
-        LocateRegistry.createRegistry(1099);
+        final var registry = LocateRegistry.createRegistry(1099);
     }
 
     private static int getFreePort() throws IOException {
@@ -132,7 +132,7 @@ public class BankTests {
     @Test
     public void newPersonTest() throws RemoteException {
         for (final var personData : PERSON_DATA) {
-            final Person person = bank.createPerson(personData);
+            final RemotePerson person = bank.createPerson(personData);
             checkPerson(person, personData);
         }
     }
@@ -140,7 +140,7 @@ public class BankTests {
     @Test
     public void withoutPersonTest() throws RemoteException {
         for (final var personData : PERSON_DATA.subList(0, PERSON_DATA.size() / 2)) {
-            final Person person = bank.createPerson(personData);
+            final RemotePerson person = bank.createPerson(personData);
             checkPerson(person, personData);
         }
         for (final var personData : PERSON_DATA.subList(PERSON_DATA.size() / 2, PERSON_DATA.size())) {
@@ -153,7 +153,7 @@ public class BankTests {
     public void localPersonGetTest() throws RemoteException {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
-            final Person person = bank.getLocalPerson(personData.passport());
+            final RemotePerson person = bank.getLocalPerson(personData.passport());
             checkPerson(person, personData);
         }
     }
@@ -162,14 +162,14 @@ public class BankTests {
     public void createAccountTest() throws RemoteException {
         for (final var personData : PERSON_DATA) {
             for (final var accountId : ACCOUNTS) {
-                final Person person = bank.createPerson(personData);
+                final RemotePerson person = bank.createPerson(personData);
                 final var account = person.createAccount(accountId);
                 Assert.assertEquals(account.getId(), getAccountId(personData, accountId));
                 Assert.assertEquals(account.getAmount(), 0);
             }
         }
         for (final var personData : PERSON_DATA) {
-            final Person person = bank.getRemotePerson(personData.passport());
+            final RemotePerson person = bank.getRemotePerson(personData.passport());
             for (final var accountId : ACCOUNTS) {
                 Assert.assertNotNull(person.getAccount(accountId));
             }
@@ -180,7 +180,7 @@ public class BankTests {
     public void randomAmountSetTest() throws RemoteException, NegativeAccountAmountAfterOperation {
         for (final var personData : PERSON_DATA) {
             for (final var accountId : ACCOUNTS) {
-                final Person person = bank.createPerson(personData);
+                final RemotePerson person = bank.createPerson(personData);
                 final var account = person.createAccount(accountId);
                 checkSetAmount(account, random.nextInt(0, Integer.MAX_VALUE));
                 checkSetAmount(account, random.nextInt(0, Integer.MAX_VALUE));
@@ -189,8 +189,8 @@ public class BankTests {
     }
 
     private void twoSequentialPersonForOneTest(
-            final RemoteFunction<String, Person> gen1,
-            final RemoteFunction<String, Person> gen2,
+            final RemoteFunction<String, RemotePerson> gen1,
+            final RemoteFunction<String, RemotePerson> gen2,
             final Function<Integer, Integer> expected) throws RemoteException, NegativeAccountAmountAfterOperation {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
@@ -211,8 +211,8 @@ public class BankTests {
     }
 
     private void twoParallelPersonForOneTest(
-            final RemoteFunction<String, Person> gen1,
-            final RemoteFunction<String, Person> gen2,
+            final RemoteFunction<String, RemotePerson> gen1,
+            final RemoteFunction<String, RemotePerson> gen2,
             final Function<Integer, Integer> expected) throws RemoteException, NegativeAccountAmountAfterOperation {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
@@ -274,7 +274,7 @@ public class BankTests {
         twoParallelPersonForOneTest(bank::getLocalPerson, bank::getRemotePerson, (set) -> null);
     }
 
-    private void checkPerson(final Person person, final PersonData personData) throws RemoteException {
+    private void checkPerson(final RemotePerson person, final PersonData personData) throws RemoteException {
         Assert.assertEquals(person.getFirstName(), personData.firstName());
         Assert.assertEquals(person.getSecondName(), personData.secondName());
         Assert.assertEquals(person.getPassport(), personData.passport());
@@ -342,7 +342,7 @@ public class BankTests {
 
     private void checkClientOk(final PersonData personData, final String subAccountId, final int amount)
             throws RemoteException {
-        final Person person = bank.getRemotePerson(personData.passport());
+        final RemotePerson person = bank.getRemotePerson(personData.passport());
         Assert.assertNotNull(person);
         final Account account = person.getAccount(subAccountId);
         Assert.assertNotNull(account);
@@ -379,16 +379,17 @@ public class BankTests {
      * Перевёл 0 рублей самому себе
      */
     @Test
-    public void test3() {
+    public void test3() throws RemoteException {
         final var person = PERSON_DATA.get(4);
         Client.main(person.firstName(), person.secondName(), person.passport(), ACCOUNTS.get(4), "0");
+        checkClientOk(person, ACCOUNTS.get(4), 0);
     }
 
     /**
      * С 1000 компьютеров переводил 0 рублей самому себе
      */
     @Test
-    public void test4() {
+    public void test4() throws RemoteException {
         final var person = PERSON_DATA.get(4);
         try (final ExecutorService executorService = Executors.newCachedThreadPool()) {
             IntStream.range(0, 1000)
@@ -397,37 +398,44 @@ public class BankTests {
                                     ACCOUNTS.get(4), "0"))
                     .forEach(executorService::submit);
         }
+        checkClientOk(person, ACCOUNTS.get(4), 0);
     }
 
     /**
      * Перевёл NaN рублей أندريه ستانكيفيتش
      */
     @Test
-    public void test5() {
+    public void test5() throws RemoteException {
         final var stankevich = new PersonData("ستانكيفيتش", "أندريه", "116501");
         Client.main(stankevich.firstName(), stankevich.secondName(), stankevich.passport(),
                 ACCOUNTS.get(2), Float.toString(Float.NaN));
+        checkClientFail(stankevich, ACCOUNTS.get(2));
     }
 
     /**
      * Перевёл 100 рублей через дорогу на финский язык
      */
     @Test
-    public void test6() {
+    public void test6() throws RemoteException {
         final var person = PERSON_DATA.get(4);
-        Client.main(person.firstName(), person.secondName(), person.passport(), "через дорогу",
+        final String account = "через дорогу";
+        Client.main(person.firstName(), person.secondName(), person.passport(), account,
                 NumberFormat.getNumberInstance(Locale.forLanguageTag("fi")).format(100));
+        checkClientOk(person, account, 100);
     }
 
     /**
      * Обменял undefined рублей на десять ClassCastException
      */
     @Test
-    public void testNull() {
+    public void testNull() throws RemoteException {
         final var person = PERSON_DATA.get(4);
+        final String account =  new ClassCastException().toString().repeat(10);
         Client.main(person.firstName(), person.secondName(), person.passport(),
-                new ClassCastException().toString().repeat(10),
+               account,
                 "undefined");
+        checkClientFail(person, account);
+
     }
 
     /**
@@ -450,37 +458,45 @@ public class BankTests {
      * Кинул Number("100") рублей себе на телефон
      */
     @Test
-    public void test10() {
+    public void test10() throws RemoteException {
         final var person = PERSON_DATA.get(4);
-        Client.main(person.firstName(), person.secondName(), person.passport(), "телефон",
+        final String account = "телефон";
+        Client.main(person.firstName(), person.secondName(), person.passport(), account,
                 ((Number) 100).toString());
+        checkClientOk(person, account, 100);
     }
 
     /**
      * Попробовал заплатить "1000" рублей за ЖКХ
      */
     @Test
-    public void test11() {
+    public void test11() throws RemoteException {
         final var person = PERSON_DATA.get(4);
-        Client.main(person.firstName(), person.secondName(), person.passport(), "ЖКХ", "\"1000\"");
+        final String account = "ЖКХ";
+        Client.main(person.firstName(), person.secondName(), person.passport(), account, "\"1000\"");
+        checkClientFail(person, account);
     }
 
     /**
      * Привязал к своему аккаунту номер телефона ""'`;,.;DROP TABLE USERS"
      */
     @Test
-    public void test12() {
+    public void test12() throws RemoteException {
         final var person = PERSON_DATA.get(4);
-        Client.main(person.firstName(), person.secondName(), person.passport(), "\"'`;,.;DROP TABLE USERS", "0");
+        final String account = "\"'`;,.;DROP TABLE USERS";
+        Client.main(person.firstName(), person.secondName(), person.passport(), account, "0");
+        checkClientOk(person, account, 0);
     }
 
     /**
      * В поле "адрес для доставки корреспонденции" указал kgeorgiy.info
      */
     @Test
-    public void test13() {
+    public void test13() throws RemoteException {
         final var person = PERSON_DATA.get(4);
-        Client.main(person.firstName(), person.secondName(), person.passport(), "kgeorgiy.info", "0");
+        final String account = "kgeorgiy.info";
+        Client.main(person.firstName(), person.secondName(), person.passport(), account, "0");
+        checkClientOk(person, account, 0);
     }
 
 
@@ -488,10 +504,12 @@ public class BankTests {
      * В поле "Отображаемое имя" указал "() -> {console.log("Georgiy Korneev");}"
      */
     @Test
-    public void test14() {
+    public void test14() throws RemoteException {
         final var person = PERSON_DATA.get(4);
-        Client.main("() -> {console.log(\"Georgiy Korneev\");}", person.secondName(), person.passport(),
+        final String firstName = "() -> {console.log(\"Georgiy Korneev\");}";
+        Client.main(firstName, person.secondName(), person.passport(),
                 ACCOUNTS.get(4), "0");
+        checkClientOk(person, ACCOUNTS.get(4), 0);
     }
 
 
@@ -499,7 +517,7 @@ public class BankTests {
      * В качестве суммы автоплатежа указал SLEEPING_COMPARATOR.for(10000000000000LL, "ms")
      */
     @Test
-    public void test15() {
+    public void test15() throws RemoteException {
         final Comparator<Integer> SLEEP_COMPARATOR = (o1, o2) -> {
             try {
                 Thread.sleep(100);
@@ -512,6 +530,7 @@ public class BankTests {
         final var person = PERSON_DATA.get(4);
         Client.main(person.firstName(), person.secondName(), person.passport(),
                 ACCOUNTS.get(4), SLEEP_COMPARATOR.toString());
+        checkClientFail(person, ACCOUNTS.get(4));
     }
 
     /**

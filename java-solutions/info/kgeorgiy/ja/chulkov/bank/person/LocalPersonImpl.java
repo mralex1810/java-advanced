@@ -4,14 +4,14 @@ import info.kgeorgiy.ja.chulkov.bank.account.Account;
 import info.kgeorgiy.ja.chulkov.bank.account.AccountImpl;
 import java.rmi.RemoteException;
 
-public class LocalPerson extends AbstractPerson  {
+public class LocalPersonImpl extends AbstractPerson implements LocalPerson  {
 
     /**
-     * Creates {@link LocalPerson} copy of {@link RemotePerson}
+     * Creates {@link LocalPersonImpl} copy of {@link RemotePersonImpl}
      *
      * @param person remote person to copy
      */
-    public LocalPerson(final RemotePerson person) {
+    public LocalPersonImpl(final RemotePersonImpl person) {
         super(person.getFirstName(), person.getSecondName(), person.getPassport());
         for (final var idAccount : person.getAccounts().entrySet()) {
             accounts.put(idAccount.getKey(), new AccountImpl(idAccount.getValue()));
