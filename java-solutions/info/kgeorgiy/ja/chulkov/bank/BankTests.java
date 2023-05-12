@@ -5,6 +5,7 @@ import static info.kgeorgiy.ja.chulkov.bank.Server.BANK;
 import info.kgeorgiy.ja.chulkov.bank.account.Account;
 import info.kgeorgiy.ja.chulkov.bank.account.AccountImpl;
 import info.kgeorgiy.ja.chulkov.bank.account.NegativeAccountAmountAfterOperation;
+import info.kgeorgiy.ja.chulkov.bank.person.LocalPerson;
 import info.kgeorgiy.ja.chulkov.bank.person.PersonData;
 import info.kgeorgiy.ja.chulkov.bank.person.RemotePerson;
 import java.io.IOException;
@@ -153,7 +154,7 @@ public class BankTests {
     public void localPersonGetTest() throws RemoteException {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
-            final RemotePerson person = bank.getLocalPerson(personData.passport());
+            final LocalPerson person = bank.getLocalPerson(personData.passport());
             checkPerson(person, personData);
         }
     }
