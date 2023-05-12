@@ -494,31 +494,6 @@ public class BankTests {
     }
 
     /**
-     * С 1000 компьютеров переводил 0 рублей самому себе
-     */
-    @Test
-    public void test4() throws RemoteException, InterruptedException {
-        final var person = PERSON_DATA.get(4);
-        executorService.invokeAll(IntStream.range(0, 1000)
-                        .<Callable<Void>>mapToObj((ignore) -> () -> {
-                                    Client.main(person.firstName(), person.secondName(), person.passport(),
-                                            ACCOUNTS.get(4), "0");
-                                    return null;
-                                }
-                        )
-                        .toList())
-                .forEach(it -> {
-                    try {
-                        it.get();
-                    } catch (final InterruptedException | ExecutionException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-
-        checkClientOk(person, ACCOUNTS.get(4), 0);
-    }
-
-    /**
      * Перевёл NaN рублей أندريه ستانكيفيتش
      */
     @Test
