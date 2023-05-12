@@ -14,16 +14,22 @@ import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.IntStream;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -54,6 +60,7 @@ public class BankTests {
             "😆🤣🤣🤣🔞🔞"
     );
     private static final Random random = new Random(42);
+    private static ExecutorService executorService;
     private Bank bank;
 
     public static void main(final String[] args) {
@@ -66,9 +73,17 @@ public class BankTests {
     }
 
     @BeforeClass
-    public static void setupRegistry() throws IOException {
+    public static void setup() throws IOException {
         // :NOTE: если registry уже запущен, то падает
-        final var registry = LocateRegistry.createRegistry(1099);
+        if (LocateRegistry.getRegistry(Registry.REGISTRY_PORT) != null) {
+            LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
+        }
+        executorService = Executors.newFixedThreadPool(16);
+    }
+
+    @AfterClass
+    public static void closeExecutor() {
+        executorService.close();
     }
 
     private static int getFreePort() throws IOException {
@@ -193,7 +208,8 @@ public class BankTests {
     private void twoSequentialPersonForOneTest(
             final RemoteFunction<String, RemotePerson> gen1,
             final RemoteFunction<String, RemotePerson> gen2,
-            final Function<Integer, Integer> expected) throws RemoteException, NegativeAccountAmountAfterOperation {
+            final Function<Integer, Integer> expected)
+            throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
             for (final var accountId : ACCOUNTS) {
@@ -215,64 +231,124 @@ public class BankTests {
     private void twoParallelPersonForOneTest(
             final RemoteFunction<String, RemotePerson> gen1,
             final RemoteFunction<String, RemotePerson> gen2,
-            final Function<Integer, Integer> expected) throws RemoteException, NegativeAccountAmountAfterOperation {
+            final Function<Integer, Integer> expected)
+            throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
             for (final var accountId : ACCOUNTS) {
-                final var account1 = gen1.apply(personData.passport()).createAccount(accountId);
-                final var account2 = gen2.apply(personData.passport()).getAccount(accountId);
-                final int set = random.nextInt(1, Integer.MAX_VALUE);
-                checkSetAmount(account1, set);
-                final var ans = expected.apply(set);
-                if (ans != null) {
-                    Assert.assertNotNull(account2);
-                    Assert.assertEquals(account2.getAmount(), ans.intValue());
-                } else {
-                    Assert.assertNull(account2);
-
-                }
+                checkPar(gen1, gen2,
+                        expected, personData, accountId);
             }
         }
     }
 
+    private void twoThreadsPersonTest(
+            final RemoteFunction<String, RemotePerson> gen1,
+            final RemoteFunction<String, RemotePerson> gen2,
+            final Function<Integer, Integer> expected
+    ) throws ExecutionException, InterruptedException, NotBoundException, IOException {
+        final List<Callable<Exception>> tasks = new ArrayList<>();
+
+        for (final var personData : PERSON_DATA) {
+            bank.createPerson(personData);
+            for (final var accountId : ACCOUNTS) {
+                tasks.add(() -> {
+                            checkPar(gen1, gen2, expected, personData, accountId);
+                            return null;
+                        }
+                );
+
+            }
+        }
+        for (final Future<Exception> it : executorService.invokeAll(tasks)) {
+            it.get();
+        }
+    }
+
+    private void checkPar(final RemoteFunction<String, RemotePerson> gen1,
+            final RemoteFunction<String, RemotePerson> gen2, final Function<Integer, Integer> expected,
+            final PersonData personData, final String accountId)
+            throws RemoteException, NegativeAccountAmountAfterOperation {
+        final var account1 = gen1.apply(personData.passport()).createAccount(accountId);
+        final var account2 = gen2.apply(personData.passport()).getAccount(accountId);
+        final int set = random.nextInt(1, Integer.MAX_VALUE);
+        checkSetAmount(account1, set);
+        final var ans = expected.apply(set);
+        if (ans != null) {
+            Assert.assertNotNull(account2);
+            Assert.assertEquals(account2.getAmount(), ans.intValue());
+        } else {
+            Assert.assertNull(account2);
+        }
+    }
+
     @Test
-    public void twoLocalSeqTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+    public void twoLocalThreadsTest()
+            throws IOException, NotBoundException, ExecutionException,
+            InterruptedException {
+        twoThreadsPersonTest(bank::getLocalPerson, bank::getLocalPerson, (set) -> null);
+    }
+
+    @Test
+    public void LocalRemoteThreadsTest()
+            throws IOException, NotBoundException, ExecutionException,
+            InterruptedException {
+        twoThreadsPersonTest(bank::getLocalPerson, bank::getRemotePerson, (set) -> null);
+    }
+
+    @Test
+    public void RemoteLocalThreadsTest()
+            throws IOException, NotBoundException, ExecutionException,
+            InterruptedException {
+        twoThreadsPersonTest(bank::getRemotePerson, bank::getLocalPerson, (set) -> 0);
+    }
+
+    @Test
+    public void RemoteRemoteThreadsTest()
+            throws IOException, NotBoundException, ExecutionException,
+            InterruptedException {
+        twoThreadsPersonTest(bank::getRemotePerson, bank::getRemotePerson, (set) -> set);
+    }
+
+
+    @Test
+    public void twoLocalSeqTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
         twoSequentialPersonForOneTest(bank::getLocalPerson, bank::getLocalPerson, (set) -> null);
     }
 
     @Test
-    public void twoLocalParTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+    public void twoLocalParTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
         twoParallelPersonForOneTest(bank::getLocalPerson, bank::getLocalPerson, (set) -> null);
     }
 
     @Test
-    public void twoRemoteSeqTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+    public void twoRemoteSeqTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
         twoSequentialPersonForOneTest(bank::getRemotePerson, bank::getRemotePerson, (set) -> set);
     }
 
     @Test
-    public void twoRemoteParTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+    public void twoRemoteParTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
         twoParallelPersonForOneTest(bank::getRemotePerson, bank::getRemotePerson, (set) -> set);
     }
 
     @Test
-    public void RemoteAndLocalSeqTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+    public void RemoteAndLocalSeqTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
         twoSequentialPersonForOneTest(bank::getRemotePerson, bank::getLocalPerson, (set) -> set);
     }
 
     @Test
-    public void RemoteAndLocalParTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+    public void RemoteAndLocalParTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
         twoParallelPersonForOneTest(bank::getRemotePerson, bank::getLocalPerson, (set) -> 0);
     }
 
 
     @Test
-    public void LocalAndRemoteSeqTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+    public void LocalAndRemoteSeqTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
         twoSequentialPersonForOneTest(bank::getLocalPerson, bank::getRemotePerson, (set) -> null);
     }
 
     @Test
-    public void LocalAndRemoteParTest() throws RemoteException, NegativeAccountAmountAfterOperation {
+    public void LocalAndRemoteParTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
         twoParallelPersonForOneTest(bank::getLocalPerson, bank::getRemotePerson, (set) -> null);
     }
 
@@ -351,6 +427,36 @@ public class BankTests {
         Assert.assertEquals(account.getAmount(), amount);
     }
 
+    @Test
+    public void testMultithreading() throws RemoteException, InterruptedException {
+        for (final var personData : PERSON_DATA) {
+            final var person = bank.createPerson(personData);
+            for (final var accountId : ACCOUNTS) {
+                final var account = person.createAccount(accountId);
+                executorService.invokeAll(IntStream.range(1, 1001)
+                                .<Callable<Void>>mapToObj((number) -> () ->
+                                {
+                                    try {
+                                        bank.getRemotePerson(personData.passport()).getAccount(accountId).setAmount(number);
+                                    } catch (final RemoteException | NegativeAccountAmountAfterOperation e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                    return null;
+                                })
+                                .toList())
+                        .forEach(it -> {
+                            try {
+                                it.get();
+                            } catch (final InterruptedException | ExecutionException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+                Assert.assertTrue(account.getAmount() >= 1 && account.getAmount() <= 1001);
+            }
+        }
+
+    }
+
     /**
      * Однажды КТ-шники решили открыть свой международный банк "Aksёnov Financial Transatlantic Co Ltd", жили-жили себе
      * спокойно, до тех пор пока в какой-то день в офис для открытия счёта не пришёл некто كورنييف جورج الكسندروفيتش
@@ -391,15 +497,24 @@ public class BankTests {
      * С 1000 компьютеров переводил 0 рублей самому себе
      */
     @Test
-    public void test4() throws RemoteException {
+    public void test4() throws RemoteException, InterruptedException {
         final var person = PERSON_DATA.get(4);
-        try (final ExecutorService executorService = Executors.newCachedThreadPool()) {
-            IntStream.range(0, 1000)
-                    .<Runnable>mapToObj((ignore) -> () ->
-                            Client.main(person.firstName(), person.secondName(), person.passport(),
-                                    ACCOUNTS.get(4), "0"))
-                    .forEach(executorService::submit);
-        }
+        executorService.invokeAll(IntStream.range(0, 1000)
+                        .<Callable<Void>>mapToObj((ignore) -> () -> {
+                                    Client.main(person.firstName(), person.secondName(), person.passport(),
+                                            ACCOUNTS.get(4), "0");
+                                    return null;
+                                }
+                        )
+                        .toList())
+                .forEach(it -> {
+                    try {
+                        it.get();
+                    } catch (final InterruptedException | ExecutionException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+
         checkClientOk(person, ACCOUNTS.get(4), 0);
     }
 
@@ -432,9 +547,9 @@ public class BankTests {
     @Test
     public void testNull() throws RemoteException {
         final var person = PERSON_DATA.get(4);
-        final String account =  new ClassCastException().toString().repeat(10);
+        final String account = new ClassCastException().toString().repeat(10);
         Client.main(person.firstName(), person.secondName(), person.passport(),
-               account,
+                account,
                 "undefined");
         checkClientFail(person, account);
 

@@ -14,10 +14,10 @@ public interface Account extends Remote {
     /**
      * Returns amount of money in the account.
      */
-    int getAmount() throws RemoteException;
+    long getAmount() throws RemoteException;
 
     /**
      * Sets amount of money in the account.
      */
-    void setAmount(int amount) throws RemoteException, NegativeAccountAmountAfterOperation;
+    void setAmount(long amount) throws RemoteException, NegativeAccountAmountAfterOperation;
 }

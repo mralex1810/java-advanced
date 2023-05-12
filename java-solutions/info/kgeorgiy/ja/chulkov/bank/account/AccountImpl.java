@@ -6,7 +6,7 @@ import java.util.Objects;
 public class AccountImpl implements Account, Serializable {
 
     private final String id;
-    private int amount;
+    private long amount;
 
 
     /**
@@ -32,7 +32,7 @@ public class AccountImpl implements Account, Serializable {
      * @param id of account
      * @param amount of account
      */
-    public AccountImpl(final String id, final int amount) {
+    public AccountImpl(final String id, final long amount) {
         Objects.requireNonNull(id);
         this.id = id;
         this.amount = amount;
@@ -44,13 +44,13 @@ public class AccountImpl implements Account, Serializable {
     }
 
     @Override
-    public synchronized int getAmount() {
+    public synchronized long getAmount() {
         System.out.println("Getting amount of money for account " + id);
         return amount;
     }
 
     @Override
-    public synchronized void setAmount(final int amount) throws NegativeAccountAmountAfterOperation {
+    public synchronized void setAmount(final long amount) throws NegativeAccountAmountAfterOperation {
         System.out.println("Setting amount of money for account " + id);
         if (amount < 0) {
             throw new NegativeAccountAmountAfterOperation(amount + " is less then zero. This is not credit account");
