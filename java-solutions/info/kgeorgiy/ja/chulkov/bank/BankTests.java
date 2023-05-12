@@ -67,6 +67,7 @@ public class BankTests {
 
     @BeforeClass
     public static void setupRegistry() throws IOException {
+        // :NOTE: если registry уже запущен, то падает
         final var registry = LocateRegistry.createRegistry(1099);
     }
 
