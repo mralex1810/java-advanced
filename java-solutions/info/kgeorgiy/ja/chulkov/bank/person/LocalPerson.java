@@ -5,17 +5,17 @@ import info.kgeorgiy.ja.chulkov.bank.account.Account;
 public interface LocalPerson extends RemotePerson {
 
     @Override
-    String getFirstName() ;
+    String getFirstName();
 
     @Override
     String getSecondName();
 
     @Override
-    String getPassport() ;
+    String getPassport();
 
     @Override
     Account createAccount(String id);
 
     @Override
-    Account getAccount(String id) ;
+    Account getAccount(String id);
 }
