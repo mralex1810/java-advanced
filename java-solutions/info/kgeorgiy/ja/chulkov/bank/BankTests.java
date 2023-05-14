@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -209,7 +210,7 @@ public class BankTests {
             final RemoteFunction<String, RemotePerson> gen1,
             final RemoteFunction<String, RemotePerson> gen2,
             final Function<Integer, Integer> expected)
-            throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
+            throws IOException, NegativeAccountAmountAfterOperation {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
             for (final var accountId : ACCOUNTS) {
@@ -232,7 +233,7 @@ public class BankTests {
             final RemoteFunction<String, RemotePerson> gen1,
             final RemoteFunction<String, RemotePerson> gen2,
             final Function<Integer, Integer> expected)
-            throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
+            throws IOException, NegativeAccountAmountAfterOperation {
         for (final var personData : PERSON_DATA) {
             bank.createPerson(personData);
             for (final var accountId : ACCOUNTS) {
@@ -246,7 +247,7 @@ public class BankTests {
             final RemoteFunction<String, RemotePerson> gen1,
             final RemoteFunction<String, RemotePerson> gen2,
             final Function<Integer, Integer> expected
-    ) throws ExecutionException, InterruptedException, NotBoundException, IOException {
+    ) throws ExecutionException, InterruptedException, IOException {
         final List<Callable<Exception>> tasks = new ArrayList<>();
 
         for (final var personData : PERSON_DATA) {
@@ -312,43 +313,43 @@ public class BankTests {
 
 
     @Test
-    public void twoLocalSeqTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
+    public void twoLocalSeqTest() throws IOException, NegativeAccountAmountAfterOperation {
         twoSequentialPersonForOneTest(bank::getLocalPerson, bank::getLocalPerson, (set) -> null);
     }
 
     @Test
-    public void twoLocalParTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
+    public void twoLocalParTest() throws IOException, NegativeAccountAmountAfterOperation {
         twoParallelPersonForOneTest(bank::getLocalPerson, bank::getLocalPerson, (set) -> null);
     }
 
     @Test
-    public void twoRemoteSeqTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
+    public void twoRemoteSeqTest() throws IOException, NegativeAccountAmountAfterOperation {
         twoSequentialPersonForOneTest(bank::getRemotePerson, bank::getRemotePerson, (set) -> set);
     }
 
     @Test
-    public void twoRemoteParTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
+    public void twoRemoteParTest() throws IOException, NegativeAccountAmountAfterOperation {
         twoParallelPersonForOneTest(bank::getRemotePerson, bank::getRemotePerson, (set) -> set);
     }
 
     @Test
-    public void RemoteAndLocalSeqTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
+    public void RemoteAndLocalSeqTest() throws IOException, NegativeAccountAmountAfterOperation {
         twoSequentialPersonForOneTest(bank::getRemotePerson, bank::getLocalPerson, (set) -> set);
     }
 
     @Test
-    public void RemoteAndLocalParTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
+    public void RemoteAndLocalParTest() throws IOException, NegativeAccountAmountAfterOperation {
         twoParallelPersonForOneTest(bank::getRemotePerson, bank::getLocalPerson, (set) -> 0);
     }
 
 
     @Test
-    public void LocalAndRemoteSeqTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
+    public void LocalAndRemoteSeqTest() throws IOException, NegativeAccountAmountAfterOperation {
         twoSequentialPersonForOneTest(bank::getLocalPerson, bank::getRemotePerson, (set) -> null);
     }
 
     @Test
-    public void LocalAndRemoteParTest() throws IOException, NegativeAccountAmountAfterOperation, NotBoundException {
+    public void LocalAndRemoteParTest() throws IOException, NegativeAccountAmountAfterOperation {
         twoParallelPersonForOneTest(bank::getLocalPerson, bank::getRemotePerson, (set) -> null);
     }
 
@@ -438,11 +439,14 @@ public class BankTests {
                                 {
                                     try {
                                         bank.getRemotePerson(personData.passport()).getAccount(accountId).setAmount(number);
+                                        Assert.assertTrue(account.getAmount() >= 1 && account.getAmount() <= 1001);
                                     } catch (final RemoteException | NegativeAccountAmountAfterOperation e) {
                                         throw new RuntimeException(e);
                                     }
                                     return null;
                                 })
+                                .collect(Collectors.toSet())
+                                .stream()
                                 .toList())
                         .forEach(it -> {
                             try {

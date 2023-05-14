@@ -26,7 +26,7 @@ import java.util.stream.IntStream;
  */
 public class HelloUDPClient implements HelloClient {
 
-    private static final int TIMEOUT = 50;
+    private static final int TIMEOUT = 100;
 
     /**
      * Get UTF-8 data from {@link DatagramPacket}
