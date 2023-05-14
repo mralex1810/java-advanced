@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.ProtectionDomain;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -221,6 +222,18 @@ public class Implementor implements JarImpler {
             final ImplInterfaceStructure implementedClassStructure = token.isInterface() ?
                     new ImplInterfaceStructure(token, typeName) :
                     new ImplClassStructure(token, typeName);
+            if (implementedClassStructure.methods.stream()
+                    .map(it -> it.parameterTypes)
+                    .flatMap(Collection::stream)
+                    .map(Class::getModifiers)
+                    .anyMatch(Modifier::isPrivate)
+                    || implementedClassStructure.methods.stream()
+                    .map(it -> it.returnType)
+                    .filter(Objects::nonNull)
+                    .map(Class::getModifiers)
+                    .anyMatch(Modifier::isPrivate)) {
+                throw new ImplerException("Can't implement method with private arg or return type");
+            }
             writer.write(implementedClassStructure.toString());
         } catch (final IOException e) {
             throw new ImplerException("Error on writing in file", e);
