@@ -82,8 +82,7 @@ public class ImplClassStructure extends ImplInterfaceStructure {
                 .collect(Collectors.toSet());
         addAllParentsMethodsToSet(methods, token);
         return Stream.concat(
-                methods.stream()
-                        .filter(ABSTRACT_METHOD_STRUCTURE_PREDICATE),
+                methods.stream().filter(ABSTRACT_METHOD_STRUCTURE_PREDICATE),
                 getNonPrivateConstructorsStream(token)
                         .map(it -> new ConstructorStructure(it, name))
         ).toList();
