@@ -76,7 +76,7 @@ public class BankTests {
     @BeforeClass
     public static void setup() throws IOException {
         // :NOTE: если registry уже запущен, то падает
-        if (LocateRegistry.getRegistry(Registry.REGISTRY_PORT) != null) {
+        if (LocateRegistry.getRegistry(Registry.REGISTRY_PORT) == null) {
             LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
         }
         executorService = Executors.newFixedThreadPool(16);
