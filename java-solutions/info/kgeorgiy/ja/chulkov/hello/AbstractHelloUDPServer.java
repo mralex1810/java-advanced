@@ -1,13 +1,9 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
-import static info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils.parseNonNegativeInt;
-
 import info.kgeorgiy.java.advanced.hello.HelloServer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -28,30 +24,6 @@ abstract class AbstractHelloUDPServer implements HelloServer {
     protected ExecutorService taskExecutorService;
     private Thread getterThread;
     private State state = State.NOT_STARTED;
-
-    /**
-     * Method to run {@link HelloUDPServer} from CLI
-     *
-     * @param args array of string {port, threads}
-     */
-    public static void main(final String[] args) {
-        Objects.requireNonNull(args);
-        Arrays.stream(args).forEach(Objects::requireNonNull);
-        if (args.length != 2) {
-            printUsage();
-            return;
-        }
-        try {
-            final int port = parseNonNegativeInt(args[0], "port");
-            final int threads = parseNonNegativeInt(args[1], "threads");
-            try (final var server = new HelloUDPServer()) {
-                server.start(port, threads);
-            } catch (final RuntimeException e) {
-                System.err.println(e.getMessage());
-            }
-        } catch (final RuntimeException ignored) {
-        }
-    }
 
     private static void printUsage() {
         System.err.println("""
