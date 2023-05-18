@@ -9,6 +9,8 @@ import java.io.UncheckedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -18,7 +20,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.stream.IntStream;
 
 /**
@@ -78,39 +79,26 @@ public class HelloUDPClient implements HelloClient {
                 """);
     }
 
-    private static boolean checkNotFail(final boolean bool, final String error) {
-        if (bool) {
-            System.err.println(error);
-            return false;
-        }
-        return true;
-    }
 
-    private static List<Integer> parseIntsFromString(final String string) {
-        final List<Integer> ans = new ArrayList<>();
-        final var scanner = new Scanner(new ByteArrayInputStream(string.getBytes()));
-        while (scanner.cachNext(Character::isDigit)) {
-            ans.add(Integer.parseInt(scanner.next()));
+    static SocketAddress prepareAddress(final String host, final int port) {
+        final SocketAddress address;
+        try {
+            address = new InetSocketAddress(InetAddress.getByName(host), port);
+        } catch (final UnknownHostException e) {
+            throw new UncheckedIOException(e);
         }
-        return ans;
+        return address;
     }
 
     @Override
     public void run(final String host, final int port, final String prefix, final int threads, final int requests) {
-        final InetAddress address;
+        final SocketAddress address = prepareAddress(host, port);
         final AtomicReference<RuntimeException> exception = new AtomicReference<>(null);
-        try {
-            address = InetAddress.getByName(host);
-        } catch (final UnknownHostException e) {
-            throw new UncheckedIOException(e);
-        }
         final Thread mainThread = Thread.currentThread();
         final var threadsList = IntStream.range(1, threads + 1)
-                .mapToObj(threadNum -> new Thread(() ->
-                        threadAction(port, (requestNum) -> prefix + threadNum + "_" + requestNum,
-                                requests, address, exception, threadNum,
-                                mainThread))
-                )
+                .mapToObj(threadNum -> new ThreadHelloContext(threadNum, prefix, requests))
+                .<Runnable>map(context -> () -> threadAction(context, address, exception, mainThread))
+                .map(Thread::new)
                 .peek(Thread::start)
                 .toList();
         boolean interrupted = false;
@@ -133,36 +121,31 @@ public class HelloUDPClient implements HelloClient {
     }
 
     private void threadAction(
-            final int port,
-            final Function<Integer, String> requestGenerator,
-            final int requests,
-            final InetAddress address,
+            final ThreadHelloContext threadHelloContext,
+            final SocketAddress address,
             final AtomicReference<RuntimeException> exception,
-            final int threadNum,
             final Thread mainThread
     ) {
         try (final var datagramSocket = new DatagramSocket()) {
             datagramSocket.setSoTimeout(TIMEOUT);
-            for (int requestNum = 1; requestNum < requests + 1; requestNum++) {
-                while (!Thread.interrupted()) {
-                    final String request = requestGenerator.apply(requestNum);
-                    final var bytes = request.getBytes(StandardCharsets.UTF_8);
-                    final var packetToSend = new DatagramPacket(bytes, bytes.length, address, port);
-                    try {
-                        datagramSocket.send(packetToSend);
-                        final var packetForReceive = new DatagramPacket(new byte[datagramSocket.getReceiveBufferSize()],
-                                datagramSocket.getReceiveBufferSize());
-                        datagramSocket.receive(packetForReceive);
-                        final var ans = getDecodedData(dataToByteBuffer(packetForReceive));
-                        if (validateAnswer(ans, threadNum, requestNum)) {
-                            System.out.println(request + " " + ans);
-                            break;
-                        } else {
-                            System.err.println("Bad answer: " + ans);
-                        }
-                    } catch (final IOException | RuntimeException e) {
-                        System.err.println("Error on " + request + " " + e.getMessage());
+            while (!Thread.interrupted() && !threadHelloContext.isEnded()) {
+                final String request = threadHelloContext.makeRequest();
+                final var bytes = request.getBytes(StandardCharsets.UTF_8);
+                final var packetToSend = new DatagramPacket(bytes, bytes.length, address);
+                try {
+                    datagramSocket.send(packetToSend);
+                    final var packetForReceive = new DatagramPacket(new byte[datagramSocket.getReceiveBufferSize()],
+                            datagramSocket.getReceiveBufferSize());
+                    datagramSocket.receive(packetForReceive);
+                    final var ans = getDecodedData(dataToByteBuffer(packetForReceive));
+                    if (threadHelloContext.validateAnswer(ans)) {
+                        System.out.println(request + " " + ans);
+                        threadHelloContext.increment();
+                    } else {
+                        System.err.println("Bad answer: " + ans);
                     }
+                } catch (final IOException | RuntimeException e) {
+                    System.err.println("Error on " + request + " " + e.getMessage());
                 }
             }
         } catch (final SocketException | RuntimeException e) {
@@ -174,11 +157,57 @@ public class HelloUDPClient implements HelloClient {
         }
     }
 
-    private boolean validateAnswer(final String ans, final int threadNum,
-            final int request) {
-        final var numbers = parseIntsFromString(ans);
-        return checkNotFail(numbers.size() != 2, "Not two numbers in string")
-                && checkNotFail(numbers.get(0) != threadNum, "First numbers isn't thread num")
-                && checkNotFail(numbers.get(1) != request, "Second numbers isn't request");
+    static class ThreadHelloContext {
+
+        private final int threadId;
+        private final String prefix;
+        private final int requests;
+        private int request = 1;
+
+        public ThreadHelloContext(final int threadId, final String prefix, final int requests) {
+            this.threadId = threadId;
+            this.prefix = prefix;
+            this.requests = requests;
+        }
+
+        private static List<Integer> parseIntsFromString(final String string) {
+            final List<Integer> ans = new ArrayList<>();
+            final var scanner = new Scanner(new ByteArrayInputStream(string.getBytes()));
+            while (scanner.cachNext(Character::isDigit)) {
+                ans.add(Integer.parseInt(scanner.next()));
+            }
+            return ans;
+        }
+
+        private static boolean checkNotFail(final boolean bool, final String error) {
+            if (bool) {
+                System.err.println(error);
+                return false;
+            }
+            return true;
+        }
+
+        public int getRequest() {
+            return request;
+        }
+
+        public void increment() {
+            request++;
+        }
+
+        public boolean validateAnswer(final String ans) {
+            final var numbers = parseIntsFromString(ans);
+            return checkNotFail(numbers.size() != 2, "Not two numbers in string")
+                    && checkNotFail(numbers.get(0) != threadId, "First numbers isn't thread num")
+                    && checkNotFail(numbers.get(1) != request, "Second numbers isn't request");
+        }
+
+        public String makeRequest() {
+            return prefix + threadId + "_" + request;
+        }
+
+        public boolean isEnded() {
+            return request > requests;
+        }
     }
 }

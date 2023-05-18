@@ -13,6 +13,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
+
+    public static final int BUFFER_SIZE = 2048;
     private Selector selector;
     private ConcurrentLinkedQueue<Answer> toSend;
 
@@ -22,13 +24,9 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
         for (final var key : selector.selectedKeys()) {
             try {
                 final DatagramChannel channel = (DatagramChannel) key.channel();
-                if (toSend.isEmpty()) {
-                    key.interestOpsAnd(~SelectionKey.OP_WRITE);
-                }
-                if (!toSend.isEmpty() && key.isWritable()) {
+
+                if (key.isWritable()) {
                     doWriteOperation(toSend, key, channel);
-                } else if (semaphore.availablePermits() == 0) {
-                    key.interestOpsAnd(~SelectionKey.OP_READ);
                 } else if (key.isReadable()) {
                     doReadOperation(toSend, key, channel);
                 }
@@ -36,6 +34,7 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
                 e.printStackTrace();
             }
         }
+        selector.selectedKeys().clear();
     }
 
     @Override
@@ -56,6 +55,9 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
     private void doWriteOperation(final ConcurrentLinkedQueue<Answer> toSend, final SelectionKey key,
             final DatagramChannel channel) {
         final var answer = toSend.remove();
+        if (toSend.isEmpty()) {
+            key.interestOpsAnd(~SelectionKey.OP_WRITE);
+        }
         try {
             channel.send(answer.buffer(), answer.inetAddress());
         } catch (final IOException e) {
@@ -67,24 +69,24 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     private void doReadOperation(final ConcurrentLinkedQueue<Answer> toSend, final SelectionKey key,
             final DatagramChannel channel) throws IOException {
-        final var bytes = ByteBuffer.allocate(2048);
+        final var bytes = ByteBuffer.allocate(BUFFER_SIZE);
         final var sender = channel.receive(bytes);
         bytes.flip();
-        if (sender != null) {
-            if (semaphore.tryAcquire()) {
-                CompletableFuture
-                        .supplyAsync(taskGenerator.apply(bytes), taskExecutorService)
-                        .thenApply(reqAnswer -> new Answer(reqAnswer, sender))
-                        .thenAccept((answer) -> {
-                            toSend.add(answer);
-                            key.interestOpsOr(SelectionKey.OP_WRITE);
-                            selector.wakeup();
-                        })
-                        .exceptionally((e) -> {
-                            System.err.println("Error on executing task " + e.getMessage());
-                            return null;
-                        });
-            }
+        if (semaphore.tryAcquire()) {
+            CompletableFuture
+                    .supplyAsync(taskGenerator.apply(bytes), taskExecutorService)
+                    .thenApply(reqAnswer -> new Answer(reqAnswer, sender))
+                    .thenAccept((answer) -> {
+                        toSend.add(answer);
+                        key.interestOpsOr(SelectionKey.OP_WRITE);
+                        selector.wakeup();
+                    })
+                    .exceptionally((e) -> {
+                        System.err.println("Error on executing task " + e.getMessage());
+                        return null;
+                    });
+        } else {
+            key.interestOpsAnd(~SelectionKey.OP_READ);
         }
     }
 
