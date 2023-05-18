@@ -25,7 +25,7 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             try {
                 final DatagramChannel channel = (DatagramChannel) key.channel();
 
-                if (key.isWritable()) {
+                if (!toSend.isEmpty() && key.isWritable()) {
                     doWriteOperation(toSend, key, channel);
                 } else if (key.isReadable()) {
                     doReadOperation(toSend, key, channel);

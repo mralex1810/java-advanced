@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 public class HelloUDPNonblockingClient implements HelloClient {
 
     public static final int BUFFER_SIZE = 2048;
-    public static final int SELECT_TIMEOUT = 100;
+    public static final int SELECT_TIMEOUT = 20;
 
     private static void doReadOperation(
             final DatagramChannel channel,
@@ -63,48 +63,31 @@ public class HelloUDPNonblockingClient implements HelloClient {
         return selector;
     }
 
-    private static void processKey(final SocketAddress address, final SelectionKey key) {
-        final var channel = (DatagramChannel) key.channel();
-        final var context = (ThreadHelloContext) key.attachment();
-        final String request = context.makeRequest();
-        try {
-            if (key.isWritable()) {
-                channel.send(ByteBuffer.wrap(request.getBytes(StandardCharsets.UTF_8)), address);
-                key.interestOps(SelectionKey.OP_READ);
-            } else if (key.isReadable()) {
-                doReadOperation(channel, context, request);
-            }
-        } catch (final IOException e) {
-            System.err.println("Error on " + request + " " + e.getMessage());
-        }
-    }
-
-    private static void resendRequests(final SocketAddress address, final Selector selector) {
-        for (final SelectionKey key : selector.keys()) {
-            final var channel = (DatagramChannel) key.channel();
-            final var context = (ThreadHelloContext) key.attachment();
-            try {
-                channel.send(ByteBuffer.wrap(context.makeRequest().getBytes(StandardCharsets.UTF_8)), address);
-            } catch (final IOException e) {
-                System.err.println("Error on sending request " + context.makeRequest() + " " + e.getMessage());
-            }
-        }
-    }
-
     private static void doSelectorIteration(final SocketAddress address, final Selector selector) {
-        try {
-            selector.select(SELECT_TIMEOUT);
-        } catch (final IOException e) {
-            throw new UncheckedIOException(e);
-        }
         if (selector.selectedKeys().isEmpty()) {
-            resendRequests(address, selector);
+            selector.keys().forEach(it -> it.interestOpsOr(SelectionKey.OP_WRITE));
         } else {
-            for (final var key : selector.selectedKeys()) {
-                processKey(address, key);
-            }
+            processKeys(address, selector);
         }
         selector.selectedKeys().clear();
+    }
+
+    private static void processKeys(final SocketAddress address, final Selector selector) {
+        for (final var key : selector.selectedKeys()) {
+            final var channel = (DatagramChannel) key.channel();
+            final var context = (ThreadHelloContext) key.attachment();
+            final String request = context.makeRequest();
+            try {
+                if (key.isWritable()) {
+                    channel.send(ByteBuffer.wrap(request.getBytes(StandardCharsets.UTF_8)), address);
+                    key.interestOps(SelectionKey.OP_READ);
+                } else if (key.isReadable()) {
+                    doReadOperation(channel, context, request);
+                }
+            } catch (final IOException e) {
+                System.err.println("Error on " + request + " " + e.getMessage());
+            }
+        }
     }
 
     @Override
@@ -117,6 +100,14 @@ public class HelloUDPNonblockingClient implements HelloClient {
         final SocketAddress address = prepareAddress(host, port);
         try (final Selector selector = prepareSelector(prefix, threads, requests, address)) {
             while (!selector.keys().isEmpty()) {
+                try {
+                    selector.select(SELECT_TIMEOUT);
+                } catch (final IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+                if (selector.keys().isEmpty()) {
+                    break;
+                }
                 doSelectorIteration(address, selector);
             }
         } catch (final IOException e) {
