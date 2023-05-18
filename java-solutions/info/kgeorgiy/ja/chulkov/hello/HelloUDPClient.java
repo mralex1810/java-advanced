@@ -29,13 +29,17 @@ public class HelloUDPClient implements HelloClient {
     private static final int TIMEOUT = 100;
 
     /**
-     * Get UTF-8 data from {@link DatagramPacket}
+     * Get UTF-8 data from {@link ByteBuffer}
      *
-     * @param packet packet with encoded data
+     * @param byteBuffer packet with encoded data
      * @return decoded string
      */
-    public static String getDecodedData(final DatagramPacket packet) {
-        return StandardCharsets.UTF_8.decode(ByteBuffer.wrap(packet.getData(), 0, packet.getLength())).toString();
+    public static String getDecodedData(final ByteBuffer byteBuffer) {
+        return StandardCharsets.UTF_8.decode(byteBuffer).toString();
+    }
+
+    public static ByteBuffer dataToByteBuffer(final DatagramPacket packet) {
+        return ByteBuffer.wrap(packet.getData(), 0, packet.getLength());
     }
 
     /**
@@ -149,7 +153,7 @@ public class HelloUDPClient implements HelloClient {
                         final var packetForReceive = new DatagramPacket(new byte[datagramSocket.getReceiveBufferSize()],
                                 datagramSocket.getReceiveBufferSize());
                         datagramSocket.receive(packetForReceive);
-                        final var ans = getDecodedData(packetForReceive);
+                        final var ans = getDecodedData(dataToByteBuffer(packetForReceive));
                         if (validateAnswer(ans, threadNum, requestNum)) {
                             System.out.println(request + " " + ans);
                             break;
