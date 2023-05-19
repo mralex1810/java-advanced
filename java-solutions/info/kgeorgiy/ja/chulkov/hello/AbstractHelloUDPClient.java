@@ -19,7 +19,7 @@ abstract class AbstractHelloUDPClient implements HelloClient {
     /**
      * Timeout for iterations of HelloClient
      */
-    public static final int TIMEOUT = 100;
+    public static final int TIMEOUT = 10;
 
     /**
      * Prepares a SocketAddress based on the provided host and port.

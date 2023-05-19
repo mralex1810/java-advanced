@@ -19,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
-    public static final int BUFFER_SIZE = 2048;
     private Selector selector;
     private Queue<Packet> toSend;
     private Queue<Packet> toReceive;

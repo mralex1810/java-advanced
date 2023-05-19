@@ -90,7 +90,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
                 } else if (key.isReadable()) {
                     doReadOperation(channel, context, request);
                 }
-            } catch (final IOException e) {
+            } catch (final IOException | RuntimeException e) {
                 System.err.println("Error on " + request + " " + e.getMessage());
             }
         }
