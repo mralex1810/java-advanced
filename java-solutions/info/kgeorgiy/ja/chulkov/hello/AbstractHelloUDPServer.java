@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -33,14 +32,9 @@ abstract class AbstractHelloUDPServer implements HelloServer {
      */
     public final Function<ByteBuffer, Supplier<ByteBuffer>> taskGenerator = (it) -> () ->
             ByteBuffer.wrap(
-                    String.format("Hello, %s", UDPUtils.getDecodedData(it))
-                            .getBytes(StandardCharsets.UTF_8)
-            );
-
-    /**
-     * A semaphore used to limit the number of tasks in the server.
-     */
-    protected final Semaphore semaphore = new Semaphore(MAX_TASKS);
+                        String.format("Hello, %s", UDPUtils.getDecodedData(it))
+                                .getBytes(StandardCharsets.UTF_8)
+                );
 
     /**
      * The executor service used to execute tasks.
@@ -75,7 +69,7 @@ abstract class AbstractHelloUDPServer implements HelloServer {
         }
         state = State.RUNNING;
         taskExecutorService = Executors.newFixedThreadPool(threads);
-        prepare(port);
+        prepare(port, threads);
         getterThread = new Thread(() -> {
             while (state == State.RUNNING && !Thread.interrupted()) {
                 try {
@@ -99,9 +93,10 @@ abstract class AbstractHelloUDPServer implements HelloServer {
     /**
      * Prepares the server to listen on the specified port.
      *
-     * @param port The port number on which requests will be received.
+     * @param port    The port number on which requests will be received.
+     * @param threads
      */
-    protected abstract void prepare(int port);
+    protected abstract void prepare(int port, final int threads);
 
     @Override
     public void close() {

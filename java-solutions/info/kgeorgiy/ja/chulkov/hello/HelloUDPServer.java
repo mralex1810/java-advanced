@@ -11,6 +11,7 @@ import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
 
 
 /**
@@ -19,6 +20,10 @@ import java.util.concurrent.CompletableFuture;
 public class HelloUDPServer extends AbstractHelloUDPServer {
 
     private DatagramSocket datagramSocket;
+    /**
+     * A semaphore used to limit the number of tasks in the server.
+     */
+    private final Semaphore semaphore = new Semaphore(MAX_TASKS);
 
     /**
      * Method to run {@link HelloUDPServer} from CLI
@@ -70,7 +75,7 @@ public class HelloUDPServer extends AbstractHelloUDPServer {
     }
 
     @Override
-    protected void prepare(final int port) {
+    protected void prepare(final int port, final int threads) {
         try {
             datagramSocket = new DatagramSocket(port);
         } catch (final SocketException e) {

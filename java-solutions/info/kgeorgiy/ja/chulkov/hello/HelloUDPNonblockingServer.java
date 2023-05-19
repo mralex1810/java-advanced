@@ -10,8 +10,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Implementation of {@link HelloServer} with main method and nonblocking operations
@@ -20,7 +21,8 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     public static final int BUFFER_SIZE = 2048;
     private Selector selector;
-    private ConcurrentLinkedQueue<Answer> toSend;
+    private Queue<Packet> toSend;
+    private Queue<Packet> toReceive;
 
     /**
      * Method to run {@link HelloUDPNonblockingServer} from CLI
@@ -37,8 +39,7 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
         for (final var key : selector.selectedKeys()) {
             try {
                 final DatagramChannel channel = (DatagramChannel) key.channel();
-
-                if (!toSend.isEmpty() && key.isWritable()) {
+                if (key.isWritable()) {
                     doWriteOperation(toSend, key, channel);
                 } else if (key.isReadable()) {
                     doReadOperation(toSend, key, channel);
@@ -51,7 +52,7 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
     }
 
     @Override
-    protected void prepare(final int port) {
+    protected void prepare(final int port, final int threads) {
         try {
             selector = Selector.open();
             final var datagramChannel = DatagramChannel.open();
@@ -59,48 +60,63 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
             datagramChannel.bind(new InetSocketAddress(port));
             datagramChannel.register(selector, SelectionKey.OP_READ);
+            toSend = new ArrayBlockingQueue<>(threads);
+            toReceive = new ArrayBlockingQueue<>(threads);
+            for (int i = 0; i < threads; i++) {
+                toReceive.add(new Packet(BUFFER_SIZE));
+            }
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
-        toSend = new ConcurrentLinkedQueue<>();
+
     }
 
-    private void doWriteOperation(final ConcurrentLinkedQueue<Answer> toSend, final SelectionKey key,
+    private void doWriteOperation(final Queue<Packet> toSend, final SelectionKey key,
             final DatagramChannel channel) {
         final var answer = toSend.remove();
         if (toSend.isEmpty()) {
             key.interestOpsAnd(~SelectionKey.OP_WRITE);
+            selector.wakeup();
         }
         try {
-            channel.send(answer.buffer(), answer.inetAddress());
+            channel.send(answer.getBuffer(), answer.getAddress());
         } catch (final IOException e) {
             e.printStackTrace();
         }
-        semaphore.release();
+        toReceive.add(answer);
         key.interestOpsOr(SelectionKey.OP_READ);
+        selector.wakeup();
     }
 
-    private void doReadOperation(final ConcurrentLinkedQueue<Answer> toSend, final SelectionKey key,
+    private void doReadOperation(final Queue<Packet> toSend, final SelectionKey key,
             final DatagramChannel channel) throws IOException {
-        final var bytes = ByteBuffer.allocate(BUFFER_SIZE);
-        final var sender = channel.receive(bytes);
-        bytes.flip();
-        if (semaphore.tryAcquire()) {
-            CompletableFuture
-                    .supplyAsync(taskGenerator.apply(bytes), taskExecutorService)
-                    .thenApply(reqAnswer -> new Answer(reqAnswer, sender))
-                    .thenAccept((answer) -> {
-                        toSend.add(answer);
-                        key.interestOpsOr(SelectionKey.OP_WRITE);
-                        selector.wakeup();
-                    })
-                    .exceptionally((e) -> {
-                        System.err.println("Error on executing task " + e.getMessage());
-                        return null;
-                    });
-        } else {
+        if (toReceive.isEmpty()) {
             key.interestOpsAnd(~SelectionKey.OP_READ);
+            selector.wakeup();
+            return;
         }
+        final var packet = toReceive.remove();
+        packet.getBuffer().clear();
+        final var sender = channel.receive(packet.getBuffer());
+        packet.getBuffer().flip();
+
+        CompletableFuture
+                .supplyAsync(taskGenerator.apply(packet.getBuffer()), taskExecutorService)
+                .thenAccept(reqAnswer ->  {
+                    packet.getBuffer().clear();
+                    packet.getBuffer().put(reqAnswer.array());
+                    packet.getBuffer().flip();
+                    packet.setAddress(sender);
+                })
+                .thenRun(() -> {
+                    toSend.add(packet);
+                    key.interestOpsOr(SelectionKey.OP_WRITE);
+                    selector.wakeup();
+                })
+                .exceptionally((e) -> {
+                    System.err.println("Error on executing task " + e.getMessage());
+                    return null;
+                });
     }
 
     @Override
@@ -120,7 +136,29 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
         }
     }
 
-    private record Answer(ByteBuffer buffer, SocketAddress inetAddress) {
+    private static class Packet {
+        private final ByteBuffer buffer;
+        private SocketAddress address;
 
+        public Packet(final int bufferSize) {
+            this(bufferSize, null);
+        }
+
+        public Packet(final int bufferSize, final SocketAddress address) {
+            buffer = ByteBuffer.allocate(bufferSize);
+            this.address = address;
+        }
+
+        public ByteBuffer getBuffer() {
+            return buffer;
+        }
+
+        public SocketAddress getAddress() {
+            return address;
+        }
+
+        public void setAddress(final SocketAddress inetAddress) {
+            this.address = inetAddress;
+        }
     }
 }
