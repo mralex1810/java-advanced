@@ -16,32 +16,62 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 
+/**
+ * An abstract implementation of the HelloServer interface that provides common functionality
+ * <p>
+ * for UDP servers.
+ */
 abstract class AbstractHelloUDPServer implements HelloServer {
 
+    /**
+     * The maximum number of tasks allowed in the server.
+     */
     public static final int MAX_TASKS = 1024;
 
+    /**
+     * A function that generates tasks based on a ByteBuffer input.
+     */
     public final Function<ByteBuffer, Supplier<ByteBuffer>> taskGenerator = (it) -> () ->
             ByteBuffer.wrap(
                     String.format("Hello, %s", UDPUtils.getDecodedData(it))
                             .getBytes(StandardCharsets.UTF_8)
             );
+
+    /**
+     * A semaphore used to limit the number of tasks in the server.
+     */
     protected final Semaphore semaphore = new Semaphore(MAX_TASKS);
+
+    /**
+     * The executor service used to execute tasks.
+     */
     protected ExecutorService taskExecutorService;
+
+    /**
+     * The getter thread responsible for receiving requests.
+     */
     private Thread getterThread;
+
+    /**
+     * The state of the server.
+     */
     private State state = State.NOT_STARTED;
 
+    /**
+     * Prints the usage information for the HelloServer class.
+     */
     private static void printUsage() {
         System.err.println("""
-                    Usage: HelloUDPServer port threads
-                    port -- port number on which requests will be received
-                    threads -- number of worker threads that will process requests
+                Usage: HelloServer port threads
+                port -- port number on which requests will be received
+                threads -- number of worker threads that will process requests
                 """);
     }
 
     @Override
     public void start(final int port, final int threads) {
         if (state != State.NOT_STARTED) {
-            throw new IllegalStateException("Server is started already");
+            throw new IllegalStateException("Server is already started");
         }
         state = State.RUNNING;
         taskExecutorService = Executors.newFixedThreadPool(threads);
@@ -58,20 +88,34 @@ abstract class AbstractHelloUDPServer implements HelloServer {
         getterThread.start();
     }
 
+    /**
+     * Performs a single iteration of the getter thread.
+     *
+     * @throws IOException          If an I/O error occurs during the iteration.
+     * @throws InterruptedException If the getter thread is interrupted during the iteration.
+     */
     protected abstract void getterIteration() throws IOException, InterruptedException;
 
+    /**
+     * Prepares the server to listen on the specified port.
+     *
+     * @param port The port number on which requests will be received.
+     */
     protected abstract void prepare(int port);
 
     @Override
     public void close() {
         if (state != State.RUNNING) {
-            throw new IllegalStateException("Server isn't running");
+            throw new IllegalStateException("Server is not running");
         }
         state = State.CLOSED;
         getterThread.interrupt();
         taskExecutorService.close();
     }
 
+    /**
+     * Represents the state of the server.
+     */
     protected enum State {
         NOT_STARTED,
         RUNNING,
@@ -79,6 +123,7 @@ abstract class AbstractHelloUDPServer implements HelloServer {
     }
 
     public abstract static class ServerMainHelper {
+
         public void mainHelp(final String[] args) {
             Objects.requireNonNull(args);
             Arrays.stream(args).forEach(Objects::requireNonNull);
@@ -104,10 +149,10 @@ abstract class AbstractHelloUDPServer implements HelloServer {
 
         public void printUsage() {
             System.err.println("""
-                    Usage: HelloUDPServer port threads
-                    port -- port number on which requests will be received
-                    threads -- number of worker threads that will process requests
-                """);
+                        Usage: HelloUDPServer port threads
+                        port -- port number on which requests will be received
+                        threads -- number of worker threads that will process requests
+                    """);
         }
     }
 }
