@@ -43,7 +43,7 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
                     final var packetForReceive = new DatagramPacket(new byte[datagramSocket.getReceiveBufferSize()],
                             datagramSocket.getReceiveBufferSize());
                     datagramSocket.receive(packetForReceive);
-                    final var ans = UDPUtils.getDecodedData(UDPUtils.dataToByteBuffer(packetForReceive));
+                    final var ans = UDPUtils.getDecodedData(UDPUtils.dataToByteBuffer(packetForReceive).flip());
                     if (threadHelloContext.validateAnswer(ans)) {
                         System.out.println(request + " " + ans);
                         threadHelloContext.increment();
