@@ -29,6 +29,8 @@ public class UDPUtils {
      * @return A ByteBuffer containing the data from the DatagramPacket.
      */
     public static ByteBuffer dataToByteBuffer(final DatagramPacket packet) {
-        return ByteBuffer.wrap(packet.getData(), 0, packet.getLength());
+        final var byteBuffer = ByteBuffer.wrap(packet.getData(), 0, packet.getLength());
+        byteBuffer.position(packet.getLength());
+        return byteBuffer;
     }
 }
