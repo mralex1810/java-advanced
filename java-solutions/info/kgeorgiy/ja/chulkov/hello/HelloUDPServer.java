@@ -50,9 +50,10 @@ public class HelloUDPServer extends AbstractHelloUDPServer {
         );
         datagramSocket.receive(datagramPacketForReceive);
         semaphore.acquire();
+        final var byteBuffer = dataToByteBuffer(datagramPacketForReceive);
         CompletableFuture
-                .supplyAsync(taskGenerator.apply(dataToByteBuffer(datagramPacketForReceive)), taskExecutorService)
-                .thenAccept((ans) -> processAnswer(datagramPacketForReceive, ans))
+                .runAsync(taskGenerator.apply(byteBuffer), taskExecutorService)
+                .thenRun(() -> processAnswer(datagramPacketForReceive, byteBuffer))
                 .handle((ans, e) -> {
                     semaphore.release();
                     if (e != null) {

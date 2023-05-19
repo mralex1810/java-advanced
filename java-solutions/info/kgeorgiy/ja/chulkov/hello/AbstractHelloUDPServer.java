@@ -2,7 +2,6 @@ package info.kgeorgiy.ja.chulkov.hello;
 
 import static info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils.parseNonNegativeInt;
 
-import info.kgeorgiy.ja.chulkov.utils.UDPUtils;
 import info.kgeorgiy.java.advanced.hello.HelloServer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -12,7 +11,6 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 
 /**
@@ -27,14 +25,22 @@ abstract class AbstractHelloUDPServer implements HelloServer {
      */
     public static final int MAX_TASKS = 128;
 
+    private static final byte[] helloBytes = "Hello, ".getBytes(StandardCharsets.UTF_8);
+
     /**
      * A function that generates tasks based on a ByteBuffer input.
      */
-    public final Function<ByteBuffer, Supplier<ByteBuffer>> taskGenerator = (it) -> () ->
-            ByteBuffer.wrap(
-                        String.format("Hello, %s", UDPUtils.getDecodedData(it))
-                                .getBytes(StandardCharsets.UTF_8)
-                );
+    public static final Function<ByteBuffer, Runnable> taskGenerator = (buffer) -> () -> {
+            buffer.limit(buffer.position() + helloBytes.length);
+            for (int i = buffer.limit() - 1; i >= helloBytes.length; i--) {
+                buffer.put(i, buffer.get(i - helloBytes.length));
+            }
+            for (int i = 0; i < helloBytes.length; i++) {
+                buffer.put(i, helloBytes[i]);
+            }
+            buffer.rewind();
+    };
+
 
     /**
      * The executor service used to execute tasks.

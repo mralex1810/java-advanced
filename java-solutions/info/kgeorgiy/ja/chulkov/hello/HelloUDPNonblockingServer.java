@@ -10,18 +10,20 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 /**
  * Implementation of {@link HelloServer} with main method and nonblocking operations
  */
 public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
+    public static final Function<Throwable, Void> LOG_ERROR = (e) -> {
+        System.err.println("Error on executing task " + e.getMessage());
+        return null;
+    };
     private Selector selector;
-    private Queue<Packet> toSend;
-    private Queue<Packet> toReceive;
+    private Runnable SELECTOR_WAKEUP;
 
     /**
      * Method to run {@link HelloUDPNonblockingServer} from CLI
@@ -34,14 +36,14 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     @Override
     protected void getterIteration() throws IOException {
-        selector.select();
+        selector.select(20);
         for (final var key : selector.selectedKeys()) {
             try {
                 final DatagramChannel channel = (DatagramChannel) key.channel();
                 if (key.isWritable()) {
-                    doWriteOperation(toSend, key, channel);
+                    doWriteOperation(key, channel);
                 } else if (key.isReadable()) {
-                    doReadOperation(toSend, key, channel);
+                    doReadOperation(key, channel);
                 }
             } catch (final Exception e) {
                 e.printStackTrace();
@@ -58,64 +60,39 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             datagramChannel.configureBlocking(false);
             datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
             datagramChannel.bind(new InetSocketAddress(port));
-            datagramChannel.register(selector, SelectionKey.OP_READ);
-            toSend = new ArrayBlockingQueue<>(MAX_TASKS);
-            toReceive = new ArrayBlockingQueue<>(MAX_TASKS);
-            for (int i = 0; i < MAX_TASKS; i++) {
-                toReceive.add(new Packet(datagramChannel.socket().getReceiveBufferSize()));
-            }
+            datagramChannel.register(selector, SelectionKey.OP_READ,
+                    new Attachment(datagramChannel.socket().getReceiveBufferSize()));
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
 
     }
 
-    private void doWriteOperation(final Queue<Packet> toSend, final SelectionKey key,
+    private void doWriteOperation(final SelectionKey key,
             final DatagramChannel channel) {
-        final var answer = toSend.remove();
-        if (toSend.isEmpty()) {
-            key.interestOpsAnd(~SelectionKey.OP_WRITE);
-            selector.wakeup();
-        }
+        final var packet = (Attachment) key.attachment();
         try {
-            channel.send(answer.getBuffer(), answer.getAddress());
+            channel.send(packet.getBuffer(), packet.getAddress());
         } catch (final IOException e) {
             e.printStackTrace();
         }
-        toReceive.add(answer);
         key.interestOpsOr(SelectionKey.OP_READ);
-        selector.wakeup();
+        key.interestOpsAnd(~SelectionKey.OP_WRITE);
     }
 
-    private void doReadOperation(final Queue<Packet> toSend, final SelectionKey key,
+    private void doReadOperation(final SelectionKey key,
             final DatagramChannel channel) throws IOException {
-        if (toReceive.isEmpty()) {
-            key.interestOpsAnd(~SelectionKey.OP_READ);
-            selector.wakeup();
-            return;
-        }
-        final var packet = toReceive.remove();
+        final var packet = (Attachment) key.attachment();
         packet.getBuffer().clear();
-        final var sender = channel.receive(packet.getBuffer());
-        packet.getBuffer().flip();
+        packet.setAddress(channel.receive(packet.getBuffer()));
+        key.interestOpsAnd(0);
 
+        SELECTOR_WAKEUP = () -> selector.wakeup();
         CompletableFuture
-                .supplyAsync(taskGenerator.apply(packet.getBuffer()), taskExecutorService)
-                .thenAccept(reqAnswer ->  {
-                    packet.getBuffer().clear();
-                    packet.getBuffer().put(reqAnswer.array());
-                    packet.getBuffer().flip();
-                    packet.setAddress(sender);
-                })
-                .thenRun(() -> {
-                    toSend.add(packet);
-                    key.interestOpsOr(SelectionKey.OP_WRITE);
-                    selector.wakeup();
-                })
-                .exceptionally((e) -> {
-                    System.err.println("Error on executing task " + e.getMessage());
-                    return null;
-                });
+                .runAsync(packet.getBufferModifier(), taskExecutorService)
+                .thenRun(() -> key.interestOpsOr(SelectionKey.OP_WRITE))
+                .thenRun(SELECTOR_WAKEUP)
+                .exceptionally(LOG_ERROR);
     }
 
     @Override
@@ -135,17 +112,15 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
         }
     }
 
-    private static class Packet {
+    private static class Attachment {
+
         private final ByteBuffer buffer;
+        private final Runnable bufferModifier;
         private SocketAddress address;
 
-        public Packet(final int bufferSize) {
-            this(bufferSize, null);
-        }
-
-        public Packet(final int bufferSize, final SocketAddress address) {
+        public Attachment(final int bufferSize) {
             buffer = ByteBuffer.allocate(bufferSize);
-            this.address = address;
+            this.bufferModifier = taskGenerator.apply(buffer);
         }
 
         public ByteBuffer getBuffer() {
@@ -158,6 +133,10 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
         public void setAddress(final SocketAddress inetAddress) {
             this.address = inetAddress;
+        }
+
+        public synchronized Runnable getBufferModifier() {
+            return bufferModifier;
         }
     }
 }
