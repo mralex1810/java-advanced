@@ -129,7 +129,8 @@ abstract class AbstractHelloUDPServer implements HelloServer {
             try {
                 final int port = parseNonNegativeInt(args[0], "port");
                 final int threads = parseNonNegativeInt(args[1], "threads");
-                try (final var server = getHelloServer()) {
+                try {
+                    final var server = getHelloServer();
                     server.start(port, threads);
                 } catch (final RuntimeException e) {
                     System.err.println(e.getMessage());
