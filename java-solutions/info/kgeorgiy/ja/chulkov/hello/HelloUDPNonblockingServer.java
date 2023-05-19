@@ -1,5 +1,6 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
+import info.kgeorgiy.java.advanced.hello.HelloServer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
@@ -12,11 +13,23 @@ import java.nio.channels.Selector;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+/**
+ * Implementation of {@link HelloServer} with main method and nonblocking operations
+ */
 public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     public static final int BUFFER_SIZE = 2048;
     private Selector selector;
     private ConcurrentLinkedQueue<Answer> toSend;
+
+    /**
+     * Method to run {@link HelloUDPNonblockingServer} from CLI
+     *
+     * @param args array of string {port, threads}
+     */
+    public static void main(final String[] args) {
+        new NonblockingServerMainHelper().mainHelp(args);
+    }
 
     @Override
     protected void getterIteration() throws IOException {
@@ -97,6 +110,14 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
         } catch (final IOException ignored) {
         }
         super.close();
+    }
+
+    private static class NonblockingServerMainHelper extends ServerMainHelper {
+
+        @Override
+        protected HelloServer getHelloServer() {
+            return new HelloUDPNonblockingServer();
+        }
     }
 
     private record Answer(ByteBuffer buffer, SocketAddress inetAddress) {

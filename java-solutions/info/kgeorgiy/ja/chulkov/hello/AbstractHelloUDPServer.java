@@ -1,9 +1,14 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
+import static info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils.parseNonNegativeInt;
+
+import info.kgeorgiy.ja.chulkov.utils.UDPUtils;
 import info.kgeorgiy.java.advanced.hello.HelloServer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -17,7 +22,7 @@ abstract class AbstractHelloUDPServer implements HelloServer {
 
     public final Function<ByteBuffer, Supplier<ByteBuffer>> taskGenerator = (it) -> () ->
             ByteBuffer.wrap(
-                    String.format("Hello, %s", HelloUDPClient.getDecodedData(it))
+                    String.format("Hello, %s", UDPUtils.getDecodedData(it))
                             .getBytes(StandardCharsets.UTF_8)
             );
     protected final Semaphore semaphore = new Semaphore(MAX_TASKS);
@@ -42,7 +47,7 @@ abstract class AbstractHelloUDPServer implements HelloServer {
         taskExecutorService = Executors.newFixedThreadPool(threads);
         prepare(port);
         getterThread = new Thread(() -> {
-            while (state == State.RUNNING) {
+            while (state == State.RUNNING && !Thread.interrupted()) {
                 try {
                     getterIteration();
                 } catch (final IOException | InterruptedException e) {
@@ -67,9 +72,42 @@ abstract class AbstractHelloUDPServer implements HelloServer {
         taskExecutorService.close();
     }
 
-    private enum State {
+    protected enum State {
         NOT_STARTED,
         RUNNING,
         CLOSED
+    }
+
+    public abstract static class ServerMainHelper {
+        public void mainHelp(final String[] args) {
+            Objects.requireNonNull(args);
+            Arrays.stream(args).forEach(Objects::requireNonNull);
+            if (args.length != 2) {
+                printUsage();
+                return;
+            }
+            try {
+                final int port = parseNonNegativeInt(args[0], "port");
+                final int threads = parseNonNegativeInt(args[1], "threads");
+                try (final var server = getHelloServer()) {
+                    server.start(port, threads);
+                } catch (final RuntimeException e) {
+                    System.err.println(e.getMessage());
+                }
+            } catch (final RuntimeException e) {
+                System.err.println(e.getMessage());
+                printUsage();
+            }
+        }
+
+        protected abstract HelloServer getHelloServer();
+
+        public void printUsage() {
+            System.err.println("""
+                    Usage: HelloUDPServer port threads
+                    port -- port number on which requests will be received
+                    threads -- number of worker threads that will process requests
+                """);
+        }
     }
 }

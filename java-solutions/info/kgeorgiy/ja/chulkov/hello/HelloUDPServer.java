@@ -1,7 +1,7 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
-import static info.kgeorgiy.ja.chulkov.hello.HelloUDPClient.dataToByteBuffer;
-import static info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils.parseNonNegativeInt;
+
+import static info.kgeorgiy.ja.chulkov.utils.UDPUtils.dataToByteBuffer;
 
 import info.kgeorgiy.java.advanced.hello.HelloServer;
 import java.io.IOException;
@@ -9,13 +9,11 @@ import java.io.UncheckedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
-import java.util.Arrays;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 
 /**
- * Implementation of {@link HelloServer} with main method
+ * Implementation of {@link HelloServer} with main method and blocking operations
  */
 public class HelloUDPServer extends AbstractHelloUDPServer {
 
@@ -27,30 +25,15 @@ public class HelloUDPServer extends AbstractHelloUDPServer {
      * @param args array of string {port, threads}
      */
     public static void main(final String[] args) {
-        Objects.requireNonNull(args);
-        Arrays.stream(args).forEach(Objects::requireNonNull);
-        if (args.length != 2) {
-            printUsage();
-            return;
-        }
-        try {
-            final int port = parseNonNegativeInt(args[0], "port");
-            final int threads = parseNonNegativeInt(args[1], "threads");
-            try (final var server = new HelloUDPServer()) {
-                server.start(port, threads);
-            } catch (final RuntimeException e) {
-                System.err.println(e.getMessage());
-            }
-        } catch (final RuntimeException ignored) {
-        }
+        new BlockingServerMainHelper().mainHelp(args);
     }
 
-    private static void printUsage() {
-        System.err.println("""
-                    Usage: HelloUDPServer port threads
-                    port -- port number on which requests will be received
-                    threads -- number of worker threads that will process requests
-                """);
+    private static class BlockingServerMainHelper extends ServerMainHelper {
+
+        @Override
+        protected HelloServer getHelloServer() {
+            return new HelloUDPServer();
+        }
     }
 
     @Override

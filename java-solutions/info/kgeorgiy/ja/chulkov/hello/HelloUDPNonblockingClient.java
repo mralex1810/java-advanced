@@ -1,8 +1,6 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
-import static info.kgeorgiy.ja.chulkov.hello.HelloUDPClient.prepareAddress;
-
-import info.kgeorgiy.ja.chulkov.hello.HelloUDPClient.ThreadHelloContext;
+import info.kgeorgiy.ja.chulkov.utils.UDPUtils;
 import info.kgeorgiy.java.advanced.hello.HelloClient;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -14,20 +12,29 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.charset.StandardCharsets;
 
-public class HelloUDPNonblockingClient implements HelloClient {
+/**
+ * Implementation of {@link HelloClient} with main method and nonblocking operations`
+ */
+public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
 
-    public static final int BUFFER_SIZE = 2048;
-    public static final int SELECT_TIMEOUT = 20;
+    /**
+     * Method to run {@link HelloUDPNonblockingClient#run(String, int, String, int, int)} from CLI
+     *
+     * @param args array of string {host, port, prefix, threads, requests}
+     */
+    public static void main(final String[] args) {
+        new NonBlockingClientMainHelper().mainHelp(args);
+    }
 
     private static void doReadOperation(
             final DatagramChannel channel,
             final ThreadHelloContext context,
             final String request)
             throws IOException {
-        final var bytes = ByteBuffer.allocate(BUFFER_SIZE);
+        final var bytes = ByteBuffer.allocate(channel.socket().getReceiveBufferSize());
         channel.receive(bytes);
         bytes.flip();
-        final String answer = HelloUDPClient.getDecodedData(bytes);
+        final String answer = UDPUtils.getDecodedData(bytes);
         if (context.validateAnswer(answer)) {
             System.out.println(request + " " + answer);
             context.increment();
@@ -42,7 +49,6 @@ public class HelloUDPNonblockingClient implements HelloClient {
             System.out.println("Bad answer: " + request + " " + answer);
         }
     }
-
 
     private static Selector prepareSelector(
             final String prefix,
@@ -101,7 +107,7 @@ public class HelloUDPNonblockingClient implements HelloClient {
         try (final Selector selector = prepareSelector(prefix, threads, requests, address)) {
             while (!selector.keys().isEmpty()) {
                 try {
-                    selector.select(SELECT_TIMEOUT);
+                    selector.select(TIMEOUT);
                 } catch (final IOException e) {
                     throw new UncheckedIOException(e);
                 }
@@ -112,6 +118,14 @@ public class HelloUDPNonblockingClient implements HelloClient {
             }
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    private static class NonBlockingClientMainHelper extends ClientMainHelper {
+
+        @Override
+        protected HelloClient getHelloClient() {
+            return new HelloUDPNonblockingClient();
         }
     }
 
