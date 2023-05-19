@@ -9,6 +9,7 @@ import java.io.UncheckedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -45,27 +46,27 @@ public class HelloUDPServer extends AbstractHelloUDPServer {
         datagramSocket.receive(datagramPacketForReceive);
         semaphore.acquire();
         CompletableFuture
-                .supplyAsync(taskGenerator.apply(dataToByteBuffer(datagramPacketForReceive)),
-                        taskExecutorService)
-                .thenAccept((ans) -> {
-                    final var datagramPacketToSend = new DatagramPacket(
-                            ans.array(),
-                            ans.limit(),
-                            datagramPacketForReceive.getSocketAddress());
-                    try {
-                        datagramSocket.send(datagramPacketToSend);
-                    } catch (final IOException e) {
-                        System.err.println("Error on executing task");
-                    }
-                })
+                .supplyAsync(taskGenerator.apply(dataToByteBuffer(datagramPacketForReceive)), taskExecutorService)
+                .thenAccept((ans) -> processAnswer(datagramPacketForReceive, ans))
                 .handle((ans, e) -> {
                     semaphore.release();
                     if (e != null) {
                         System.err.println("Error on executing task " + e.getMessage());
-
                     }
                     return null;
                 });
+    }
+
+    private void processAnswer(final DatagramPacket datagramPacketForReceive, final ByteBuffer ans) {
+        final var datagramPacketToSend = new DatagramPacket(
+                ans.array(),
+                ans.limit(),
+                datagramPacketForReceive.getSocketAddress());
+        try {
+            datagramSocket.send(datagramPacketToSend);
+        } catch (final IOException e) {
+            System.err.println("Error on executing task");
+        }
     }
 
     @Override
