@@ -60,10 +60,10 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
             datagramChannel.bind(new InetSocketAddress(port));
             datagramChannel.register(selector, SelectionKey.OP_READ);
-            toSend = new ArrayBlockingQueue<>(threads);
-            toReceive = new ArrayBlockingQueue<>(threads);
-            for (int i = 0; i < threads; i++) {
-                toReceive.add(new Packet(BUFFER_SIZE));
+            toSend = new ArrayBlockingQueue<>(MAX_TASKS);
+            toReceive = new ArrayBlockingQueue<>(MAX_TASKS);
+            for (int i = 0; i < MAX_TASKS; i++) {
+                toReceive.add(new Packet(datagramChannel.socket().getReceiveBufferSize()));
             }
         } catch (final IOException e) {
             throw new UncheckedIOException(e);

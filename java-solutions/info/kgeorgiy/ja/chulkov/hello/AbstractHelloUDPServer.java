@@ -25,7 +25,7 @@ abstract class AbstractHelloUDPServer implements HelloServer {
     /**
      * The maximum number of tasks allowed in the server.
      */
-    public static final int MAX_TASKS = 1024;
+    public static final int MAX_TASKS = 128;
 
     /**
      * A function that generates tasks based on a ByteBuffer input.
