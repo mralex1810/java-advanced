@@ -72,9 +72,8 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
     private static void doSelectorIteration(final SocketAddress address, final Selector selector) {
         if (selector.selectedKeys().isEmpty()) {
             selector.keys().forEach(it -> it.interestOpsOr(SelectionKey.OP_WRITE));
-        } else {
-            processKeys(address, selector);
         }
+        processKeys(address, selector);
         selector.selectedKeys().clear();
     }
 
