@@ -1,5 +1,6 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
+import info.kgeorgiy.ja.chulkov.utils.UDPUtils;
 import info.kgeorgiy.java.advanced.hello.HelloServer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -10,20 +11,19 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.function.Consumer;
 
 /**
  * Implementation of {@link HelloServer} with main method and nonblocking operations
  */
 public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
-    public static final Function<Throwable, Void> LOG_ERROR = (e) -> {
-        System.err.println("Error on executing task " + e.getMessage());
-        return null;
-    };
     private Selector selector;
-    private Runnable SELECTOR_WAKEUP;
+    private Queue<Attachment> toSend;
+    private Queue<Attachment> toReceive;
+    final Consumer<SelectionKey> keyProcessor = this::processKey;
 
     /**
      * Method to run {@link HelloUDPNonblockingServer} from CLI
@@ -31,25 +31,25 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
      * @param args array of string {port, threads}
      */
     public static void main(final String[] args) {
-        new NonblockingServerMainHelper().mainHelp(args);
+        mainHelp(args, HelloUDPNonblockingServer::new);
     }
 
     @Override
     protected void getterIteration() throws IOException {
-        selector.select(20);
-        for (final var key : selector.selectedKeys()) {
-            try {
-                final DatagramChannel channel = (DatagramChannel) key.channel();
-                if (key.isWritable()) {
-                    doWriteOperation(key, channel);
-                } else if (key.isReadable()) {
-                    doReadOperation(key, channel);
-                }
-            } catch (final Exception e) {
-                e.printStackTrace();
+        selector.select(keyProcessor);
+    }
+
+    private void processKey(final SelectionKey key) {
+        try {
+            final DatagramChannel channel = (DatagramChannel) key.channel();
+            if (key.isWritable()) {
+                doWriteOperation(key, channel);
+            } else if (key.isReadable()) {
+                doReadOperation(key, channel);
             }
+        } catch (final Exception e) {
+            e.printStackTrace();
         }
-        selector.selectedKeys().clear();
     }
 
     @Override
@@ -60,8 +60,14 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             datagramChannel.configureBlocking(false);
             datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
             datagramChannel.bind(new InetSocketAddress(port));
-            datagramChannel.register(selector, SelectionKey.OP_READ,
-                    new Attachment(datagramChannel.socket().getReceiveBufferSize()));
+            datagramChannel.register(selector, SelectionKey.OP_READ);
+            final SelectionKey key = selector.keys().stream().findAny().orElseThrow();
+            toSend = new ArrayBlockingQueue<>(threads);
+            toReceive = new ArrayBlockingQueue<>(threads);
+            for (int i = 0; i < threads; i++) {
+                toReceive.add(new Attachment(datagramChannel.socket().getReceiveBufferSize()));
+            }
+            toReceive.forEach(it -> it.initTask(key, toSend));
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -70,33 +76,42 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     private void doWriteOperation(final SelectionKey key,
             final DatagramChannel channel) {
-        final var packet = (Attachment) key.attachment();
+        final Attachment answer;
+        synchronized (toSend) {
+            answer = toSend.remove();
+            if (toSend.isEmpty()) {
+                key.interestOpsAnd(~SelectionKey.OP_WRITE);
+            }
+        }
         try {
-            channel.send(packet.getBuffer(), packet.getAddress());
+            channel.send(answer.getBuffer(), answer.getAddress());
         } catch (final IOException e) {
             e.printStackTrace();
         }
-        key.interestOpsOr(SelectionKey.OP_READ);
-        key.interestOpsAnd(~SelectionKey.OP_WRITE);
+        synchronized (toReceive) {
+            toReceive.add(answer);
+            key.interestOpsOr(SelectionKey.OP_READ);
+        }
     }
 
     private void doReadOperation(final SelectionKey key,
             final DatagramChannel channel) throws IOException {
-        final var packet = (Attachment) key.attachment();
+        final Attachment packet;
+        synchronized (toReceive) {
+            if (toReceive.isEmpty()) {
+                key.interestOpsAnd(~SelectionKey.OP_READ);
+                return;
+            }
+            packet = toReceive.remove();
+        }
         packet.getBuffer().clear();
         packet.setAddress(channel.receive(packet.getBuffer()));
-        key.interestOpsAnd(0);
-
-        SELECTOR_WAKEUP = () -> selector.wakeup();
-        CompletableFuture
-                .runAsync(packet.getBufferModifier(), taskExecutorService)
-                .thenRun(() -> key.interestOpsOr(SelectionKey.OP_WRITE))
-                .thenRun(SELECTOR_WAKEUP)
-                .exceptionally(LOG_ERROR);
+        taskExecutorService.execute(packet.getTask());
     }
 
     @Override
     public void close() {
+        selector.keys().forEach(UDPUtils::closeChannel);
         try {
             selector.close();
         } catch (final IOException ignored) {
@@ -104,19 +119,12 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
         super.close();
     }
 
-    private static class NonblockingServerMainHelper extends ServerMainHelper {
-
-        @Override
-        protected HelloServer getHelloServer() {
-            return new HelloUDPNonblockingServer();
-        }
-    }
-
     private static class Attachment {
 
         private final ByteBuffer buffer;
         private final Runnable bufferModifier;
         private SocketAddress address;
+        private Runnable task;
 
         public Attachment(final int bufferSize) {
             buffer = ByteBuffer.allocate(bufferSize);
@@ -135,8 +143,23 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             this.address = inetAddress;
         }
 
-        public synchronized Runnable getBufferModifier() {
-            return bufferModifier;
+        public void initTask(final SelectionKey key, final Queue<Attachment> toSend) {
+            task = () -> {
+                try {
+                    bufferModifier.run();
+                    synchronized (toSend) {
+                        toSend.add(this);
+                        key.interestOpsOr(SelectionKey.OP_WRITE);
+                    }
+                    key.selector().wakeup();
+                } catch (final RuntimeException e) {
+                    System.err.println("Error on executing task " + e.getMessage());
+                }
+            };
+        }
+
+        public Runnable getTask() {
+            return task;
         }
     }
 }

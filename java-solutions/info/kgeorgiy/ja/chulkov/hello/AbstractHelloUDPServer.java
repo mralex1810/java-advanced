@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 
 /**
@@ -20,10 +21,6 @@ import java.util.function.Function;
  */
 abstract class AbstractHelloUDPServer implements HelloServer {
 
-    /**
-     * The maximum number of tasks allowed in the server.
-     */
-    public static final int MAX_TASKS = 128;
 
     private static final byte[] helloBytes = "Hello, ".getBytes(StandardCharsets.UTF_8);
 
@@ -31,14 +28,14 @@ abstract class AbstractHelloUDPServer implements HelloServer {
      * A function that generates tasks based on a ByteBuffer input.
      */
     public static final Function<ByteBuffer, Runnable> taskGenerator = (buffer) -> () -> {
-            buffer.limit(buffer.position() + helloBytes.length);
-            for (int i = buffer.limit() - 1; i >= helloBytes.length; i--) {
-                buffer.put(i, buffer.get(i - helloBytes.length));
-            }
-            for (int i = 0; i < helloBytes.length; i++) {
-                buffer.put(i, helloBytes[i]);
-            }
-            buffer.rewind();
+        buffer.limit(buffer.position() + helloBytes.length);
+        for (int i = buffer.limit() - 1; i >= helloBytes.length; i--) {
+            buffer.put(i, buffer.get(i - helloBytes.length));
+        }
+        for (int i = 0; i < helloBytes.length; i++) {
+            buffer.put(i, helloBytes[i]);
+        }
+        buffer.rewind();
     };
 
 
@@ -57,14 +54,32 @@ abstract class AbstractHelloUDPServer implements HelloServer {
      */
     private State state = State.NOT_STARTED;
 
-    /**
-     * Prints the usage information for the HelloServer class.
-     */
+    protected static void mainHelp(final String[] args, final Supplier<HelloServer> helloServerSupplier) {
+        Objects.requireNonNull(args);
+        Arrays.stream(args).forEach(Objects::requireNonNull);
+        if (args.length != 2) {
+            printUsage();
+            return;
+        }
+        try {
+            final int port = parseNonNegativeInt(args[0], "port");
+            final int threads = parseNonNegativeInt(args[1], "threads");
+            try {
+                helloServerSupplier.get().start(port, threads);
+            } catch (final RuntimeException e) {
+                System.err.println(e.getMessage());
+            }
+        } catch (final RuntimeException e) {
+            System.err.println(e.getMessage());
+            printUsage();
+        }
+    }
+
     private static void printUsage() {
         System.err.println("""
-                Usage: HelloServer port threads
-                port -- port number on which requests will be received
-                threads -- number of worker threads that will process requests
+                    Usage: HelloUDPServer port threads
+                    port -- port number on which requests will be received
+                    threads -- number of worker threads that will process requests
                 """);
     }
 
@@ -114,6 +129,7 @@ abstract class AbstractHelloUDPServer implements HelloServer {
         taskExecutorService.close();
     }
 
+
     /**
      * Represents the state of the server.
      */
@@ -121,40 +137,5 @@ abstract class AbstractHelloUDPServer implements HelloServer {
         NOT_STARTED,
         RUNNING,
         CLOSED
-    }
-
-    public abstract static class ServerMainHelper {
-
-        public void mainHelp(final String[] args) {
-            Objects.requireNonNull(args);
-            Arrays.stream(args).forEach(Objects::requireNonNull);
-            if (args.length != 2) {
-                printUsage();
-                return;
-            }
-            try {
-                final int port = parseNonNegativeInt(args[0], "port");
-                final int threads = parseNonNegativeInt(args[1], "threads");
-                try {
-                    final var server = getHelloServer();
-                    server.start(port, threads);
-                } catch (final RuntimeException e) {
-                    System.err.println(e.getMessage());
-                }
-            } catch (final RuntimeException e) {
-                System.err.println(e.getMessage());
-                printUsage();
-            }
-        }
-
-        protected abstract HelloServer getHelloServer();
-
-        public void printUsage() {
-            System.err.println("""
-                        Usage: HelloUDPServer port threads
-                        port -- port number on which requests will be received
-                        threads -- number of worker threads that will process requests
-                    """);
-        }
     }
 }

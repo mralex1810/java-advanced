@@ -18,6 +18,10 @@ import java.util.concurrent.Semaphore;
  * Implementation of {@link HelloServer} with main method and blocking operations
  */
 public class HelloUDPServer extends AbstractHelloUDPServer {
+    /**
+     * The maximum number of tasks allowed in the server.
+     */
+    public static final int MAX_TASKS = 1024;
 
     private DatagramSocket datagramSocket;
     /**
@@ -31,15 +35,7 @@ public class HelloUDPServer extends AbstractHelloUDPServer {
      * @param args array of string {port, threads}
      */
     public static void main(final String[] args) {
-        new BlockingServerMainHelper().mainHelp(args);
-    }
-
-    private static class BlockingServerMainHelper extends ServerMainHelper {
-
-        @Override
-        protected HelloServer getHelloServer() {
-            return new HelloUDPServer();
-        }
+        mainHelp(args, HelloUDPServer::new);
     }
 
     @Override

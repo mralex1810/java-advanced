@@ -1,7 +1,10 @@
 package info.kgeorgiy.ja.chulkov.utils;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
+import java.nio.channels.SelectionKey;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -32,5 +35,19 @@ public class UDPUtils {
         final var byteBuffer = ByteBuffer.wrap(packet.getData(), 0, packet.getLength());
         byteBuffer.position(packet.getLength());
         return byteBuffer;
+    }
+
+    public static void closeChannel(final SelectionKey selectionKey) {
+        closeChannel(selectionKey.channel());
+    }
+
+    public static void closeChannel(final Channel channel) {
+        while (true) {
+            try {
+                channel.close();
+                break;
+            } catch (final IOException ignored) {
+            }
+        }
     }
 }

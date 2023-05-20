@@ -1,11 +1,12 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
+
+import info.kgeorgiy.ja.chulkov.utils.UDPUtils;
 import info.kgeorgiy.java.advanced.hello.HelloClient;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.SocketAddress;
 import java.net.StandardSocketOptions;
-import java.nio.channels.Channel;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -16,6 +17,7 @@ import java.util.function.Consumer;
  * Implementation of {@link HelloClient} with main method and nonblocking operations`
  */
 public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
+
 
     public static final Consumer<SelectionKey> MAKE_WRITABLE = it -> it.interestOpsOr(SelectionKey.OP_WRITE);
 
@@ -38,7 +40,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
             context.printRequestAndAnswer();
             context.increment();
             if (context.isEnded()) {
-                closeChannel(channel);
+                UDPUtils.closeChannel(channel);
             }
         }
     }
@@ -78,19 +80,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
         }
     }
 
-    private static void closeChannel(final SelectionKey selectionKey) {
-        closeChannel(selectionKey.channel());
-    }
 
-    private static void closeChannel(final Channel channel) {
-        while (true) {
-            try {
-                channel.close();
-                break;
-            } catch (final IOException ignored) {
-            }
-        }
-    }
 
     private static Consumer<SelectionKey> getOpenChecker(final AtomicBoolean isOpened) {
         return key -> {
@@ -124,7 +114,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
                     }
                 }
             } finally {
-                selector.keys().forEach(HelloUDPNonblockingClient::closeChannel);
+                selector.keys().forEach(UDPUtils::closeChannel);
             }
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
