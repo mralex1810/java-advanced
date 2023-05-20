@@ -1,17 +1,17 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
 import info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils;
-import info.kgeorgiy.ja.chulkov.utils.Scanner;
 import info.kgeorgiy.java.advanced.hello.HelloClient;
-import java.io.ByteArrayInputStream;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 
 abstract class AbstractHelloUDPClient implements HelloClient {
@@ -19,7 +19,7 @@ abstract class AbstractHelloUDPClient implements HelloClient {
     /**
      * Timeout for iterations of HelloClient
      */
-    public static final int TIMEOUT = 100;
+    public static final int TIMEOUT = 20;
 
     /**
      * Prepares a SocketAddress based on the provided host and port.
@@ -86,104 +86,110 @@ abstract class AbstractHelloUDPClient implements HelloClient {
         protected abstract HelloClient getHelloClient();
     }
 
-    /**
-     * A context class used by a threaded application to manage thread-specific information for executing requests. The
-     * class provides methods for retrieving and updating request-related information, validating answers, generating
-     * request strings, and checking if all requests have been completed.
-     */
     protected static class ThreadHelloContext {
 
+        public static final byte[] DELIMITER_BYTES = "_".getBytes(StandardCharsets.UTF_8);
+        public static final CharsetDecoder UTF_8_DECODER = StandardCharsets.UTF_8.newDecoder();
         private final int threadId;
-        private final String prefix;
+        private final byte[] prefixBytes;
         private final int requests;
+        private final ByteBuffer requestBytes;
+        private final CharBuffer requestChars;
+        private final ByteBuffer answerBytes;
+        private final CharBuffer answerChars;
         private int request = 1;
 
-        /**
-         * Constructs a ThreadHelloContext object with the specified thread ID, prefix, and number of requests.
-         *
-         * @param threadId The ID of the thread.
-         * @param prefix   The prefix string to be used in request generation.
-         * @param requests The total number of requests to be executed.
-         */
-        public ThreadHelloContext(final int threadId, final String prefix, final int requests) {
+        public ThreadHelloContext(final int threadId, final String prefix, final int requests, final int bufferSize) {
             this.threadId = threadId;
-            this.prefix = prefix;
+            this.prefixBytes = prefix.getBytes(StandardCharsets.UTF_8);
             this.requests = requests;
+            requestBytes = ByteBuffer.allocate(bufferSize);
+            requestChars = CharBuffer.allocate(bufferSize);
+            answerBytes = ByteBuffer.allocate(bufferSize);
+            answerChars = CharBuffer.allocate(bufferSize);
         }
 
-        /**
-         * Parses integers from a string and returns them as a list.
-         *
-         * @param string The string containing integers.
-         * @return A list of integers parsed from the input string.
-         */
-        private static List<Integer> parseIntegersFromString(final String string) {
-            final List<Integer> ans = new ArrayList<>();
-            final var scanner = new Scanner(new ByteArrayInputStream(string.getBytes()));
-            while (scanner.cachNext(Character::isDigit)) {
-                ans.add(Integer.parseInt(scanner.next()));
-            }
-            return ans;
-        }
-
-        /**
-         * Checks if a boolean condition is false and prints an error message if it is true.
-         *
-         * @param bool  The boolean condition to check.
-         * @param error The error message to print if the condition is true.
-         * @return {@code true} if the condition is false, {@code false} otherwise.
-         */
-        private static boolean checkNotFail(final boolean bool, final String error) {
+        private static boolean checkFail(final boolean bool, final String error) {
             if (bool) {
                 System.err.println(error);
-                return false;
+                return true;
             }
-            return true;
+            return false;
         }
 
-        /**
-         * Returns the current request number.
-         *
-         * @return The current request number.
-         */
+        private void syncBytesToChars(final ByteBuffer src, final CharBuffer out) {
+            src.flip();
+            out.clear();
+            UTF_8_DECODER.decode(src, out, true);
+            out.flip();
+        }
+
+        public ByteBuffer getAnswerBytes() {
+            return answerBytes;
+        }
+
+        public ByteBuffer getRequestBytes() {
+            return requestBytes;
+        }
+
         public int getRequest() {
             return request;
         }
 
-        /**
-         * Increments the request number by one.
-         */
         public void increment() {
             request++;
         }
 
-        /**
-         * Validates the answer received from a request.
-         *
-         * @param ans The answer string to validate.
-         * @return {@code true} if the answer is valid, {@code false} otherwise.
-         */
-        public boolean validateAnswer(final String ans) {
-            final var numbers = parseIntegersFromString(ans);
-            return checkNotFail(numbers.size() != 2, "Not two numbers in string")
-                    && checkNotFail(numbers.get(0) != threadId, "First number isn't thread num")
-                    && checkNotFail(numbers.get(1) != request, "Second number isn't request");
+        public boolean validateAnswer() {
+            syncBytesToChars(answerBytes, answerChars);
+            int numbers = 0;
+            for (int i = 0; i < answerChars.length(); i++) {
+                if (Character.isDigit(answerChars.charAt(i))) {
+                    final int numberBeginIndex = i;
+
+                    while (i < answerChars.length() && Character.isDigit(answerChars.charAt(i))) {
+                        i++;
+                    }
+                    final int res;
+                    try {
+                        res = Integer.parseInt(answerChars, numberBeginIndex, i, 10);
+                    } catch (final NumberFormatException e) {
+                        System.err.println(e.getMessage());
+                        return false;
+                    }
+                    if (numbers == 0) {
+                        if (checkFail(res != threadId, "First number isn't thread num")) {
+                            return false;
+                        }
+                    }
+                    if (numbers == 1) {
+                        if (checkFail(res != request, "Second number isn't request")) {
+                            return false;
+                        }
+                    }
+                    numbers++;
+                }
+            }
+            return !checkFail(numbers != 2, "Not two numbers in string");
         }
 
-        /**
-         * Generates the request string for the current thread and request number.
-         *
-         * @return The generated request string.
-         */
-        public String makeRequest() {
-            return prefix + threadId + "_" + request;
+        public void printRequestAndAnswer() {
+            syncBytesToChars(requestBytes, requestChars);
+            System.out.print(requestChars);
+            System.out.print(" ");
+            System.out.println(answerChars);
         }
 
-        /**
-         * Checks if all requests have been completed for the current thread.
-         *
-         * @return {@code true} if all requests have been completed, {@code false} otherwise.
-         */
+        public void makeRequest() {
+            requestBytes.clear();
+            requestBytes.put(prefixBytes);
+            // TODO
+            requestBytes.put(Integer.toString(threadId).getBytes(StandardCharsets.UTF_8));
+            requestBytes.put(DELIMITER_BYTES);
+            requestBytes.put(Integer.toString(request).getBytes(StandardCharsets.UTF_8));
+            requestBytes.flip();
+        }
+
         public boolean isEnded() {
             return request > requests;
         }

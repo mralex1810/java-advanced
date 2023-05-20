@@ -1,21 +1,23 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
-import info.kgeorgiy.ja.chulkov.utils.UDPUtils;
 import info.kgeorgiy.java.advanced.hello.HelloClient;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.SocketAddress;
 import java.net.StandardSocketOptions;
-import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.charset.StandardCharsets;
+import java.nio.channels.spi.AbstractInterruptibleChannel;
+import java.util.function.Consumer;
 
 /**
  * Implementation of {@link HelloClient} with main method and nonblocking operations`
  */
 public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
+
+    public static final Consumer<SelectionKey> MAKE_WRITABLE = it -> it.interestOpsOr(SelectionKey.OP_WRITE);
 
     /**
      * Method to run {@link HelloUDPNonblockingClient#run(String, int, String, int, int)} from CLI
@@ -28,25 +30,16 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
 
     private static void doReadOperation(
             final DatagramChannel channel,
-            final ThreadHelloContext context,
-            final String request)
+            final ThreadHelloContext context)
             throws IOException {
-        final var bytes = ByteBuffer.allocate(channel.socket().getReceiveBufferSize());
-        channel.receive(bytes);
-        bytes.flip();
-        final String answer = UDPUtils.getDecodedData(bytes);
-        if (context.validateAnswer(answer)) {
-            System.out.println(request + " " + answer);
+        context.getAnswerBytes().clear();
+        channel.receive(context.getAnswerBytes());
+        if (context.validateAnswer()) {
+            context.printRequestAndAnswer();
             context.increment();
             if (context.isEnded()) {
-                try {
-                    channel.close();
-                } catch (final IOException e) {
-                    throw new UncheckedIOException(e);
-                }
+                closeChannel(channel);
             }
-        } else {
-            System.out.println("Bad answer: " + request + " " + answer);
         }
     }
 
@@ -63,34 +56,34 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
             datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
             datagramChannel.connect(address);
             datagramChannel.register(selector, SelectionKey.OP_WRITE,
-                    new ThreadHelloContext(thread, prefix, requests));
+                    new ThreadHelloContext(thread, prefix, requests, 4096));
         }
 
         return selector;
     }
 
-    private static void doSelectorIteration(final SocketAddress address, final Selector selector) {
-        if (selector.selectedKeys().isEmpty()) {
-            selector.keys().forEach(it -> it.interestOpsOr(SelectionKey.OP_WRITE));
+    private static void processKey(final SocketAddress address, final SelectionKey key) {
+        final var channel = (DatagramChannel) key.channel();
+        final var context = (ThreadHelloContext) key.attachment();
+        try {
+            if (key.isWritable()) {
+                context.makeRequest();
+                channel.send(context.getRequestBytes(), address);
+                key.interestOps(SelectionKey.OP_READ);
+            } else if (key.isReadable()) {
+                doReadOperation(channel, context);
+            }
+        } catch (final IOException e) {
+            System.err.println(e.getMessage());
         }
-        processKeys(address, selector);
-        selector.selectedKeys().clear();
     }
 
-    private static void processKeys(final SocketAddress address, final Selector selector) {
-        for (final var key : selector.selectedKeys()) {
-            final var channel = (DatagramChannel) key.channel();
-            final var context = (ThreadHelloContext) key.attachment();
-            final String request = context.makeRequest();
+    private static void closeChannel(final Channel channel) {
+        while (true) {
             try {
-                if (key.isWritable()) {
-                    channel.send(ByteBuffer.wrap(request.getBytes(StandardCharsets.UTF_8)), address);
-                    key.interestOps(SelectionKey.OP_READ);
-                } else if (key.isReadable()) {
-                    doReadOperation(channel, context, request);
-                }
-            } catch (final IOException | RuntimeException e) {
-                System.err.println("Error on " + request + " " + e.getMessage());
+                channel.close();
+                break;
+            } catch (final IOException ignored) {
             }
         }
     }
@@ -103,17 +96,23 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
             final int threads,
             final int requests) {
         final SocketAddress address = prepareAddress(host, port);
+        final Consumer<SelectionKey> keyProcessor = key -> processKey(address, key);
         try (final Selector selector = prepareSelector(prefix, threads, requests, address)) {
-            while (!selector.keys().isEmpty()) {
-                try {
-                    selector.select(TIMEOUT);
-                } catch (final IOException e) {
-                    throw new UncheckedIOException(e);
+            try {
+                while (!selector.keys().isEmpty()) {
+                    if (selector.select(keyProcessor, TIMEOUT) == 0) {
+                        selector.keys().forEach(MAKE_WRITABLE);
+                    }
+                    if (selector.keys().stream()
+                            .map(SelectionKey::channel)
+                            .noneMatch(AbstractInterruptibleChannel::isOpen)) {
+                        break;
+                    }
                 }
-                if (selector.keys().isEmpty()) {
-                    break;
-                }
-                doSelectorIteration(address, selector);
+            } finally {
+                selector.keys().stream()
+                        .map(SelectionKey::channel)
+                        .forEach(HelloUDPNonblockingClient::closeChannel);
             }
         } catch (final IOException e) {
             throw new UncheckedIOException(e);

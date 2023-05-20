@@ -7,7 +7,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.net.SocketException;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
@@ -16,6 +15,8 @@ import java.util.stream.IntStream;
  */
 public class HelloUDPClient extends AbstractHelloUDPClient {
 
+
+    public static final int BUFFER_SIZE = 4096;
 
     /**
      * Method to run {@link HelloUDPClient#run(String, int, String, int, int)} from CLI
@@ -27,31 +28,30 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
     }
 
     private void threadAction(
-            final ThreadHelloContext threadHelloContext,
+            final ThreadHelloContext context,
             final SocketAddress address,
             final AtomicReference<RuntimeException> exception,
             final Thread mainThread
     ) {
         try (final var datagramSocket = new DatagramSocket()) {
             datagramSocket.setSoTimeout(TIMEOUT);
-            while (!Thread.interrupted() && !threadHelloContext.isEnded()) {
-                final String request = threadHelloContext.makeRequest();
-                final var bytes = request.getBytes(StandardCharsets.UTF_8);
-                final var packetToSend = new DatagramPacket(bytes, bytes.length, address);
+            while (!Thread.interrupted() && !context.isEnded()) {
+                context.makeRequest();
+                final var bytes = context.getRequestBytes();
+                final var packetToSend = new DatagramPacket(bytes.array(), bytes.limit(), address);
                 try {
                     datagramSocket.send(packetToSend);
                     final var packetForReceive = new DatagramPacket(new byte[datagramSocket.getReceiveBufferSize()],
                             datagramSocket.getReceiveBufferSize());
                     datagramSocket.receive(packetForReceive);
-                    final var ans = UDPUtils.getDecodedData(UDPUtils.dataToByteBuffer(packetForReceive).flip());
-                    if (threadHelloContext.validateAnswer(ans)) {
-                        System.out.println(request + " " + ans);
-                        threadHelloContext.increment();
-                    } else {
-                        System.err.println("Bad answer: " + ans);
+                    context.getAnswerBytes().flip();
+                    context.getAnswerBytes().put(UDPUtils.dataToByteBuffer(packetForReceive).flip());
+                    if (context.validateAnswer()) {
+                        context.printRequestAndAnswer();
+                        context.increment();
                     }
                 } catch (final IOException | RuntimeException e) {
-                    System.err.println("Error on " + request + " " + e.getMessage());
+//                    System.err.println("Error on " + request + " " + e.getMessage());
                 }
             }
         } catch (final SocketException | RuntimeException e) {
@@ -70,7 +70,7 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
         final AtomicReference<RuntimeException> exception = new AtomicReference<>(null);
         final Thread mainThread = Thread.currentThread();
         final var threadsList = IntStream.range(1, threads + 1)
-                .mapToObj(threadNum -> new ThreadHelloContext(threadNum, prefix, requests))
+                .mapToObj(threadNum -> new ThreadHelloContext(threadNum, prefix, requests, BUFFER_SIZE))
                 .<Runnable>map(context -> () -> threadAction(context, address, exception, mainThread))
                 .map(Thread::new)
                 .peek(Thread::start)
