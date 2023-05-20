@@ -8,8 +8,10 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -21,6 +23,10 @@ import java.util.function.Supplier;
  */
 abstract class AbstractHelloUDPServer implements HelloServer {
 
+    /**
+     * The maximum number of tasks allowed in the server.
+     */
+    public static final int MAX_TASKS = 128;
 
     private static final byte[] helloBytes = "Hello, ".getBytes(StandardCharsets.UTF_8);
 
@@ -29,12 +35,8 @@ abstract class AbstractHelloUDPServer implements HelloServer {
      */
     public static final Function<ByteBuffer, Runnable> taskGenerator = (buffer) -> () -> {
         buffer.limit(buffer.position() + helloBytes.length);
-        for (int i = buffer.limit() - 1; i >= helloBytes.length; i--) {
-            buffer.put(i, buffer.get(i - helloBytes.length));
-        }
-        for (int i = 0; i < helloBytes.length; i++) {
-            buffer.put(i, helloBytes[i]);
-        }
+        System.arraycopy(buffer.array(), 0, buffer.array(), helloBytes.length, buffer.limit() - helloBytes.length);
+        System.arraycopy(helloBytes, 0, buffer.array(), 0, helloBytes.length);
         buffer.rewind();
     };
 
@@ -89,7 +91,10 @@ abstract class AbstractHelloUDPServer implements HelloServer {
             throw new IllegalStateException("Server is already started");
         }
         state = State.RUNNING;
-        taskExecutorService = Executors.newFixedThreadPool(threads);
+        taskExecutorService = new ThreadPoolExecutor(threads, threads,
+                0L, TimeUnit.MILLISECONDS,
+                new ArrayBlockingQueue<>(threads),
+                new ThreadPoolExecutor.CallerRunsPolicy());
         prepare(port, threads);
         getterThread = new Thread(() -> {
             while (state == State.RUNNING && !Thread.interrupted()) {

@@ -18,16 +18,9 @@ import java.util.concurrent.Semaphore;
  * Implementation of {@link HelloServer} with main method and blocking operations
  */
 public class HelloUDPServer extends AbstractHelloUDPServer {
-    /**
-     * The maximum number of tasks allowed in the server.
-     */
-    public static final int MAX_TASKS = 1024;
 
     private DatagramSocket datagramSocket;
-    /**
-     * A semaphore used to limit the number of tasks in the server.
-     */
-    private final Semaphore semaphore = new Semaphore(MAX_TASKS);
+    private int threads;
 
     /**
      * Method to run {@link HelloUDPServer} from CLI
@@ -45,6 +38,7 @@ public class HelloUDPServer extends AbstractHelloUDPServer {
                 datagramSocket.getReceiveBufferSize()
         );
         datagramSocket.receive(datagramPacketForReceive);
+        final Semaphore semaphore = new Semaphore(threads);
         semaphore.acquire();
         final var byteBuffer = dataToByteBuffer(datagramPacketForReceive);
         CompletableFuture
@@ -73,6 +67,7 @@ public class HelloUDPServer extends AbstractHelloUDPServer {
 
     @Override
     protected void prepare(final int port, final int threads) {
+        this.threads = threads;
         try {
             datagramSocket = new DatagramSocket(port);
         } catch (final SocketException e) {

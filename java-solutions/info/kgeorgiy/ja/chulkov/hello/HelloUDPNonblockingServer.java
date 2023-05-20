@@ -11,8 +11,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.function.Consumer;
 
 /**
@@ -62,8 +62,8 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             datagramChannel.bind(new InetSocketAddress(port));
             datagramChannel.register(selector, SelectionKey.OP_READ);
             final SelectionKey key = selector.keys().stream().findAny().orElseThrow();
-            toSend = new ArrayBlockingQueue<>(threads);
-            toReceive = new ArrayBlockingQueue<>(threads);
+            toSend = new ArrayDeque<>(threads);
+            toReceive = new ArrayDeque<>(threads);
             for (int i = 0; i < threads; i++) {
                 toReceive.add(new Attachment(datagramChannel.socket().getReceiveBufferSize()));
             }
@@ -88,22 +88,18 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
         } catch (final IOException e) {
             e.printStackTrace();
         }
-        synchronized (toReceive) {
-            toReceive.add(answer);
-            key.interestOpsOr(SelectionKey.OP_READ);
-        }
+        toReceive.add(answer);
+        key.interestOpsOr(SelectionKey.OP_READ);
     }
 
     private void doReadOperation(final SelectionKey key,
             final DatagramChannel channel) throws IOException {
         final Attachment packet;
-        synchronized (toReceive) {
-            if (toReceive.isEmpty()) {
-                key.interestOpsAnd(~SelectionKey.OP_READ);
-                return;
-            }
-            packet = toReceive.remove();
+        if (toReceive.isEmpty()) {
+            key.interestOpsAnd(~SelectionKey.OP_READ);
+            return;
         }
+        packet = toReceive.remove();
         packet.getBuffer().clear();
         packet.setAddress(channel.receive(packet.getBuffer()));
         taskExecutorService.execute(packet.getTask());
