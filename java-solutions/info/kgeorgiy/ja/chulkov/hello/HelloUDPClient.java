@@ -16,8 +16,6 @@ import java.util.stream.IntStream;
 public class HelloUDPClient extends AbstractHelloUDPClient {
 
 
-    public static final int BUFFER_SIZE = 4096;
-
     /**
      * Method to run {@link HelloUDPClient#run(String, int, String, int, int)} from CLI
      *
@@ -28,7 +26,7 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
     }
 
     private void threadAction(
-            final ThreadHelloContext context,
+            final HelloClientThreadContext context,
             final SocketAddress address,
             final AtomicReference<RuntimeException> exception,
             final Thread mainThread
@@ -51,7 +49,7 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
                         context.increment();
                     }
                 } catch (final IOException | RuntimeException e) {
-//                    System.err.println("Error on " + request + " " + e.getMessage());
+                    System.err.println(e.getMessage());
                 }
             }
         } catch (final SocketException | RuntimeException e) {
@@ -70,7 +68,7 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
         final AtomicReference<RuntimeException> exception = new AtomicReference<>(null);
         final Thread mainThread = Thread.currentThread();
         final var threadsList = IntStream.range(1, threads + 1)
-                .mapToObj(threadNum -> new ThreadHelloContext(threadNum, prefix, requests, BUFFER_SIZE))
+                .mapToObj(threadNum -> new HelloClientThreadContext(threadNum, prefix, requests, BUFFER_SIZE))
                 .<Runnable>map(context -> () -> threadAction(context, address, exception, mainThread))
                 .map(Thread::new)
                 .peek(Thread::start)

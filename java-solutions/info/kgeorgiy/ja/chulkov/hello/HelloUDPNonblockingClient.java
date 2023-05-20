@@ -30,7 +30,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
 
     private static void doReadOperation(
             final DatagramChannel channel,
-            final ThreadHelloContext context)
+            final HelloClientThreadContext context)
             throws IOException {
         context.getAnswerBytes().clear();
         channel.receive(context.getAnswerBytes());
@@ -56,7 +56,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
             datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
             datagramChannel.connect(address);
             datagramChannel.register(selector, SelectionKey.OP_WRITE,
-                    new ThreadHelloContext(thread, prefix, requests, 4096));
+                    new HelloClientThreadContext(thread, prefix, requests, BUFFER_SIZE));
         }
 
         return selector;
@@ -64,7 +64,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
 
     private static void processKey(final SocketAddress address, final SelectionKey key) {
         final var channel = (DatagramChannel) key.channel();
-        final var context = (ThreadHelloContext) key.attachment();
+        final var context = (HelloClientThreadContext) key.attachment();
         try {
             if (key.isWritable()) {
                 context.makeRequest();
