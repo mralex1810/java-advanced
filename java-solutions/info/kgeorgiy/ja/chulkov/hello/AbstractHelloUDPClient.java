@@ -13,13 +13,14 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 abstract class AbstractHelloUDPClient implements HelloClient {
 
     /**
      * Timeout for iterations of HelloClient
      */
-    public static final int TIMEOUT = 20;
+    public static final int TIMEOUT = 50;
 
     /**
      * Prepares a SocketAddress based on the provided host and port.
@@ -40,56 +41,51 @@ abstract class AbstractHelloUDPClient implements HelloClient {
     }
 
 
+
+    private static void printUsage() {
+        System.err.println("""
+                    Usage: HelloClient host port prefix threads requests
+                    host -- the name or ip address of the computer running the server
+                    port -- port number to send requests to
+                    prefix -- request prefix
+                    threads -- number of parallel request threads
+                    requests -- number of requests per thread
+                """);
+    }
+
     /**
-     * Help class to run {@link HelloClient} from CLI
+     * Help method to run {@link HelloClient#run(String, int, String, int, int)} from CLI
+     *
+     * @param args array of string {host, port, prefix, threads, requests}
      */
-    protected abstract static class ClientMainHelper {
-
-        private static void printUsage() {
-            System.err.println("""
-                        Usage: HelloClient host port prefix threads requests
-                        host -- the name or ip address of the computer running the server
-                        port -- port number to send requests to
-                        prefix -- request prefix
-                        threads -- number of parallel request threads
-                        requests -- number of requests per thread
-                    """);
+    protected static void mainHelp(final String[] args, final Supplier<HelloClient> helloClientSupplier) {
+        Objects.requireNonNull(args);
+        Arrays.stream(args).forEach(Objects::requireNonNull);
+        if (args.length != 5) {
+            printUsage();
+            return;
         }
-
-        /**
-         * Help method to run {@link HelloClient#run(String, int, String, int, int)} from CLI
-         *
-         * @param args array of string {host, port, prefix, threads, requests}
-         */
-        public void mainHelp(final String[] args) {
-            Objects.requireNonNull(args);
-            Arrays.stream(args).forEach(Objects::requireNonNull);
-            if (args.length != 5) {
-                printUsage();
-                return;
-            }
+        try {
+            final int port = ArgumentsUtils.parseNonNegativeInt(args[1], "port");
+            final int threads = ArgumentsUtils.parseNonNegativeInt(args[3], "threads");
+            final int requests = ArgumentsUtils.parseNonNegativeInt(args[4], "requests");
             try {
-                final int port = ArgumentsUtils.parseNonNegativeInt(args[1], "port");
-                final int threads = ArgumentsUtils.parseNonNegativeInt(args[3], "threads");
-                final int requests = ArgumentsUtils.parseNonNegativeInt(args[4], "requests");
-                try {
-                    getHelloClient().run(args[0], port, args[2], threads, requests);
-                } catch (final RuntimeException e) {
-                    System.err.println(e.getMessage());
-                }
-            } catch (final NumberFormatException e) {
+                helloClientSupplier.get().run(args[0], port, args[2], threads, requests);
+            } catch (final RuntimeException e) {
                 System.err.println(e.getMessage());
-                printUsage();
             }
+        } catch (final NumberFormatException e) {
+            System.err.println(e.getMessage());
+            printUsage();
         }
-
-        protected abstract HelloClient getHelloClient();
     }
 
     protected static class ThreadHelloContext {
 
         public static final byte[] DELIMITER_BYTES = "_".getBytes(StandardCharsets.UTF_8);
         public static final CharsetDecoder UTF_8_DECODER = StandardCharsets.UTF_8.newDecoder();
+        public static final String SPACE = " ";
+        public static final int RADIX = 10;
         private final int threadId;
         private final byte[] prefixBytes;
         private final int requests;
@@ -173,20 +169,39 @@ abstract class AbstractHelloUDPClient implements HelloClient {
             return !checkFail(numbers != 2, "Not two numbers in string");
         }
 
+        private static void putIntToByteBufferAsString(int src, final ByteBuffer out) {
+            final int start = out.position();
+            int size = 0;
+            if (src == 0) {
+                out.put((byte) Character.forDigit(0, RADIX));
+                size++;
+            }
+            while (src != 0) {
+                out.put((byte) Character.forDigit(src % RADIX, RADIX));
+                src /= RADIX;
+                size++;
+            }
+            for (int i = 0; i < size / 2; i++) {
+                final byte tmp = out.get(start + i);
+                out.put(start + i, out.get(out.position() - i - 1));
+                out.put(out.position() - i - 1, tmp);
+            }
+        }
+
         public void printRequestAndAnswer() {
             syncBytesToChars(requestBytes, requestChars);
-            System.out.print(requestChars);
-            System.out.print(" ");
-            System.out.println(answerChars);
+            System.out.append(requestChars);
+            System.out.print(SPACE);
+            System.out.append(answerChars);
+            System.out.println();
         }
 
         public void makeRequest() {
             requestBytes.clear();
             requestBytes.put(prefixBytes);
-            // TODO
-            requestBytes.put(Integer.toString(threadId).getBytes(StandardCharsets.UTF_8));
+            putIntToByteBufferAsString(threadId, requestBytes);
             requestBytes.put(DELIMITER_BYTES);
-            requestBytes.put(Integer.toString(request).getBytes(StandardCharsets.UTF_8));
+            putIntToByteBufferAsString(request, requestBytes);
             requestBytes.flip();
         }
 

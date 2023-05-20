@@ -24,7 +24,7 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
      * @param args array of string {host, port, prefix, threads, requests}
      */
     public static void main(final String[] args) {
-        new BlockingClientMainHelper().mainHelp(args);
+        mainHelp(args, HelloUDPClient::new);
     }
 
     private void threadAction(
@@ -44,7 +44,7 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
                     final var packetForReceive = new DatagramPacket(new byte[datagramSocket.getReceiveBufferSize()],
                             datagramSocket.getReceiveBufferSize());
                     datagramSocket.receive(packetForReceive);
-                    context.getAnswerBytes().flip();
+                    context.getAnswerBytes().clear();
                     context.getAnswerBytes().put(UDPUtils.dataToByteBuffer(packetForReceive).flip());
                     if (context.validateAnswer()) {
                         context.printRequestAndAnswer();
@@ -93,13 +93,4 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
             throw exception.get();
         }
     }
-
-    private static class BlockingClientMainHelper extends ClientMainHelper {
-
-        @Override
-        protected HelloClient getHelloClient() {
-            return new HelloUDPClient();
-        }
-    }
-
 }

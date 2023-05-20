@@ -9,7 +9,7 @@ import java.nio.channels.Channel;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.spi.AbstractInterruptibleChannel;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -25,7 +25,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
      * @param args array of string {host, port, prefix, threads, requests}
      */
     public static void main(final String[] args) {
-        new NonBlockingClientMainHelper().mainHelp(args);
+        mainHelp(args, HelloUDPNonblockingClient::new);
     }
 
     private static void doReadOperation(
@@ -78,6 +78,10 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
         }
     }
 
+    private static void closeChannel(final SelectionKey selectionKey) {
+        closeChannel(selectionKey.channel());
+    }
+
     private static void closeChannel(final Channel channel) {
         while (true) {
             try {
@@ -88,6 +92,14 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
         }
     }
 
+    private static Consumer<SelectionKey> getOpenChecker(final AtomicBoolean isOpened) {
+        return key -> {
+            if (key.channel().isOpen()) {
+                isOpened.set(true);
+            }
+        };
+    }
+
     @Override
     public void run(
             final String host,
@@ -96,6 +108,8 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
             final int threads,
             final int requests) {
         final SocketAddress address = prepareAddress(host, port);
+        final AtomicBoolean isOpened = new AtomicBoolean(false);
+        final Consumer<SelectionKey> openChecker = getOpenChecker(isOpened);
         final Consumer<SelectionKey> keyProcessor = key -> processKey(address, key);
         try (final Selector selector = prepareSelector(prefix, threads, requests, address)) {
             try {
@@ -103,27 +117,17 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
                     if (selector.select(keyProcessor, TIMEOUT) == 0) {
                         selector.keys().forEach(MAKE_WRITABLE);
                     }
-                    if (selector.keys().stream()
-                            .map(SelectionKey::channel)
-                            .noneMatch(AbstractInterruptibleChannel::isOpen)) {
+                    isOpened.set(false);
+                    selector.keys().forEach(openChecker);
+                    if (!isOpened.get()) {
                         break;
                     }
                 }
             } finally {
-                selector.keys().stream()
-                        .map(SelectionKey::channel)
-                        .forEach(HelloUDPNonblockingClient::closeChannel);
+                selector.keys().forEach(HelloUDPNonblockingClient::closeChannel);
             }
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
-        }
-    }
-
-    private static class NonBlockingClientMainHelper extends ClientMainHelper {
-
-        @Override
-        protected HelloClient getHelloClient() {
-            return new HelloUDPNonblockingClient();
         }
     }
 
