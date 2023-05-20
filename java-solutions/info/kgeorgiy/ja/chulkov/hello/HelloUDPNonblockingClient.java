@@ -19,7 +19,7 @@ import java.util.function.Consumer;
 public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
 
 
-    public static final Consumer<SelectionKey> MAKE_WRITABLE = it -> it.interestOpsOr(SelectionKey.OP_WRITE);
+    private static final Consumer<SelectionKey> MAKE_WRITABLE = it -> it.interestOpsOr(SelectionKey.OP_WRITE);
 
     /**
      * Method to run {@link HelloUDPNonblockingClient#run(String, int, String, int, int)} from CLI
@@ -52,13 +52,18 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
             final SocketAddress address) throws IOException {
         final Selector selector;
         selector = Selector.open();
-        for (int thread = 1; thread <= threads; thread++) {
-            final var datagramChannel = DatagramChannel.open();
-            datagramChannel.configureBlocking(false);
-            datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
-            datagramChannel.connect(address);
-            datagramChannel.register(selector, SelectionKey.OP_WRITE,
-                    new HelloClientThreadContext(thread, prefix, requests, BUFFER_SIZE));
+        try {
+            for (int thread = 1; thread <= threads; thread++) {
+                final var datagramChannel = DatagramChannel.open();
+                datagramChannel.configureBlocking(false);
+                datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
+                datagramChannel.connect(address);
+                datagramChannel.register(selector, SelectionKey.OP_WRITE,
+                        new HelloClientThreadContext(thread, prefix, requests, BUFFER_SIZE));
+            }
+        } catch (final IOException e) {
+            UDPUtils.closeSelectorWithChannels(selector);
+            throw new UncheckedIOException(e);
         }
 
         return selector;
@@ -81,7 +86,6 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
     }
 
 
-
     private static Consumer<SelectionKey> getOpenChecker(final AtomicBoolean isOpened) {
         return key -> {
             if (key.channel().isOpen()) {
@@ -101,7 +105,8 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
         final AtomicBoolean isOpened = new AtomicBoolean(false);
         final Consumer<SelectionKey> openChecker = getOpenChecker(isOpened);
         final Consumer<SelectionKey> keyProcessor = key -> processKey(address, key);
-        try (final Selector selector = prepareSelector(prefix, threads, requests, address)) {
+        try {
+            final Selector selector = prepareSelector(prefix, threads, requests, address);
             try {
                 while (!selector.keys().isEmpty()) {
                     if (selector.select(keyProcessor, TIMEOUT) == 0) {
@@ -114,7 +119,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
                     }
                 }
             } finally {
-                selector.keys().forEach(UDPUtils::closeChannel);
+                UDPUtils.closeSelectorWithChannels(selector);
             }
         } catch (final IOException e) {
             throw new UncheckedIOException(e);

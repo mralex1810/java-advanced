@@ -5,6 +5,7 @@ import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -49,5 +50,10 @@ public class UDPUtils {
             } catch (final IOException ignored) {
             }
         }
+    }
+
+    public static void closeSelectorWithChannels(final Selector selector) throws IOException {
+        selector.keys().forEach(UDPUtils::closeChannel);
+        selector.close();
     }
 }

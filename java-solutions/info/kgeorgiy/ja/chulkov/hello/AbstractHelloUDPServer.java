@@ -56,7 +56,7 @@ abstract class AbstractHelloUDPServer implements HelloServer {
      */
     private State state = State.NOT_STARTED;
 
-    protected static void mainHelp(final String[] args, final Supplier<HelloServer> helloServerSupplier) {
+    static void mainHelp(final String[] args, final Supplier<HelloServer> helloServerSupplier) {
         Objects.requireNonNull(args);
         Arrays.stream(args).forEach(Objects::requireNonNull);
         if (args.length != 2) {

@@ -21,9 +21,9 @@ import java.util.function.Consumer;
 public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     private Selector selector;
-    private Queue<Attachment> toSend;
-    private Queue<Attachment> toReceive;
-    final Consumer<SelectionKey> keyProcessor = this::processKey;
+    private Queue<Packet> toSend;
+    private Queue<Packet> toReceive;
+    private final Consumer<SelectionKey> keyProcessor = this::processKey;
 
     /**
      * Method to run {@link HelloUDPNonblockingServer} from CLI
@@ -65,10 +65,11 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             toSend = new ArrayDeque<>(threads);
             toReceive = new ArrayDeque<>(threads);
             for (int i = 0; i < threads; i++) {
-                toReceive.add(new Attachment(datagramChannel.socket().getReceiveBufferSize()));
+                toReceive.add(new Packet(datagramChannel.socket().getReceiveBufferSize()));
             }
             toReceive.forEach(it -> it.initTask(key, toSend));
         } catch (final IOException e) {
+            closeSelectorAndChannels();
             throw new UncheckedIOException(e);
         }
 
@@ -76,7 +77,7 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     private void doWriteOperation(final SelectionKey key,
             final DatagramChannel channel) {
-        final Attachment answer;
+        final Packet answer;
         synchronized (toSend) {
             answer = toSend.remove();
             if (toSend.isEmpty()) {
@@ -94,7 +95,7 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     private void doReadOperation(final SelectionKey key,
             final DatagramChannel channel) throws IOException {
-        final Attachment packet;
+        final Packet packet;
         if (toReceive.isEmpty()) {
             key.interestOpsAnd(~SelectionKey.OP_READ);
             return;
@@ -107,22 +108,26 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     @Override
     public void close() {
+        closeSelectorAndChannels();
+        super.close();
+    }
+
+    private void closeSelectorAndChannels() {
         selector.keys().forEach(UDPUtils::closeChannel);
         try {
             selector.close();
         } catch (final IOException ignored) {
         }
-        super.close();
     }
 
-    private static class Attachment {
+    private static class Packet {
 
         private final ByteBuffer buffer;
         private final Runnable bufferModifier;
         private SocketAddress address;
         private Runnable task;
 
-        public Attachment(final int bufferSize) {
+        public Packet(final int bufferSize) {
             buffer = ByteBuffer.allocate(bufferSize);
             this.bufferModifier = taskGenerator.apply(buffer);
         }
@@ -139,7 +144,7 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             this.address = inetAddress;
         }
 
-        public void initTask(final SelectionKey key, final Queue<Attachment> toSend) {
+        public void initTask(final SelectionKey key, final Queue<Packet> toSend) {
             task = () -> {
                 try {
                     bufferModifier.run();
