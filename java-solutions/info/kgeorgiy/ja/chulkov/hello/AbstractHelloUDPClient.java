@@ -17,10 +17,7 @@ abstract class AbstractHelloUDPClient implements HelloClient {
      * Timeout for iterations of HelloClient
      */
     public static final int TIMEOUT = 50;
-    /**
-     * Size of buffers for IO operations
-     */
-    public static final int BUFFER_SIZE = 4096;
+
 
     private static void printUsage() {
         System.err.println("""

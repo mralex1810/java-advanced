@@ -59,7 +59,8 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
                 datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
                 datagramChannel.connect(address);
                 datagramChannel.register(selector, SelectionKey.OP_WRITE,
-                        new HelloClientThreadContext(thread, prefix, requests, BUFFER_SIZE));
+                        new HelloClientThreadContext(thread, prefix, requests,
+                                datagramChannel.socket().getReceiveBufferSize()));
             }
         } catch (final IOException e) {
             UDPUtils.closeSelectorWithChannels(selector);

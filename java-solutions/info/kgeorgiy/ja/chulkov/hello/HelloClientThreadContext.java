@@ -132,7 +132,7 @@ class HelloClientThreadContext {
     }
 
     /**
-     * Converts a ByteBuffer to a CharBuffer using UTF-8 decoding.
+     * Converts a ByteBuffer content to a CharBuffer using UTF-8 decoding.
      *
      * @param src The source ByteBuffer to be converted.
      * @param out The target CharBuffer to store the converted characters.

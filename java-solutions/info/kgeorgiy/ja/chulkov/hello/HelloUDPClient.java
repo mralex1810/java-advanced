@@ -15,7 +15,6 @@ import java.util.stream.IntStream;
  */
 public class HelloUDPClient extends AbstractHelloUDPClient {
 
-
     /**
      * Method to run {@link HelloUDPClient#run(String, int, String, int, int)} from CLI
      *
@@ -26,12 +25,16 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
     }
 
     private void threadAction(
-            final HelloClientThreadContext context,
+            final int threadNum,
+            final String prefix,
+            final int requests,
             final SocketAddress address,
             final AtomicReference<RuntimeException> exception,
             final Thread mainThread
     ) {
         try (final var datagramSocket = new DatagramSocket()) {
+            final var context = new HelloClientThreadContext(threadNum, prefix, requests,
+                    datagramSocket.getReceiveBufferSize());
             datagramSocket.setSoTimeout(TIMEOUT);
             while (!Thread.interrupted() && !context.isEnded()) {
                 context.makeRequest();
@@ -68,8 +71,8 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
         final AtomicReference<RuntimeException> exception = new AtomicReference<>(null);
         final Thread mainThread = Thread.currentThread();
         final var threadsList = IntStream.range(1, threads + 1)
-                .mapToObj(threadNum -> new HelloClientThreadContext(threadNum, prefix, requests, BUFFER_SIZE))
-                .<Runnable>map(context -> () -> threadAction(context, address, exception, mainThread))
+                .<Runnable>mapToObj(
+                        threadNum -> () -> threadAction(threadNum, prefix, requests, address, exception, mainThread))
                 .map(Thread::new)
                 .peek(Thread::start)
                 .toList();
