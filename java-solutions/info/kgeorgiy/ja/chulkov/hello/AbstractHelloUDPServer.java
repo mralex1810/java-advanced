@@ -120,7 +120,7 @@ abstract class AbstractHelloUDPServer implements HelloServer {
      * Prepares the server to listen on the specified port.
      *
      * @param port    The port number on which requests will be received.
-     * @param threads
+     * @param threads Number of working threads
      */
     protected abstract void prepare(int port, final int threads);
 
