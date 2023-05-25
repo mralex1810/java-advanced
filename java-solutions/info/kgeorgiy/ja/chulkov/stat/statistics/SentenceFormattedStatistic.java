@@ -13,6 +13,21 @@ public final class SentenceFormattedStatistic extends AbstractTextFormattedStati
 
     @Override
     protected boolean isCorrect(final String subtext) {
-        return true;
+        return subtext.length() != 1;
+    }
+
+    @Override
+    protected String getName() {
+        return "sentence";
+    }
+
+    @Override
+    protected String getMultipleName() {
+        return "sentences";
+    }
+
+    @Override
+    protected Gender getGender() {
+        return Gender.NEUTER;
     }
 }

@@ -9,4 +9,19 @@ public class CurrencyFormattedStatistic extends AbstractNumberFormattedStatistic
         super(locale, outputLocale, resourceBundle, "_currency",
                 NumberFormat::getCurrencyInstance);
     }
+
+    @Override
+    protected String getName() {
+        return "sum";
+    }
+
+    @Override
+    protected String getMultipleName() {
+        return "sums";
+    }
+
+    @Override
+    protected Gender getGender() {
+        return Gender.FEMININE;
+    }
 }

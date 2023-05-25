@@ -1,36 +1,36 @@
 Analyzing file "info/kgeorgiy/ja/chulkov/stat/tests/resources/big.in"
 Summary
-	Sentences count: 32,836.
-	Words count: 565,175.
-	Numbers count: 347.
-	Currencies count: 0.
-	Dates count: 4.
-Sentence statistic
-	Sentences count: 32,836 (31,755 distinct).
-	Minimum sentence: ".".
+	Count sentences: 32,729.
+	Count words: 565,175.
+	Count numbers: 347.
+	Count currencies: 0.
+	Count dates: 4.
+Statistic on sentences
+	Count sentences: 32,729 (31,754 distinct).
+	Minimum sentence: "... and the count began bustling to get out his pocketbook.".
 	Maximum sentence: "”—and she left the hall.".
-	Minimum length sentence: 1 (".").
-	Maximum length sentence: 1,762 ("But Count Rostopchín, who now taunted those who left Moscow and now had the government offices removed; now distributed quite useless weapons to the drunken rabble; now had processions displaying the icons, and now forbade Father Augustin to remove icons or the relics of saints; now seized all the private carts in Moscow and on one hundred and thirty-six of them removed the balloon that was being constructed by Leppich; now hinted that he would burn Moscow and related how he had set fire to his own house; now wrote a proclamation to the French solemnly upbraiding them for having destroyed his Orphanage; now claimed the glory of having hinted that he would burn Moscow and now repudiated the deed; now ordered the people to catch all spies and bring them to him, and now reproached them for doing so; now expelled all the French residents from Moscow, and now allowed Madame Aubert-Chalmé (the center of the whole French colony in Moscow) to remain, but ordered the venerable old postmaster Klyucharëv to be arrested and exiled for no particular offense; now assembled the people at the Three Hills to fight the French and now, to get rid of them, handed over to them a man to be killed and himself drove away by a back gate; now declared that he would not survive the fall of Moscow, and now wrote French verses in albums concerning his share in the affair—this man did not understand the meaning of what was happening but merely wanted to do something himself that would astonish people, to perform some patriotically heroic feat; and like a child he made sport of the momentous, and unavoidable event—the abandonment and burning of Moscow—and tried with his puny hand now to speed and now to stay the enormous, popular tide that bore him along with it.").
-	Average length sentence: 96.081.
-Word statistic
-	Words count: 565,175 (18,751 distinct).
+	Minimum length of sentence: 2 ("I?").
+	Maximum length of sentence: 1,762 ("But Count Rostopchín, who now taunted those who left Moscow and now had the government offices removed; now distributed quite useless weapons to the drunken rabble; now had processions displaying the icons, and now forbade Father Augustin to remove icons or the relics of saints; now seized all the private carts in Moscow and on one hundred and thirty-six of them removed the balloon that was being constructed by Leppich; now hinted that he would burn Moscow and related how he had set fire to his own house; now wrote a proclamation to the French solemnly upbraiding them for having destroyed his Orphanage; now claimed the glory of having hinted that he would burn Moscow and now repudiated the deed; now ordered the people to catch all spies and bring them to him, and now reproached them for doing so; now expelled all the French residents from Moscow, and now allowed Madame Aubert-Chalmé (the center of the whole French colony in Moscow) to remain, but ordered the venerable old postmaster Klyucharëv to be arrested and exiled for no particular offense; now assembled the people at the Three Hills to fight the French and now, to get rid of them, handed over to them a man to be killed and himself drove away by a back gate; now declared that he would not survive the fall of Moscow, and now wrote French verses in albums concerning his share in the affair—this man did not understand the meaning of what was happening but merely wanted to do something himself that would astonish people, to perform some patriotically heroic feat; and like a child he made sport of the momentous, and unavoidable event—the abandonment and burning of Moscow—and tried with his puny hand now to speed and now to stay the enormous, popular tide that bore him along with it.").
+	Average length of sentence: 96.392.
+Statistic on words
+	Count words: 565,175 (18,751 distinct).
 	Minimum word: "a".
 	Maximum word: "Zweck".
-	Minimum length word: 1 ("I").
-	Maximum length word: 18 ("characteristically").
-	Average length word: 4.386.
-Number statistic
-	Numbers count: 347 (69 distinct).
+	Minimum length of word: 1 ("I").
+	Maximum length of word: 18 ("characteristically").
+	Average length of word: 4.386.
+Statistic on numbers
+	Count numbers: 347 (69 distinct).
 	Minimum number: -6.
 	Maximum number: 160,000.
 	Average number: 2,578.646.
-Currency statistic
-	Currencies count: 0 (0 distinct).
+Statistic on money currencies
+	Count currencies: 0 (0 distinct).
 	Minimum currency: not found.
 	Maximum currency: not found.
 	Average currency: not found.
-Date statistic
-	Dates count: 4 (4 distinct).
+Statistic on dates
+	Count dates: 4 (4 distinct).
 	Minimum date: Oct 11, 1805.
 	Maximum date: Oct 30, 1812.
 	Average date: Dec 2, 1807.

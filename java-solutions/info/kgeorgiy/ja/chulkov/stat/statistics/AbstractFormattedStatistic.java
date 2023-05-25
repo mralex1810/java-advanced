@@ -1,29 +1,28 @@
 package info.kgeorgiy.ja.chulkov.stat.statistics;
 
 import java.math.BigInteger;
+import java.text.MessageFormat;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.NavigableSet;
 import java.util.ResourceBundle;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 
 public abstract class AbstractFormattedStatistic<T> implements FormattedStatistic {
 
 
     public static final String NOT_FOUND = "not_found";
     protected final ResourceBundle bundle;
-    protected final String keySuffix;
-    private final NavigableSet<T> previous;
     protected final NumberFormat outputNumberFormat;
-
+    private final NavigableSet<T> previous;
     protected int counter = 0;
     protected BigInteger total = BigInteger.ZERO;
 
     public AbstractFormattedStatistic(final Locale outputLocale, final ResourceBundle bundle, final String keySuffix,
             final TreeSet<T> previous) {
         this.bundle = bundle;
-        this.keySuffix = keySuffix;
         this.previous = previous;
         outputNumberFormat = NumberFormat.getNumberInstance(outputLocale);
     }
@@ -36,17 +35,21 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
 
     @Override
     public String getTitle() {
-        return bundle.getString("name" + keySuffix);
+        return bundle.getString("statistic") + " " + bundle.getString("on_" + getMultipleName());
     }
 
     @Override
     public String formattedCount() {
-        return String.format("%s: %s", bundle.getString("count" + keySuffix), outputNumberFormat.format(counter));
+        return MessageFormat.format(bundle.getString("count_format"),
+                bundle.getString("count"),
+                bundle.getString(getMultipleName()),
+                outputNumberFormat.format(counter));
     }
 
     public String formattedCountWithUniqueStat() {
-        return String.format("%s: %s (%s %s)",
-                bundle.getString("count" + keySuffix),
+        return MessageFormat.format(bundle.getString("count_uniq_format"),
+                bundle.getString("count"),
+                bundle.getString(getMultipleName()),
                 outputNumberFormat.format(counter),
                 outputNumberFormat.format(previous.size()),
                 getUniqueWord(previous.size())
@@ -72,32 +75,48 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
     }
 
     protected String minMaxFormat() {
-        return "%s: %s";
+        return "{0} {1}: {2}";
+    }
+
+    protected String formatMinMaxAvgT(final String key, final Supplier<T> elemGetter) {
+        return formatMinMaxAvg(key, () -> objToString(elemGetter.get()), getGender());
+    }
+
+    protected String formatMinMaxAvg(final String key, final Supplier<String> elemGetter,
+            final Gender gender) {
+        return MessageFormat.format(minMaxFormat(),
+                bundle.getString(key + "_" + gender.getKey()),
+                bundle.getString(getName()),
+                isEmpty() ? bundle.getString(NOT_FOUND) : elemGetter.get());
+    }
+
+    private boolean isEmpty() {
+        return counter == 0;
     }
 
     public String formattedMaxStat() {
-        return String.format(minMaxFormat(),
-                bundle.getString("max" + keySuffix),
-                previous.isEmpty() ? bundle.getString("not_found") : objToString(previous.last()));
+        return formatMinMaxAvgT("max", previous::last);
     }
 
     public String formattedMinStat() {
-        return String.format(minMaxFormat(),
-                bundle.getString("min" + keySuffix),
-                previous.isEmpty() ? bundle.getString(NOT_FOUND) : objToString(previous.first()));
+        return formatMinMaxAvgT("min", previous::first);
     }
-
-    protected abstract String objToString(T obj);
 
     protected String formattedAverageStat() {
-        return String.format("%s: %s",
-                bundle.getString("average" + keySuffix),
-                counter == 0 ? bundle.getString(NOT_FOUND) : average());
+        return formatMinMaxAvg("avg", this::average, getGender());
     }
-
-    protected abstract String average();
 
     protected double getAvgDouble() {
         return total.doubleValue() / counter;
     }
+
+    protected abstract String objToString(T obj);
+
+    protected abstract String average();
+
+    protected abstract String getName();
+
+    protected abstract String getMultipleName();
+
+    protected abstract Gender getGender();
 }

@@ -25,4 +25,19 @@ public final class WordFormattedStatistic extends AbstractTextFormattedStatistic
         }
         return isWord;
     }
+
+    @Override
+    protected String getName() {
+        return "word";
+    }
+
+    @Override
+    protected String getMultipleName() {
+        return "words";
+    }
+
+    @Override
+    protected Gender getGender() {
+        return Gender.NEUTER;
+    }
 }

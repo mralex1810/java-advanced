@@ -41,6 +41,10 @@ public class IntegrationTextStatisticsTests {
     public void loremTest() throws IOException {
         test("lorem", "en_US");
     }
+    @Test
+    public void emptyTest() throws IOException {
+        test("empty", "en_US");
+    }
 
     @Test
     public void humourTest() throws IOException {

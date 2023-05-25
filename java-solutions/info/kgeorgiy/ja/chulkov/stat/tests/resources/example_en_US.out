@@ -1,36 +1,36 @@
 Analyzing file "info/kgeorgiy/ja/chulkov/stat/tests/resources/example.in"
 Summary
-	Sentences count: 44.
-	Words count: 270.
-	Numbers count: 36.
-	Currencies count: 3.
-	Dates count: 3.
-Sentence statistic
-	Sentences count: 44 (44 distinct).
+	Count sentences: 44.
+	Count words: 270.
+	Count numbers: 36.
+	Count currencies: 3.
+	Count dates: 3.
+Statistic on sentences
+	Count sentences: 44 (44 distinct).
 	Minimum sentence: "Аргументы командной строки: локаль текста, локаль вывода, файл с текстом, файл отчета.".
 	Maximum sentence: "Число чисел: 40.".
-	Minimum length sentence: 13 ("Число дат: 3.").
-	Maximum length sentence: 211 ("Для каждой категории должна собираться следующая статистика: число вхождений, число различных значений, минимальное значение, максимальное значение, минимальная длина, максимальная длина, среднее значение/длина.").
-	Average length sentence: 53.909.
-Word statistic
-	Words count: 270 (152 distinct).
+	Minimum length of sentence: 13 ("Число дат: 3.").
+	Maximum length of sentence: 211 ("Для каждой категории должна собираться следующая статистика: число вхождений, число различных значений, минимальное значение, максимальное значение, минимальная длина, максимальная длина, среднее значение/длина.").
+	Average length of sentence: 53.909.
+Statistic on words
+	Count words: 270 (152 distinct).
 	Minimum word: "GK".
 	Maximum word: "языках".
-	Minimum length word: 1 ("с").
-	Maximum length word: 14 ("TextStatistics").
-	Average length word: 6.696.
-Number statistic
-	Numbers count: 36 (23 distinct).
+	Minimum length of word: 1 ("с").
+	Maximum length of word: 14 ("TextStatistics").
+	Average length of word: 6.696.
+Statistic on numbers
+	Count numbers: 36 (23 distinct).
 	Minimum number: -12,345.
 	Maximum number: 12,345.67.
 	Average number: 230.083.
-Currency statistic
-	Currencies count: 3 (3 distinct).
+Statistic on money currencies
+	Count currencies: 3 (3 distinct).
 	Minimum currency: $100.00.
 	Maximum currency: $345.67.
 	Average currency: $222.33.
-Date statistic
-	Dates count: 3 (3 distinct).
+Statistic on dates
+	Count dates: 3 (3 distinct).
 	Minimum date: May 19, 2023.
 	Maximum date: Jun 2, 2023.
 	Average date: May 26, 2023.

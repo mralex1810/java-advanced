@@ -59,14 +59,16 @@ public abstract class AbstractTextFormattedStatistic extends AbstractFormattedSt
 
     @Override
     protected String minMaxFormat() {
-        return "%s: \"%s\"";
+        return "{0} {1}: \"{2}\"";
     }
 
     private String formatLengthString(final String str, final String key) {
-        return String.format("%s: %s (\"%s\")",
-                bundle.getString(key + keySuffix),
-                str == null ? bundle.getString("not_found") : outputNumberFormat.format(str.length()),
-                str == null ? "" : str
+        return String.format("%s %s %s: %s (\"%s\")",
+                bundle.getString(key + "_" + Gender.FEMININE.getKey()),
+                bundle.getString("length"),
+                bundle.getString("of_" + getName()),
+                counter == 0 ? bundle.getString(NOT_FOUND) : outputNumberFormat.format(str.length()),
+                counter == 0 ? "" : str
         );
     }
 
@@ -84,11 +86,20 @@ public abstract class AbstractTextFormattedStatistic extends AbstractFormattedSt
     }
 
     public String formattedMinLengthStat() {
-        return formatLengthString(minLength, "min_length");
+        return formatLengthString(minLength, "min");
     }
 
     public String formattedMaxLengthStat() {
-        return formatLengthString(maxLength, "max_length");
+        return formatLengthString(maxLength, "max");
+    }
+
+    @Override
+    protected String formattedAverageStat() {
+        return String.format("%s %s %s: %s",
+                bundle.getString("avg" + "_" + Gender.FEMININE.getKey()),
+                bundle.getString("length"),
+                bundle.getString("of_" + getName()),
+                counter == 0 ? bundle.getString(NOT_FOUND) : average());
     }
 
     @Override

@@ -27,6 +27,21 @@ public class DateFormattedStatistic extends AbstractFormattedStatistic<Date> {
     }
 
     @Override
+    protected String getName() {
+        return "date";
+    }
+
+    @Override
+    protected String getMultipleName() {
+        return "dates";
+    }
+
+    @Override
+    protected Gender getGender() {
+        return Gender.FEMININE;
+    }
+
+    @Override
     public void parseText(final String text) {
         for (final var pp = new ParsePosition(0); pp.getIndex() != text.length(); ) {
             final Date res = inputDateFormat.parse(text, pp);
