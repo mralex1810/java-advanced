@@ -24,10 +24,7 @@ import java.util.ResourceBundle;
 public class TextStatistics {
 
     public static final String ERROR_FORMAT = "%s: %s%n";
-
-    /**
-     * @param args Аргументы командной строки: локаль текста, локаль вывода, файл с текстом, файл отчета.
-     */
+    
     public static void main(final String[] args) {
         ArgumentsUtils.checkNonNullsArgs(args);
         ResourceBundle bundle = null;
@@ -88,7 +85,8 @@ public class TextStatistics {
 
     private static void printResults(final String inputFileName, final String outputFileName,
             final ResourceBundle bundle, final String text, final List<FormattedStatistic> statistics) {
-        try (final var out = new PrintStream(Files.newOutputStream(Path.of(outputFileName)))) {
+        try (final var out = new PrintStream(Files.newOutputStream(Path.of(outputFileName)), false,
+                StandardCharsets.UTF_8)) {
             out.println(bundle.getString("analyzing_file") + " \"" + inputFileName + "\"");
             out.println(bundle.getString("summary"));
             for (final FormattedStatistic statistic : statistics) {
@@ -103,7 +101,6 @@ public class TextStatistics {
             }
         } catch (final IOException e) {
             System.err.printf(ERROR_FORMAT, bundle.getString("io_exception_on_write"), e.getLocalizedMessage());
-
         }
     }
 }

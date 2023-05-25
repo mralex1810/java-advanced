@@ -51,7 +51,7 @@ public abstract class AbstractTextFormattedStatistic extends AbstractFormattedSt
     }
 
     private void checkFirst(final String subtext) {
-        if (minLength == null) {
+        if (minLength == null || maxLength == null) {
             minLength = subtext;
             maxLength = subtext;
         }

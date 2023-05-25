@@ -14,7 +14,7 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
     protected final Locale locale;
     protected final ResourceBundle bundle;
     protected final String keySuffix;
-    protected final NavigableSet<T> previous;
+    private final NavigableSet<T> previous;
     protected final NumberFormat numberFormat;
 
     protected int counter = 0;
