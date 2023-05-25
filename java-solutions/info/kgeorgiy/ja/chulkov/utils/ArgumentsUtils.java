@@ -1,6 +1,7 @@
 package info.kgeorgiy.ja.chulkov.utils;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -30,5 +31,13 @@ public class ArgumentsUtils {
     public static void checkNonNullsArgs(final String[] args) {
         Objects.requireNonNull(args);
         Arrays.stream(args).forEach(Objects::requireNonNull);
+    }
+
+    public static Locale toLocale(final String tag, final String errorMessage) {
+        final var locale = Locale.forLanguageTag(tag);
+        if (locale == null) {
+            System.err.println(errorMessage);
+        }
+        return locale;
     }
 }
