@@ -1,0 +1,52 @@
+Analyzing file "info/kgeorgiy/ja/chulkov/stat/tests/resources/humour.in"
+Summary
+	Sentences count: 8.
+	Words count: 201.
+	Numbers count: 27.
+	Currencies count: 0.
+	Dates count: 0.
+Sentence statistic
+	Sentences count: 8 (8 distinct).
+	Minimum sentence: ";DROP TABLE USERS"
+13) В поле "адрес для доставки корреспонденции" указал kgeorgiy.info
+14) В поле "Отображаемое имя" указал "() -> {console.log("Georgiy Korneev");}"
+15) В качестве суммы автоплатежа указал SLEEPING_COMPARATOR.for(10000000000000LL, "ms")
+$R$12) При помощи reflections и API Excel вызвал редактор встроеных функций и подменил РАВНОКЧЕК так, чтобы она считала не эквивалентный облигации доход по казначейскому векселю, а накопленный процент по ценным бумагам, процент по которым выплачивается в срок погашения, то есть НАКОПДОХОДПОГАШ.".
+	Maximum sentence: "Стало 100 рублей.".
+	Minimum length sentence: 6 ("Ltd.".").
+	Maximum length sentence: 568 ("Затем он:
+1) Перевёл со своего счёта 100 рублей самому себе
+2) Перевёл со своего счёта 999223372036854775807 рублей самому себе
+3) Перевёл 0 рублей самому себе
+4) С 1000 компьютеров переводил 0 рублей самому себе
+5) Перевёл NaN рублей أندريه ستانكيفيتش
+6) Перевёл 100 рублей через дорогу на финский язык
+null) Обменял undefined рублей на десять ClassCastException
+-1) Отправил на сервер ёжика с стакане
+-2) null null null
+10) Кинул Number("100") рублей себе на телефон
+11) Попробовал заплатить "1000" рублей за ЖКХ
+12) Привязал к своему аккаунту номер телефона ""'`;,.").
+	Average length sentence: 212.875.
+Word statistic
+	Words count: 201 (149 distinct).
+	Minimum word: "Aksёnov".
+	Maximum word: "كورنييف".
+	Minimum length word: 1 ("в").
+	Maximum length word: 18 ("ClassCastException").
+	Average length word: 5.657.
+Number statistic
+	Numbers count: 27 (19 distinct).
+	Minimum number: -2.
+	Maximum number: 999,223,372,036,854,800,000.
+	Average number: 341,606,742,105,732,540.
+Currency statistic
+	Currencies count: 0 (0 distinct).
+	Minimum currency: not found.
+	Maximum currency: not found.
+	Average currency: not found.
+Date statistic
+	Dates count: 0 (0 distinct).
+	Minimum date: not found.
+	Maximum date: not found.
+	Average date: not found.

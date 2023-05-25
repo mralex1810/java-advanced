@@ -6,27 +6,26 @@ import java.util.List;
 import java.util.Locale;
 import java.util.NavigableSet;
 import java.util.ResourceBundle;
+import java.util.TreeSet;
 
 public abstract class AbstractFormattedStatistic<T> implements FormattedStatistic {
 
 
     public static final String NOT_FOUND = "not_found";
-    protected final Locale locale;
     protected final ResourceBundle bundle;
     protected final String keySuffix;
     private final NavigableSet<T> previous;
-    protected final NumberFormat numberFormat;
+    protected final NumberFormat outputNumberFormat;
 
     protected int counter = 0;
     protected BigInteger total = BigInteger.ZERO;
 
-    public AbstractFormattedStatistic(final Locale locale, final ResourceBundle bundle,
-            final String keySuffix, final NavigableSet<T> previous) {
-        this.locale = locale;
+    public AbstractFormattedStatistic(final Locale outputLocale, final ResourceBundle bundle, final String keySuffix,
+            final TreeSet<T> previous) {
         this.bundle = bundle;
         this.keySuffix = keySuffix;
         this.previous = previous;
-        numberFormat = NumberFormat.getNumberInstance(locale);
+        outputNumberFormat = NumberFormat.getNumberInstance(outputLocale);
     }
 
     protected void registerObject(final T value, final long totalAdd) {
@@ -42,14 +41,14 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
 
     @Override
     public String formattedCount() {
-        return String.format("%s: %s", bundle.getString("count" + keySuffix), numberFormat.format(counter));
+        return String.format("%s: %s", bundle.getString("count" + keySuffix), outputNumberFormat.format(counter));
     }
 
     public String formattedCountWithUniqueStat() {
         return String.format("%s: %s (%s %s)",
                 bundle.getString("count" + keySuffix),
-                numberFormat.format(counter),
-                numberFormat.format(previous.size()),
+                outputNumberFormat.format(counter),
+                outputNumberFormat.format(previous.size()),
                 getUniqueWord(previous.size())
         );
     }

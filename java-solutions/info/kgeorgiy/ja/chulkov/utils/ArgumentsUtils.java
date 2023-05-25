@@ -33,8 +33,16 @@ public class ArgumentsUtils {
         Arrays.stream(args).forEach(Objects::requireNonNull);
     }
 
-    public static Locale toLocale(final String tag, final String errorMessage) {
-        final var locale = Locale.forLanguageTag(tag);
+    public static Locale toLocale(final String localeStr, final String errorMessage) {
+        final var flags = localeStr.split("_");
+        final var localeBuilder = new Locale.Builder().setLanguage(flags[0]);
+        if (flags.length > 1) {
+            localeBuilder.setRegion(flags[1]);
+        }
+        if (flags.length > 2) {
+            localeBuilder.setVariant(flags[2]);
+        }
+        final var locale = localeBuilder.build();
         if (locale == null) {
             System.err.println(errorMessage);
         }

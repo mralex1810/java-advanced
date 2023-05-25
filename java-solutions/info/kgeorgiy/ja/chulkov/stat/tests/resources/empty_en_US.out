@@ -1,0 +1,36 @@
+Analyzing file "info/kgeorgiy/ja/chulkov/stat/tests/resources/empty.in"
+Summary
+	Sentences count: 0.
+	Words count: 0.
+	Numbers count: 0.
+	Currencies count: 0.
+	Dates count: 0.
+Sentence statistic
+	Sentences count: 0 (0 distinct).
+	Minimum sentence: "not found".
+	Maximum sentence: "not found".
+	Minimum length sentence: not found ("").
+	Maximum length sentence: not found ("").
+	Average length sentence: not found.
+Word statistic
+	Words count: 0 (0 distinct).
+	Minimum word: "not found".
+	Maximum word: "not found".
+	Minimum length word: not found ("").
+	Maximum length word: not found ("").
+	Average length word: not found.
+Number statistic
+	Numbers count: 0 (0 distinct).
+	Minimum number: not found.
+	Maximum number: not found.
+	Average number: not found.
+Currency statistic
+	Currencies count: 0 (0 distinct).
+	Minimum currency: not found.
+	Maximum currency: not found.
+	Average currency: not found.
+Date statistic
+	Dates count: 0 (0 distinct).
+	Minimum date: not found.
+	Maximum date: not found.
+	Average date: not found.

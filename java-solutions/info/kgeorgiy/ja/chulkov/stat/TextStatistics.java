@@ -24,7 +24,8 @@ import java.util.ResourceBundle;
 public class TextStatistics {
 
     public static final String ERROR_FORMAT = "%s: %s%n";
-    
+    public static final String RESOURCE_BUNDLE = "info.kgeorgiy.ja.chulkov.stat.StatisticsResourceBundle";
+
     public static void main(final String[] args) {
         ArgumentsUtils.checkNonNullsArgs(args);
         ResourceBundle bundle = null;
@@ -36,7 +37,7 @@ public class TextStatistics {
         if (bundle == null) {
             bundle = ResourceBundle.getBundle("info.kgeorgiy.ja.chulkov.stat.StatisticsResourceBundle", Locale.US);
         }
-        if (args.length != 4) {
+        if (args.length < 4) {
             System.err.format(
                     "%s. %n %s: <%s> <%s> <%s> <%s> %n",
                     bundle.getString("Incorrect_usage"),
@@ -51,8 +52,7 @@ public class TextStatistics {
         final var inputLocale = toLocale(args[0], bundle.getString("input_locale_is_not_found"));
         final var outputLocale = toLocale(args[1], bundle.getString("output_locale_is_not_found"));
         try {
-            bundle = ResourceBundle.getBundle("info.kgeorgiy.ja.chulkov.stat.StatisticsResourceBundle",
-                    outputLocale);
+            bundle = ResourceBundle.getBundle(RESOURCE_BUNDLE, outputLocale);
         } catch (final MissingResourceException e) {
             System.err.format(ERROR_FORMAT, bundle.getString("bundle_not_found"), e.getLocalizedMessage());
         }
@@ -67,19 +67,31 @@ public class TextStatistics {
         if (inputLocale == null || outputLocale == null || text == null) {
             return;
         }
-        final List<FormattedStatistic> statistics = getStatistics(bundle, inputLocale);
-        printResults(args[2], args[3], bundle, text, statistics);
+        final List<FormattedStatistic> statistics = getStatistics(bundle, inputLocale, outputLocale);
+        if (args.length > 4) {
+            final var ruLocale = Locale.of("ru", "RU");
+            final var enLocale = Locale.of("en", "US");
+            final var ruBundle = ResourceBundle.getBundle(RESOURCE_BUNDLE, ruLocale);
+            final var enBundle = ResourceBundle.getBundle(RESOURCE_BUNDLE, enLocale);
+            printResults(args[2], args[3] + "_ru_RU.out", ruBundle, text,
+                    getStatistics(ruBundle, inputLocale, ruLocale));
+            printResults(args[2], args[3] + "_en_US.out", enBundle, text,
+                    getStatistics(enBundle, inputLocale, enLocale));
+        } else {
+            printResults(args[2], args[3], bundle, text, statistics);
+        }
+
     }
 
     private static List<FormattedStatistic> getStatistics(final ResourceBundle bundle,
-            final Locale inputLocale) {
+            final Locale inputLocale, final Locale outputLocale) {
         final var collator = Collator.getInstance(inputLocale);
         return List.of(
-                new SentenceFormattedStatistic(inputLocale, bundle, collator),
-                new WordFormattedStatistic(inputLocale, bundle, collator),
-                new NumberFormattedStatistic(inputLocale, bundle),
-                new CurrencyFormattedStatistic(inputLocale, bundle),
-                new DateFormattedStatistic(inputLocale, bundle)
+                new SentenceFormattedStatistic(inputLocale, outputLocale, bundle, collator),
+                new WordFormattedStatistic(inputLocale, outputLocale, bundle, collator),
+                new NumberFormattedStatistic(inputLocale, outputLocale, bundle),
+                new CurrencyFormattedStatistic(inputLocale, outputLocale, bundle),
+                new DateFormattedStatistic(inputLocale, outputLocale, bundle)
         );
     }
 

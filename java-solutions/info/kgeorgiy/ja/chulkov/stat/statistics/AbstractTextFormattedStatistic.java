@@ -13,9 +13,9 @@ public abstract class AbstractTextFormattedStatistic extends AbstractFormattedSt
     private String minLength = null;
     private String maxLength = null;
 
-    protected AbstractTextFormattedStatistic(final Locale locale, final ResourceBundle resourceBundle,
+    protected AbstractTextFormattedStatistic(final Locale outputLocale, final ResourceBundle resourceBundle,
             final BreakIterator iterator, final Collator collator, final String keySuffix) {
-        super(locale, resourceBundle, keySuffix, new TreeSet<>(collator));
+        super(outputLocale, resourceBundle, keySuffix, new TreeSet<>(collator));
         this.iterator = iterator;
     }
 
@@ -65,7 +65,7 @@ public abstract class AbstractTextFormattedStatistic extends AbstractFormattedSt
     private String formatLengthString(final String str, final String key) {
         return String.format("%s: %s (\"%s\")",
                 bundle.getString(key + keySuffix),
-                str == null ? bundle.getString("not_found") : numberFormat.format(str.length()),
+                str == null ? bundle.getString("not_found") : outputNumberFormat.format(str.length()),
                 str == null ? "" : str
         );
     }
@@ -93,7 +93,7 @@ public abstract class AbstractTextFormattedStatistic extends AbstractFormattedSt
 
     @Override
     protected String average() {
-        return numberFormat.format(getAvgDouble());
+        return outputNumberFormat.format(getAvgDouble());
     }
 
 }

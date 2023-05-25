@@ -1,0 +1,36 @@
+Анализируемый файл "info/kgeorgiy/ja/chulkov/stat/tests/resources/big.in"
+Сводная статистика
+	Число предложений: 32 836.
+	Число слов: 565 175.
+	Число чисел: 347.
+	Число сумм: 0.
+	Число дат: 4.
+Статистика по предложениям
+	Число предложений: 32 836 (31 755 различных).
+	Минимальное предложение: ".".
+	Максимальное предложение: "”—and she left the hall.".
+	Минимальная длина предложения: 1 (".").
+	Максимальная длина предложения: 1 762 ("But Count Rostopchín, who now taunted those who left Moscow and now had the government offices removed; now distributed quite useless weapons to the drunken rabble; now had processions displaying the icons, and now forbade Father Augustin to remove icons or the relics of saints; now seized all the private carts in Moscow and on one hundred and thirty-six of them removed the balloon that was being constructed by Leppich; now hinted that he would burn Moscow and related how he had set fire to his own house; now wrote a proclamation to the French solemnly upbraiding them for having destroyed his Orphanage; now claimed the glory of having hinted that he would burn Moscow and now repudiated the deed; now ordered the people to catch all spies and bring them to him, and now reproached them for doing so; now expelled all the French residents from Moscow, and now allowed Madame Aubert-Chalmé (the center of the whole French colony in Moscow) to remain, but ordered the venerable old postmaster Klyucharëv to be arrested and exiled for no particular offense; now assembled the people at the Three Hills to fight the French and now, to get rid of them, handed over to them a man to be killed and himself drove away by a back gate; now declared that he would not survive the fall of Moscow, and now wrote French verses in albums concerning his share in the affair—this man did not understand the meaning of what was happening but merely wanted to do something himself that would astonish people, to perform some patriotically heroic feat; and like a child he made sport of the momentous, and unavoidable event—the abandonment and burning of Moscow—and tried with his puny hand now to speed and now to stay the enormous, popular tide that bore him along with it.").
+	Средняя длина предложения: 96,081.
+Статистика по словам
+	Число слов: 565 175 (18 751 различный).
+	Минимальное слово: "a".
+	Максимальное слово: "Zweck".
+	Минимальная длина слова: 1 ("I").
+	Максимальная длина слова: 18 ("characteristically").
+	Средняя длина слова: 4,386.
+Статистика по числам
+	Число чисел: 347 (69 различных).
+	Минимальное число: -6.
+	Максимальное число: 160 000.
+	Среднее число: 2 578,646.
+Статистика по суммам денег
+	Число сумм: 0 (0 различных).
+	Минимальная сумма: Не найдено.
+	Максимальная сумма: Не найдено.
+	Средняя сумма: Не найдено.
+Статистика по датам
+	Число дат: 4 (4 различных).
+	Минимальная дата: 11 окт. 1805 г..
+	Максимальная дата: 30 окт. 1812 г..
+	Средняя дата: 2 дек. 1807 г..

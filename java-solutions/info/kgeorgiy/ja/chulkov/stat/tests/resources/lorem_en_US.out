@@ -1,0 +1,36 @@
+Analyzing file "info/kgeorgiy/ja/chulkov/stat/tests/resources/lorem.in"
+Summary
+	Sentences count: 53.
+	Words count: 385.
+	Numbers count: 0.
+	Currencies count: 0.
+	Dates count: 0.
+Sentence statistic
+	Sentences count: 53 (51 distinct).
+	Minimum sentence: "Aenean a felis blandit, congue libero vitae, interdum leo.".
+	Maximum sentence: "Vivamus suscipit neque vel lacus posuere molestie.".
+	Minimum length sentence: 15 ("Nulla facilisi.").
+	Maximum length sentence: 98 ("Nullam mollis, lacus non tristique suscipit, mi augue euismod erat, et maximus sem arcu quis eros.").
+	Average length sentence: 48.283.
+Word statistic
+	Words count: 385 (154 distinct).
+	Minimum word: "a".
+	Maximum word: "vulputate".
+	Minimum length word: 1 ("a").
+	Maximum length word: 12 ("pellentesque").
+	Average length word: 5.553.
+Number statistic
+	Numbers count: 0 (0 distinct).
+	Minimum number: not found.
+	Maximum number: not found.
+	Average number: not found.
+Currency statistic
+	Currencies count: 0 (0 distinct).
+	Minimum currency: not found.
+	Maximum currency: not found.
+	Average currency: not found.
+Date statistic
+	Dates count: 0 (0 distinct).
+	Minimum date: not found.
+	Maximum date: not found.
+	Average date: not found.
