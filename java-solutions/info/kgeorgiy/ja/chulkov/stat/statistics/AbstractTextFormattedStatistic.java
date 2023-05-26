@@ -15,7 +15,7 @@ public abstract class AbstractTextFormattedStatistic extends AbstractFormattedSt
     private String maxLength = null;
 
     protected AbstractTextFormattedStatistic(final Locale outputLocale, final ResourceBundle resourceBundle,
-            final BreakIterator iterator, final Collator collator, final String keySuffix) {
+            final BreakIterator iterator, final Collator collator) {
         super(outputLocale, resourceBundle, new TreeSet<>(collator));
         this.iterator = iterator;
     }

@@ -8,7 +8,7 @@ import java.util.ResourceBundle;
 public final class SentenceFormattedStatistic extends AbstractTextFormattedStatistic {
 
     public SentenceFormattedStatistic(final Locale locale, final Locale outputLocale, final ResourceBundle resourceBundle, final Collator collator) {
-        super(outputLocale, resourceBundle, BreakIterator.getSentenceInstance(locale), collator, "_sentence");
+        super(outputLocale, resourceBundle, BreakIterator.getSentenceInstance(locale), collator);
     }
 
     @Override

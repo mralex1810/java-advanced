@@ -8,7 +8,7 @@ import java.util.ResourceBundle;
 public final class WordFormattedStatistic extends AbstractTextFormattedStatistic {
 
     public WordFormattedStatistic(final Locale locale, final Locale outputLocale, final ResourceBundle resourceBundle, final Collator collator) {
-        super(outputLocale, resourceBundle, BreakIterator.getWordInstance(locale), collator, "_word");
+        super(outputLocale, resourceBundle, BreakIterator.getWordInstance(locale), collator);
     }
 
     @Override

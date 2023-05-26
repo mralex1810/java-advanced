@@ -7,7 +7,7 @@ import java.util.ResourceBundle;
 public class NumberFormattedStatistic extends AbstractNumberFormattedStatistic {
 
     public NumberFormattedStatistic(final Locale inputLocale, final Locale outputLocale, final ResourceBundle resourceBundle) {
-        super(inputLocale, outputLocale, resourceBundle, "_number", NumberFormat::getNumberInstance);
+        super(inputLocale, outputLocale, resourceBundle, NumberFormat::getNumberInstance);
     }
 
     @Override

@@ -6,7 +6,7 @@ import java.util.ResourceBundle;
 
 public class CurrencyFormattedStatistic extends AbstractNumberFormattedStatistic {
     public CurrencyFormattedStatistic(final Locale locale, final Locale outputLocale, final ResourceBundle resourceBundle) {
-        super(locale, outputLocale, resourceBundle, "_currency",
+        super(locale, outputLocale, resourceBundle,
                 NumberFormat::getCurrencyInstance);
     }
 

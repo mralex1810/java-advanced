@@ -13,8 +13,9 @@ public abstract class AbstractNumberFormattedStatistic extends AbstractFormatted
     private final NumberFormat inputSpecialNumberFormat;
     private final NumberFormat outputSpecialNumberFormat;
 
-    protected AbstractNumberFormattedStatistic(final Locale locale, final Locale outputLocale, final ResourceBundle resourceBundle,
-            final String keySuffix, final Function<Locale, NumberFormat> specialNumberFormatGenerator) {
+    protected AbstractNumberFormattedStatistic(final Locale locale, final Locale outputLocale,
+            final ResourceBundle resourceBundle,
+            final Function<Locale, NumberFormat> specialNumberFormatGenerator) {
         super(outputLocale, resourceBundle, new TreeSet<>(Comparator.comparingDouble(Number::doubleValue)));
         this.inputSpecialNumberFormat = specialNumberFormatGenerator.apply(locale);
         this.outputSpecialNumberFormat = specialNumberFormatGenerator.apply(outputLocale);
