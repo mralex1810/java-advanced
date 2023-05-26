@@ -60,7 +60,12 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             datagramChannel.configureBlocking(false);
             datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
             datagramChannel.bind(new InetSocketAddress(port));
-            datagramChannel.register(selector, SelectionKey.OP_READ);
+            try {
+                datagramChannel.register(selector, SelectionKey.OP_READ);
+            } catch (final IOException e) {
+                datagramChannel.close();
+                throw e;
+            }
             final SelectionKey key = selector.keys().stream().findAny().orElseThrow();
             toSend = new ArrayDeque<>(threads);
             toReceive = new ArrayDeque<>(threads);
