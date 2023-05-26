@@ -1,7 +1,7 @@
 Analyzing file "info/kgeorgiy/ja/chulkov/stat/tests/resources/humour.in"
 Summary
 	Count sentences: 8.
-	Count words: 201.
+	Count words: 202.
 	Count numbers: 27.
 	Count currencies: 0.
 	Count dates: 0.
@@ -29,12 +29,12 @@ null) Обменял undefined рублей на десять ClassCastException
 12) Привязал к своему аккаунту номер телефона ""'`;,.").
 	Average length of sentence: 212.875.
 Statistic on words
-	Count words: 201 (149 distinct).
+	Count words: 202 (150 distinct).
 	Minimum word: "Aksёnov".
-	Maximum word: "كورنييف".
+	Maximum word: "🅹".
 	Minimum length of word: 1 ("в").
 	Maximum length of word: 18 ("ClassCastException").
-	Average length of word: 5.657.
+	Average length of word: 5.639.
 Statistic on numbers
 	Count numbers: 27 (19 distinct).
 	Minimum number: -2.

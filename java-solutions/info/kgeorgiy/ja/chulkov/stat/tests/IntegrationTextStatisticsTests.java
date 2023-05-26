@@ -55,4 +55,13 @@ public class IntegrationTextStatisticsTests {
     public void bigTest() throws IOException {
         test("big", "en_US");
     }
+    @Test
+    public void arabicTest() throws IOException {
+        test("arabic", "ar");
+    }
+
+    @Test(expected = AssertionError.class)
+    public void wrongLocale() throws IOException {
+        test("arabic", "en_US");
+    }
 }
