@@ -10,7 +10,6 @@ import java.net.StandardSocketOptions;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -71,7 +70,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
         return selector;
     }
 
-    private static void processKey(final SocketAddress address, final SelectionKey key, final Selector selector) {
+    private static void processKey(final SocketAddress address, final SelectionKey key) {
         final var channel = (DatagramChannel) key.channel();
         final var context = (HelloClientThreadContext) key.attachment();
         try {
@@ -88,14 +87,6 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
     }
 
 
-    private static Consumer<SelectionKey> getOpenChecker(final AtomicBoolean isOpened) {
-        return key -> {
-            if (key.channel().isOpen()) {
-                isOpened.set(true);
-            }
-        };
-    }
-
     @Override
     public void run(
             final String host,
@@ -104,9 +95,9 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
             final int threads,
             final int requests) {
         final SocketAddress address = prepareAddress(host, port);
+        final Consumer<SelectionKey> keyProcessor = key -> processKey(address, key);
         try {
             final Selector selector = prepareSelector(prefix, threads, requests, address);
-            final Consumer<SelectionKey> keyProcessor = key -> processKey(address, key, selector);
             try {
                 while (!selector.keys().isEmpty()) {
                     if (selector.select(keyProcessor, TIMEOUT) == 0) {
