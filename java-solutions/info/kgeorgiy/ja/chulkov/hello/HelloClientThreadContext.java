@@ -186,6 +186,7 @@ class HelloClientThreadContext {
     public boolean validateAnswer() {
         syncBytesToChars(answerBytes, answerChars);
         int numbers = 0;
+        // :NOTE: simplify
         for (int i = 0; i < answerChars.length(); i++) {
             if (Character.isDigit(answerChars.charAt(i))) {
                 final int numberBeginIndex = i;
@@ -248,4 +249,3 @@ class HelloClientThreadContext {
         return request > requests;
     }
 }
-

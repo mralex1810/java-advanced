@@ -2,6 +2,7 @@ package info.kgeorgiy.ja.chulkov.hello;
 
 import info.kgeorgiy.ja.chulkov.utils.UDPUtils;
 import info.kgeorgiy.java.advanced.hello.HelloServer;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
@@ -13,7 +14,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.function.Consumer;
 
 /**
  * Implementation of {@link HelloServer} with main method and nonblocking operations
@@ -23,7 +23,6 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
     private Selector selector;
     private Queue<Packet> toSend;
     private Queue<Packet> toReceive;
-    private final Consumer<SelectionKey> keyProcessor = this::processKey;
 
     /**
      * Method to run {@link HelloUDPNonblockingServer} from CLI
@@ -36,12 +35,13 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     @Override
     protected void getterIteration() throws IOException {
-        selector.select(keyProcessor);
+        selector.select(this::processKey);
     }
 
     private void processKey(final SelectionKey key) {
         try {
             final DatagramChannel channel = (DatagramChannel) key.channel();
+            // :NOTE: readble && writable
             if (key.isWritable()) {
                 doWriteOperation(key, channel);
             } else if (key.isReadable()) {
@@ -66,12 +66,14 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
                 datagramChannel.close();
                 throw e;
             }
+
             final SelectionKey key = selector.keys().stream().findAny().orElseThrow();
             toSend = new ArrayDeque<>(threads);
             toReceive = new ArrayDeque<>(threads);
             for (int i = 0; i < threads; i++) {
                 toReceive.add(new Packet(datagramChannel.socket().getReceiveBufferSize()));
             }
+            // :NOTE: initTask?
             toReceive.forEach(it -> it.initTask(key, toSend));
         } catch (final IOException e) {
             closeSelectorAndChannels();
@@ -83,7 +85,7 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
     private void doWriteOperation(final SelectionKey key,
             final DatagramChannel channel) {
         final Packet answer;
-        synchronized (toSend) {
+        synchronized (toSend) { // :NOTE: synchronized
             answer = toSend.remove();
             if (toSend.isEmpty()) {
                 key.interestOpsAnd(~SelectionKey.OP_WRITE);
@@ -92,22 +94,21 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
         try {
             channel.send(answer.getBuffer(), answer.getAddress());
         } catch (final IOException e) {
-            e.printStackTrace();
+            e.printStackTrace(); // :NOTE: unificate
         }
         toReceive.add(answer);
         key.interestOpsOr(SelectionKey.OP_READ);
     }
 
+    // :NOTE: formatting
     private void doReadOperation(final SelectionKey key,
             final DatagramChannel channel) throws IOException {
-        final Packet packet;
-        if (toReceive.isEmpty()) {
+        final Packet packet = toReceive.poll();
+        if (packet == null) {
             key.interestOpsAnd(~SelectionKey.OP_READ);
             return;
         }
-        packet = toReceive.remove();
-        packet.getBuffer().clear();
-        packet.setAddress(channel.receive(packet.getBuffer()));
+        packet.setAddress(channel.receive(packet.getBuffer().clear()));
         taskExecutorService.execute(packet.getTask());
     }
 
@@ -134,7 +135,7 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
         public Packet(final int bufferSize) {
             buffer = ByteBuffer.allocate(bufferSize);
-            this.bufferModifier = taskGenerator.apply(buffer);
+            this.bufferModifier = generateTask(buffer);
         }
 
         public ByteBuffer getBuffer() {

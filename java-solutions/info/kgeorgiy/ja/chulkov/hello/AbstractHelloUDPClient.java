@@ -66,12 +66,10 @@ abstract class AbstractHelloUDPClient implements HelloClient {
      * @throws UncheckedIOException if the host is unknown.
      */
     protected SocketAddress prepareAddress(final String host, final int port) {
-        final SocketAddress address;
         try {
-            address = new InetSocketAddress(InetAddress.getByName(host), port);
+            return new InetSocketAddress(InetAddress.getByName(host), port);
         } catch (final UnknownHostException e) {
             throw new UncheckedIOException(e);
         }
-        return address;
     }
 }

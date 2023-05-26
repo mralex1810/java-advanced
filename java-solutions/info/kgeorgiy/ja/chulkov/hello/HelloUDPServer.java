@@ -1,9 +1,8 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
 
-import static info.kgeorgiy.ja.chulkov.utils.UDPUtils.dataToByteBuffer;
-
 import info.kgeorgiy.java.advanced.hello.HelloServer;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.DatagramPacket;
@@ -12,6 +11,8 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
+
+import static info.kgeorgiy.ja.chulkov.utils.UDPUtils.dataToByteBuffer;
 
 
 /**
@@ -42,7 +43,7 @@ public class HelloUDPServer extends AbstractHelloUDPServer {
         semaphore.acquire();
         final var byteBuffer = dataToByteBuffer(datagramPacketForReceive);
         CompletableFuture
-                .runAsync(taskGenerator.apply(byteBuffer), taskExecutorService)
+                .runAsync(generateTask(byteBuffer), taskExecutorService)
                 .thenRun(() -> processAnswer(datagramPacketForReceive, byteBuffer))
                 .handle((ans, e) -> {
                     semaphore.release();

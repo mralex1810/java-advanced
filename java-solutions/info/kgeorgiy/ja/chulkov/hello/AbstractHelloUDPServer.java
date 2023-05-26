@@ -1,8 +1,7 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
-import static info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils.parseNonNegativeInt;
-
 import info.kgeorgiy.java.advanced.hello.HelloServer;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -12,8 +11,9 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils.parseNonNegativeInt;
 
 
 /**
@@ -30,15 +30,15 @@ abstract class AbstractHelloUDPServer implements HelloServer {
 
     private static final byte[] helloBytes = "Hello, ".getBytes(StandardCharsets.UTF_8);
 
-    /**
-     * A function that generates tasks based on a ByteBuffer input.
-     */
-    public static final Function<ByteBuffer, Runnable> taskGenerator = (buffer) -> () -> {
-        buffer.limit(buffer.position() + helloBytes.length);
-        System.arraycopy(buffer.array(), 0, buffer.array(), helloBytes.length, buffer.limit() - helloBytes.length);
-        System.arraycopy(helloBytes, 0, buffer.array(), 0, helloBytes.length);
-        buffer.rewind();
-    };
+    protected static Runnable generateTask(final ByteBuffer buffer) {
+        return () -> {
+            // :NOTE: no-copy
+            buffer.limit(buffer.position() + helloBytes.length);
+            System.arraycopy(buffer.array(), 0, buffer.array(), helloBytes.length, buffer.limit() - helloBytes.length);
+            System.arraycopy(helloBytes, 0, buffer.array(), 0, helloBytes.length);
+            buffer.rewind();
+        };
+    }
 
 
     /**
@@ -91,10 +91,12 @@ abstract class AbstractHelloUDPServer implements HelloServer {
             throw new IllegalStateException("Server is already started");
         }
         state = State.RUNNING;
-        taskExecutorService = new ThreadPoolExecutor(threads, threads,
+        taskExecutorService = new ThreadPoolExecutor(
+                threads, threads,
                 0L, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<>(threads),
-                new ThreadPoolExecutor.CallerRunsPolicy());
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
         prepare(port, threads);
         getterThread = new Thread(() -> {
             while (state == State.RUNNING && !Thread.interrupted()) {
