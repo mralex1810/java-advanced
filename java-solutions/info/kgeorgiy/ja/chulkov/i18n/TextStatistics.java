@@ -135,7 +135,7 @@ public class TextStatistics {
             for (final FormattedStatistic statistic : statistics) {
                 statistic.parseText(text);
                 out.println(MessageFormat.format(bundle.getString(STATISTIC_FORMAT),
-                        statistic.formattedCount()));
+                        statistic.formattedSummary()));
             }
             for (final FormattedStatistic statistic : statistics) {
                 out.println(statistic.getTitle());

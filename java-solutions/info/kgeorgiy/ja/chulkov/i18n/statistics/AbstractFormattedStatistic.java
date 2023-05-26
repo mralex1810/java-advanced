@@ -41,7 +41,7 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
     }
 
     @Override
-    public String formattedCount() {
+    public String formattedSummary() {
         return MessageFormat.format(bundle.getString("count_format"),
                 bundle.getString("count"),
                 bundle.getString(getMultipleName()),

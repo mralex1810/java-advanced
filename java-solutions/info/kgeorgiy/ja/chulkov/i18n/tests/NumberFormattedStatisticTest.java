@@ -31,13 +31,13 @@ public class NumberFormattedStatisticTest {
             final Function<Locale, AbstractNumberFormattedStatistic> statisticGenerator) {
         LOCALES.forEach(
                 locale -> {
-                    for (final var a : NUMBERS) {
-                        for (final var b : NUMBERS) {
+                    for (final var number1 : NUMBERS) {
+                        for (final var number2 : NUMBERS) {
                             checkNumbers("abacaba "
-                                            + numberFormatGenerator.apply(locale).format(a)
+                                            + numberFormatGenerator.apply(locale).format(number1)
                                             + " magic words.\n "
-                                            + numberFormatGenerator.apply(locale).format(b)
-                                            + " end\n\n\t", 2, a.doubleValue() + b.doubleValue(),
+                                            + numberFormatGenerator.apply(locale).format(number2)
+                                            + " end\n\n\t", 2, number1.doubleValue() + number2.doubleValue(),
                                     () -> statisticGenerator.apply(locale));
                         }
                     }
