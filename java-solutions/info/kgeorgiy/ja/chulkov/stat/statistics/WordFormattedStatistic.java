@@ -16,14 +16,8 @@ public final class WordFormattedStatistic extends AbstractTextFormattedStatistic
         if (subtext.length() == 0) {
             return false;
         }
-        boolean isWord = true;
 
-        for (int i = 0; i < subtext.length(); i++) {
-            if (!Character.isAlphabetic(subtext.charAt(i))) {
-                isWord = false;
-            }
-        }
-        return isWord;
+        return subtext.codePoints().allMatch(Character::isAlphabetic);
     }
 
     @Override
