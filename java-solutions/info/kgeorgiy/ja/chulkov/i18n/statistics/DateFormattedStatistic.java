@@ -1,4 +1,4 @@
-package info.kgeorgiy.ja.chulkov.stat.statistics;
+package info.kgeorgiy.ja.chulkov.i18n.statistics;
 
 import java.text.DateFormat;
 import java.text.ParsePosition;

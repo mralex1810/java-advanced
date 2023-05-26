@@ -1,13 +1,17 @@
-package info.kgeorgiy.ja.chulkov.stat;
+/**
+ * The {@code TextStatistics} class provides functionality to analyze and print statistics about a given text. It
+ * supports various formatting options and locales.
+ */
+package info.kgeorgiy.ja.chulkov.i18n;
 
 import static info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils.toLocale;
 
-import info.kgeorgiy.ja.chulkov.stat.statistics.CurrencyFormattedStatistic;
-import info.kgeorgiy.ja.chulkov.stat.statistics.DateFormattedStatistic;
-import info.kgeorgiy.ja.chulkov.stat.statistics.FormattedStatistic;
-import info.kgeorgiy.ja.chulkov.stat.statistics.NumberFormattedStatistic;
-import info.kgeorgiy.ja.chulkov.stat.statistics.SentenceFormattedStatistic;
-import info.kgeorgiy.ja.chulkov.stat.statistics.WordFormattedStatistic;
+import info.kgeorgiy.ja.chulkov.i18n.statistics.CurrencyFormattedStatistic;
+import info.kgeorgiy.ja.chulkov.i18n.statistics.DateFormattedStatistic;
+import info.kgeorgiy.ja.chulkov.i18n.statistics.FormattedStatistic;
+import info.kgeorgiy.ja.chulkov.i18n.statistics.NumberFormattedStatistic;
+import info.kgeorgiy.ja.chulkov.i18n.statistics.SentenceFormattedStatistic;
+import info.kgeorgiy.ja.chulkov.i18n.statistics.WordFormattedStatistic;
 import info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -24,31 +28,31 @@ import java.util.ResourceBundle;
 
 public class TextStatistics {
 
+    /**
+     * The key for getting format for displaying error messages.
+     */
     public static final String ERROR_FORMAT = "error_format";
-    public static final String RESOURCE_BUNDLE = "info.kgeorgiy.ja.chulkov.stat.StatisticsResourceBundle";
+
+    /**
+     * The resource bundle used for localized strings.
+     */
+    public static final String RESOURCE_BUNDLE = "info.kgeorgiy.ja.chulkov.i18n.StatisticsResourceBundle";
+
+    /**
+     * The key for getting format for displaying statistic results.
+     */
     public static final String STATISTIC_FORMAT = "statistic_format";
 
+    /**
+     * The entry point for the application.
+     *
+     * @param args command-line arguments: text locale, write locale, text file, output file
+     */
     public static void main(final String[] args) {
         ArgumentsUtils.checkNonNullsArgs(args);
-        ResourceBundle bundle = null;
-        try {
-            bundle = ResourceBundle.getBundle("info.kgeorgiy.ja.chulkov.stat.StatisticsResourceBundle",
-                    Locale.getDefault());
-        } catch (final MissingResourceException ignored) {
-        }
-        if (bundle == null) {
-            bundle = ResourceBundle.getBundle("info.kgeorgiy.ja.chulkov.stat.StatisticsResourceBundle", Locale.US);
-        }
-        if (args.length < 4) {
-            System.err.println(
-                    MessageFormat.format(bundle.getString("usage_format"),
-                            bundle.getString("Incorrect_usage"),
-                            bundle.getString("Usage"),
-                            bundle.getString("text_locale"),
-                            bundle.getString("write_local"),
-                            bundle.getString("text_file"),
-                            bundle.getString("output_file")
-                    ));
+        ResourceBundle bundle = getDefaultBundle();
+        if (args.length != 4) {
+            printUsage(bundle);
             return;
         }
         final var inputLocale = toLocale(args[0], bundle.getString("input_locale_is_not_found"));
@@ -58,6 +62,27 @@ public class TextStatistics {
         } catch (final MissingResourceException e) {
             printException(bundle, e, "bundle_not_found");
         }
+        final String text = getText(args, bundle);
+        if (inputLocale == null || outputLocale == null || text == null) {
+            return;
+        }
+        final List<FormattedStatistic> statistics = getStatistics(bundle, inputLocale, outputLocale);
+        printResults(args[2], args[3], bundle, text, statistics);
+    }
+
+    private static void printUsage(final ResourceBundle bundle) {
+        System.err.println(
+                MessageFormat.format(bundle.getString("usage_format"),
+                        bundle.getString("Incorrect_usage"),
+                        bundle.getString("Usage"),
+                        bundle.getString("text_locale"),
+                        bundle.getString("write_local"),
+                        bundle.getString("text_file"),
+                        bundle.getString("output_file")
+                ));
+    }
+
+    private static String getText(final String[] args, final ResourceBundle bundle) {
         String text = null;
         try {
             text = Files.readString(Path.of(args[2]), StandardCharsets.UTF_8);
@@ -66,12 +91,19 @@ public class TextStatistics {
         } catch (final IOException e) {
             printException(bundle, e, "io_exception_on_read");
         }
-        if (inputLocale == null || outputLocale == null || text == null) {
-            return;
-        }
-        final List<FormattedStatistic> statistics = getStatistics(bundle, inputLocale, outputLocale);
-        printResults(args[2], args[3], bundle, text, statistics);
+        return text;
+    }
 
+    private static ResourceBundle getDefaultBundle() {
+        ResourceBundle bundle = null;
+        try {
+            bundle = ResourceBundle.getBundle(RESOURCE_BUNDLE, Locale.getDefault());
+        } catch (final MissingResourceException ignored) {
+        }
+        if (bundle == null) {
+            bundle = ResourceBundle.getBundle(RESOURCE_BUNDLE, Locale.US);
+        }
+        return bundle;
     }
 
     private static void printException(final ResourceBundle bundle, final Exception e,
@@ -94,7 +126,8 @@ public class TextStatistics {
     }
 
     private static void printResults(final String inputFileName, final String outputFileName,
-            final ResourceBundle bundle, final String text, final List<FormattedStatistic> statistics) {
+            final ResourceBundle bundle, final String text,
+            final List<FormattedStatistic> statistics) {
         try (final var out = new PrintStream(Files.newOutputStream(Path.of(outputFileName)), false,
                 StandardCharsets.UTF_8)) {
             out.println(bundle.getString("analyzing_file") + " \"" + inputFileName + "\"");

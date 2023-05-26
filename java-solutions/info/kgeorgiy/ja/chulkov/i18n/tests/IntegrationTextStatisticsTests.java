@@ -1,6 +1,6 @@
-package info.kgeorgiy.ja.chulkov.stat.tests;
+package info.kgeorgiy.ja.chulkov.i18n.tests;
 
-import info.kgeorgiy.ja.chulkov.stat.TextStatistics;
+import info.kgeorgiy.ja.chulkov.i18n.TextStatistics;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,7 +10,7 @@ import org.junit.Test;
 
 public class IntegrationTextStatisticsTests {
 
-    public static final String TESTS_RESOURCES = "info/kgeorgiy/ja/chulkov/stat/tests/resources/";
+    public static final String TESTS_RESOURCES = "info/kgeorgiy/ja/chulkov/i18n/tests/resources/";
 
     public void test(final String fileName, final String inLocale, final String outLocale) throws IOException {
         final var inputPath = Path.of(TESTS_RESOURCES + fileName + ".in");

@@ -1,11 +1,11 @@
-package info.kgeorgiy.ja.chulkov.stat.tests;
+package info.kgeorgiy.ja.chulkov.i18n.tests;
 
-import static info.kgeorgiy.ja.chulkov.stat.tests.TestsData.DATES;
-import static info.kgeorgiy.ja.chulkov.stat.tests.TestsData.FORMATS;
-import static info.kgeorgiy.ja.chulkov.stat.tests.TestsData.LOCALES;
-import static info.kgeorgiy.ja.chulkov.stat.tests.TestsData.get26May;
+import static info.kgeorgiy.ja.chulkov.i18n.tests.TestsData.DATES;
+import static info.kgeorgiy.ja.chulkov.i18n.tests.TestsData.FORMATS;
+import static info.kgeorgiy.ja.chulkov.i18n.tests.TestsData.LOCALES;
+import static info.kgeorgiy.ja.chulkov.i18n.tests.TestsData.get26May;
 
-import info.kgeorgiy.ja.chulkov.stat.statistics.DateFormattedStatistic;
+import info.kgeorgiy.ja.chulkov.i18n.statistics.DateFormattedStatistic;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -13,7 +13,7 @@ import java.util.Locale;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class DateFormattedStatisticTest {
+public class DateFormattedStatisticTests {
 
     Locale output = Locale.US;
 

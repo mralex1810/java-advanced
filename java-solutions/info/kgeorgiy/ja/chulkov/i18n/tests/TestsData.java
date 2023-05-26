@@ -1,4 +1,4 @@
-package info.kgeorgiy.ja.chulkov.stat.tests;
+package info.kgeorgiy.ja.chulkov.i18n.tests;
 
 import java.text.DateFormat;
 import java.util.Calendar;

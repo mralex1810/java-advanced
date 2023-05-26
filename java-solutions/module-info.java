@@ -23,8 +23,9 @@ module info.kgeorgiy.ja.chulkov {
     exports info.kgeorgiy.ja.chulkov.bank;
     exports info.kgeorgiy.ja.chulkov.bank.person;
     exports info.kgeorgiy.ja.chulkov.bank.account;
-    exports info.kgeorgiy.ja.chulkov.stat;
-    exports info.kgeorgiy.ja.chulkov.stat.tests;
+    exports info.kgeorgiy.ja.chulkov.i18n;
+    exports info.kgeorgiy.ja.chulkov.i18n.tests;
+    exports info.kgeorgiy.ja.chulkov.i18n.statistics;
 
     opens info.kgeorgiy.ja.chulkov.concurrent to info.kgeorgiy.java.advanced.concurrent,
             info.kgeorgiy.java.advanced.base;
