@@ -4,8 +4,8 @@ import info.kgeorgiy.ja.chulkov.utils.UDPUtils;
 import info.kgeorgiy.java.advanced.hello.HelloServer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -85,7 +85,7 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             }
         }
         try {
-            channel.send(answer.getBuffer(), answer.getAddress());
+            channel.socket().send(answer.getDatagramPacketForSend());
         } catch (final IOException e) {
             e.printStackTrace();
         }
@@ -102,7 +102,8 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
         }
         packet = toReceive.remove();
         packet.getBuffer().clear();
-        packet.setAddress(channel.receive(packet.getBuffer()));
+        channel.socket().receive(packet.getDatagramPacketForReceive());
+        packet.syncBufferAfterReceive();
         taskExecutorService.execute(packet.getTask());
     }
 
@@ -124,25 +125,21 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
         private final ByteBuffer buffer;
         private final Runnable bufferModifier;
-        private SocketAddress address;
+        private final DatagramPacket datagramPacket;
         private Runnable task;
 
         public Packet(final int bufferSize) {
             buffer = ByteBuffer.allocate(bufferSize);
             this.bufferModifier = taskGenerator.apply(buffer);
+            datagramPacket = new DatagramPacket(buffer.array(), buffer.capacity());
         }
 
         public ByteBuffer getBuffer() {
             return buffer;
         }
 
-        public SocketAddress getAddress() {
-            return address;
-        }
 
-        public void setAddress(final SocketAddress inetAddress) {
-            this.address = inetAddress;
-        }
+
 
         public void initTask(final SelectionKey key, final Queue<Packet> toSend) {
             task = () -> {
@@ -161,6 +158,21 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
         public Runnable getTask() {
             return task;
+        }
+
+        public DatagramPacket getDatagramPacketForReceive() {
+            buffer.clear();
+            datagramPacket.setLength(buffer.capacity());
+            return datagramPacket;
+        }
+
+        public void syncBufferAfterReceive() {
+            buffer.limit(datagramPacket.getLength());
+        }
+
+        public DatagramPacket getDatagramPacketForSend() {
+            datagramPacket.setLength(buffer.limit());
+            return datagramPacket;
         }
     }
 }
