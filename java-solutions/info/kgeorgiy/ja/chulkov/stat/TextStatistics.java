@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.text.Collator;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.MissingResourceException;
@@ -23,8 +24,9 @@ import java.util.ResourceBundle;
 
 public class TextStatistics {
 
-    public static final String ERROR_FORMAT = "%s: %s%n";
+    public static final String ERROR_FORMAT = "error_format";
     public static final String RESOURCE_BUNDLE = "info.kgeorgiy.ja.chulkov.stat.StatisticsResourceBundle";
+    public static final String STATISTIC_FORMAT = "statistic_format";
 
     public static void main(final String[] args) {
         ArgumentsUtils.checkNonNullsArgs(args);
@@ -54,15 +56,15 @@ public class TextStatistics {
         try {
             bundle = ResourceBundle.getBundle(RESOURCE_BUNDLE, outputLocale);
         } catch (final MissingResourceException e) {
-            System.err.format(ERROR_FORMAT, bundle.getString("bundle_not_found"), e.getLocalizedMessage());
+            printException(bundle, e, "bundle_not_found");
         }
         String text = null;
         try {
             text = Files.readString(Path.of(args[2]), StandardCharsets.UTF_8);
         } catch (final InvalidPathException e) {
-            System.err.format(ERROR_FORMAT, bundle.getString("invalid_input_path"), e.getLocalizedMessage());
+            printException(bundle, e, "invalid_input_path");
         } catch (final IOException e) {
-            System.err.format(ERROR_FORMAT, bundle.getString("io_exception_on_read"), e.getLocalizedMessage());
+            printException(bundle, e, "io_exception_on_read");
         }
         if (inputLocale == null || outputLocale == null || text == null) {
             return;
@@ -81,6 +83,13 @@ public class TextStatistics {
             printResults(args[2], args[3], bundle, text, statistics);
         }
 
+    }
+
+    private static void printException(final ResourceBundle bundle, final Exception e,
+            final String invalidInputPath) {
+        System.err.println(MessageFormat.format(bundle.getString(ERROR_FORMAT),
+                bundle.getString(invalidInputPath),
+                e.getLocalizedMessage()));
     }
 
     private static List<FormattedStatistic> getStatistics(final ResourceBundle bundle,
@@ -103,16 +112,19 @@ public class TextStatistics {
             out.println(bundle.getString("summary"));
             for (final FormattedStatistic statistic : statistics) {
                 statistic.parseText(text);
-                out.println("\t" + statistic.formattedCount() + ".");
+                out.println(MessageFormat.format(bundle.getString(STATISTIC_FORMAT),
+                        statistic.formattedCount()));
             }
             for (final FormattedStatistic statistic : statistics) {
                 out.println(statistic.getTitle());
                 for (final String str : statistic.getStats()) {
-                    out.println("\t" + str + ".");
+                    out.println(MessageFormat.format(bundle.getString(STATISTIC_FORMAT), str));
                 }
             }
         } catch (final IOException e) {
-            System.err.printf(ERROR_FORMAT, bundle.getString("io_exception_on_write"), e.getLocalizedMessage());
+            System.err.println(MessageFormat.format(bundle.getString(ERROR_FORMAT),
+                    bundle.getString("io_exception_on_write"),
+                    e.getLocalizedMessage()));
         }
     }
 }

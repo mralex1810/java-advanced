@@ -35,7 +35,9 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
 
     @Override
     public String getTitle() {
-        return bundle.getString("statistic") + " " + bundle.getString("on_" + getMultipleName());
+        return MessageFormat.format(bundle.getString("title_format"),
+                bundle.getString("statistic"),
+                bundle.getString("on_" + getMultipleName()));
     }
 
     @Override
@@ -75,7 +77,7 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
     }
 
     protected String minMaxFormat() {
-        return "{0} {1}: {2}";
+        return bundle.getString("min_max_base_format");
     }
 
     protected String formatMinMaxAvgT(final String key, final Supplier<T> elemGetter) {
@@ -108,6 +110,22 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
 
     protected double getAvgDouble() {
         return total.doubleValue() / counter;
+    }
+
+    public int getCounter() {
+        return counter;
+    }
+
+    public BigInteger getTotal() {
+        return total;
+    }
+
+    public T min() {
+        return previous.isEmpty() ? null : previous.first();
+    }
+
+    public T max() {
+        return previous.isEmpty() ? null : previous.last();
     }
 
     protected abstract String objToString(T obj);

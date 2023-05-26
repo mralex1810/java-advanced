@@ -2,6 +2,7 @@ package info.kgeorgiy.ja.chulkov.stat.statistics;
 
 import java.text.BreakIterator;
 import java.text.Collator;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
@@ -59,11 +60,11 @@ public abstract class AbstractTextFormattedStatistic extends AbstractFormattedSt
 
     @Override
     protected String minMaxFormat() {
-        return "{0} {1}: \"{2}\"";
+        return bundle.getString("min_max_text_format");
     }
 
     private String formatLengthString(final String str, final String key) {
-        return String.format("%s %s %s: %s (\"%s\")",
+        return MessageFormat.format(bundle.getString("length_format"),
                 bundle.getString(key + "_" + Gender.FEMININE.getKey()),
                 bundle.getString("length"),
                 bundle.getString("of_" + getName()),
