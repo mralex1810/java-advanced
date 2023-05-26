@@ -32,7 +32,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
 
     private static void doReadOperation(
             final DatagramChannel channel,
-            final HelloClientThreadContext context)
+            final HelloClientThreadContext context, final SelectionKey key)
             throws IOException {
         context.getAnswerBytes().clear();
         channel.receive(context.getAnswerBytes());
@@ -41,6 +41,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
             context.increment();
             if (context.isEnded()) {
                 UDPUtils.closeChannel(channel);
+                key.cancel();
             }
         }
     }
@@ -70,7 +71,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
         return selector;
     }
 
-    private static void processKey(final SocketAddress address, final SelectionKey key) {
+    private static void processKey(final SocketAddress address, final SelectionKey key, final Selector selector) {
         final var channel = (DatagramChannel) key.channel();
         final var context = (HelloClientThreadContext) key.attachment();
         try {
@@ -79,7 +80,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
                 channel.send(context.getRequestBytes(), address);
                 key.interestOps(SelectionKey.OP_READ);
             } else if (key.isReadable()) {
-                doReadOperation(channel, context);
+                doReadOperation(channel, context, key);
             }
         } catch (final IOException e) {
             System.err.println(e.getMessage());
@@ -103,20 +104,13 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
             final int threads,
             final int requests) {
         final SocketAddress address = prepareAddress(host, port);
-        final AtomicBoolean isOpened = new AtomicBoolean(false);
-        final Consumer<SelectionKey> openChecker = getOpenChecker(isOpened);
-        final Consumer<SelectionKey> keyProcessor = key -> processKey(address, key);
         try {
             final Selector selector = prepareSelector(prefix, threads, requests, address);
+            final Consumer<SelectionKey> keyProcessor = key -> processKey(address, key, selector);
             try {
                 while (!selector.keys().isEmpty()) {
                     if (selector.select(keyProcessor, TIMEOUT) == 0) {
                         selector.keys().forEach(MAKE_WRITABLE);
-                    }
-                    isOpened.set(false);
-                    selector.keys().forEach(openChecker);
-                    if (!isOpened.get()) {
-                        break;
                     }
                 }
             } finally {
