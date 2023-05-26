@@ -46,12 +46,12 @@ public class NumberFormattedStatisticTest {
         );
     }
 
-    public static void checkNumbers(final String locale1, final int expected, final double a,
+    public static void checkNumbers(final String locale1, final int expected, final double expectedSum,
             final Supplier<AbstractNumberFormattedStatistic> supplier) {
         final var numberFormattedStatistic = supplier.get();
         numberFormattedStatistic.parseText(locale1);
         Assert.assertEquals(expected, numberFormattedStatistic.getCounter());
-        Assert.assertEquals(a, numberFormattedStatistic.getTotal().doubleValue(), 1e-10d);
+        Assert.assertEquals(expectedSum, numberFormattedStatistic.getTotal().doubleValue(), 1e-10d);
     }
 
     @Test

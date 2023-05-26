@@ -16,20 +16,20 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
     public static final String NOT_FOUND = "not_found";
     protected final ResourceBundle bundle;
     protected final NumberFormat outputNumberFormat;
-    private final NavigableSet<T> previous;
+    private final NavigableSet<T> occurrences;
     protected int counter = 0;
     protected BigDecimal total = BigDecimal.ZERO;
 
-    public AbstractFormattedStatistic(final Locale outputLocale, final ResourceBundle bundle,
+    protected AbstractFormattedStatistic(final Locale outputLocale, final ResourceBundle bundle,
             final TreeSet<T> previous) {
         this.bundle = bundle;
-        this.previous = previous;
+        this.occurrences = previous;
         outputNumberFormat = NumberFormat.getNumberInstance(outputLocale);
     }
 
     protected void registerObject(final T value, final double totalAdd) {
         counter++;
-        previous.add(value);
+        occurrences.add(value);
         total = total.add(BigDecimal.valueOf(totalAdd));
     }
 
@@ -53,8 +53,8 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
                 bundle.getString("count"),
                 bundle.getString(getMultipleName()),
                 outputNumberFormat.format(counter),
-                outputNumberFormat.format(previous.size()),
-                getUniqueWord(previous.size())
+                outputNumberFormat.format(occurrences.size()),
+                getUniqueWord(occurrences.size())
         );
     }
 
@@ -97,11 +97,11 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
     }
 
     public String formattedMaxStat() {
-        return formatMinMaxAvgT("max", previous::last);
+        return formatMinMaxAvgT("max", occurrences::last);
     }
 
     public String formattedMinStat() {
-        return formatMinMaxAvgT("min", previous::first);
+        return formatMinMaxAvgT("min", occurrences::first);
     }
 
     protected String formattedAverageStat() {
@@ -121,11 +121,11 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
     }
 
     public T min() {
-        return previous.isEmpty() ? null : previous.first();
+        return occurrences.isEmpty() ? null : occurrences.first();
     }
 
     public T max() {
-        return previous.isEmpty() ? null : previous.last();
+        return occurrences.isEmpty() ? null : occurrences.last();
     }
 
     protected abstract String objToString(T obj);
