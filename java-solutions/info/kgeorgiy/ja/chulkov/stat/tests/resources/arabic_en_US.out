@@ -1,0 +1,36 @@
+Analyzing file "info/kgeorgiy/ja/chulkov/stat/tests/resources/arabic.in"
+Summary
+	Count sentences: 5.
+	Count words: 176.
+	Count numbers: 2.
+	Count currencies: 0.
+	Count dates: 1.
+Statistic on sentences
+	Count sentences: 5 (5 distinct).
+	Minimum sentence: "(CNN)-- تبدو مياه بحر قزوين هادئة بشكل مخادع، لكن هذا الطريق البحري - الذي يوفر مسارًا مباشرًا بين إيران وروسيا - مشغول بشكل متزايد بحركة الشحن، بما في ذلك عمليات نقل ما يشتبه أنها أسلحة من طهران إلى موسكو.".
+	Maximum sentence: "ويقول محللون إن حلفاء أوكرانيا الغربيين لن يكون لديهم سوى القليل لوقف عمليات تسليم الأسلحة هذه، حيث قال مارتن كيلي، كبير محللي الشؤون الاستخباراتية في شركة EOS Risk Group الأمنية: "لا يوجد خطر على الصادرات الإيرانية في بحر قزوين بسبب الدول المجاورة - ليس لديهم القدرة أو الدافع لاعتراض مثل هذه الأنواع من التبادلات"، حيث أن أذربيجان وتركمانستان وكازاخستان وجميع الجمهوريات السوفيتية السابقة هي الدول التي لها موانئ على بحر قزوين.".
+	Minimum length of sentence: 24 ("نشر الجمعة، ٢٦ مايو ٢٠٢٣").
+	Maximum length of sentence: 429 ("ويقول محللون إن حلفاء أوكرانيا الغربيين لن يكون لديهم سوى القليل لوقف عمليات تسليم الأسلحة هذه، حيث قال مارتن كيلي، كبير محللي الشؤون الاستخباراتية في شركة EOS Risk Group الأمنية: "لا يوجد خطر على الصادرات الإيرانية في بحر قزوين بسبب الدول المجاورة - ليس لديهم القدرة أو الدافع لاعتراض مثل هذه الأنواع من التبادلات"، حيث أن أذربيجان وتركمانستان وكازاخستان وجميع الجمهوريات السوفيتية السابقة هي الدول التي لها موانئ على بحر قزوين.").
+	Average length of sentence: 211.4.
+Statistic on words
+	Count words: 176 (144 distinct).
+	Minimum word: "CNN".
+	Maximum word: "يوفر".
+	Minimum length of word: 2 ("في").
+	Maximum length of word: 13 ("الاستخباراتية").
+	Average length of word: 4.818.
+Statistic on numbers
+	Count numbers: 2 (2 distinct).
+	Minimum number: 26.
+	Maximum number: 2,023.
+	Average number: 1,024.5.
+Statistic on money currencies
+	Count currencies: 0 (0 distinct).
+	Minimum currency: not found.
+	Maximum currency: not found.
+	Average currency: not found.
+Statistic on dates
+	Count dates: 1 (1 distinct).
+	Minimum date: May 26, 2023.
+	Maximum date: May 26, 2023.
+	Average date: May 26, 2023.

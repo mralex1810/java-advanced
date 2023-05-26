@@ -40,15 +40,15 @@ public class TextStatistics {
             bundle = ResourceBundle.getBundle("info.kgeorgiy.ja.chulkov.stat.StatisticsResourceBundle", Locale.US);
         }
         if (args.length < 4) {
-            System.err.format(
-                    "%s. %n %s: <%s> <%s> <%s> <%s> %n",
-                    bundle.getString("Incorrect_usage"),
-                    bundle.getString("Usage"),
-                    bundle.getString("text_locale"),
-                    bundle.getString("write_local"),
-                    bundle.getString("text_file"),
-                    bundle.getString("output_file")
-            );
+            System.err.println(
+                    MessageFormat.format(bundle.getString("usage_format"),
+                            bundle.getString("Incorrect_usage"),
+                            bundle.getString("Usage"),
+                            bundle.getString("text_locale"),
+                            bundle.getString("write_local"),
+                            bundle.getString("text_file"),
+                            bundle.getString("output_file")
+                    ));
             return;
         }
         final var inputLocale = toLocale(args[0], bundle.getString("input_locale_is_not_found"));
@@ -70,18 +70,7 @@ public class TextStatistics {
             return;
         }
         final List<FormattedStatistic> statistics = getStatistics(bundle, inputLocale, outputLocale);
-        if (args.length > 4) {
-            final var ruLocale = Locale.of("ru", "RU");
-            final var enLocale = Locale.of("en", "US");
-            final var ruBundle = ResourceBundle.getBundle(RESOURCE_BUNDLE, ruLocale);
-            final var enBundle = ResourceBundle.getBundle(RESOURCE_BUNDLE, enLocale);
-            printResults(args[2], args[3] + "_ru_RU.out", ruBundle, text,
-                    getStatistics(ruBundle, inputLocale, ruLocale));
-            printResults(args[2], args[3] + "_en_US.out", enBundle, text,
-                    getStatistics(enBundle, inputLocale, enLocale));
-        } else {
-            printResults(args[2], args[3], bundle, text, statistics);
-        }
+        printResults(args[2], args[3], bundle, text, statistics);
 
     }
 

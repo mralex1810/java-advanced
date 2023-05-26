@@ -1,6 +1,6 @@
 package info.kgeorgiy.ja.chulkov.stat.statistics;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.text.NumberFormat;
 import java.util.List;
@@ -18,19 +18,19 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
     protected final NumberFormat outputNumberFormat;
     private final NavigableSet<T> previous;
     protected int counter = 0;
-    protected BigInteger total = BigInteger.ZERO;
+    protected BigDecimal total = BigDecimal.ZERO;
 
-    public AbstractFormattedStatistic(final Locale outputLocale, final ResourceBundle bundle, final String keySuffix,
+    public AbstractFormattedStatistic(final Locale outputLocale, final ResourceBundle bundle,
             final TreeSet<T> previous) {
         this.bundle = bundle;
         this.previous = previous;
         outputNumberFormat = NumberFormat.getNumberInstance(outputLocale);
     }
 
-    protected void registerObject(final T value, final long totalAdd) {
+    protected void registerObject(final T value, final double totalAdd) {
         counter++;
         previous.add(value);
-        total = total.add(BigInteger.valueOf(totalAdd));
+        total = total.add(BigDecimal.valueOf(totalAdd));
     }
 
     @Override
@@ -116,7 +116,7 @@ public abstract class AbstractFormattedStatistic<T> implements FormattedStatisti
         return counter;
     }
 
-    public BigInteger getTotal() {
+    public BigDecimal getTotal() {
         return total;
     }
 

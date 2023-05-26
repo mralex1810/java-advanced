@@ -23,12 +23,12 @@ Statistic on numbers
 	Count numbers: 36 (23 distinct).
 	Minimum number: -12,345.
 	Maximum number: 12,345.67.
-	Average number: 230.083.
+	Average number: 230.181.
 Statistic on money currencies
 	Count currencies: 3 (3 distinct).
 	Minimum currency: $100.00.
 	Maximum currency: $345.67.
-	Average currency: $222.33.
+	Average currency: $222.67.
 Statistic on dates
 	Count dates: 3 (3 distinct).
 	Minimum date: May 19, 2023.

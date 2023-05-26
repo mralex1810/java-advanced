@@ -16,8 +16,8 @@ public class DateFormattedStatistic extends AbstractFormattedStatistic<Date> {
 
     public DateFormattedStatistic(final Locale inputLocale, final Locale outputLocale,
             final ResourceBundle resourceBundle) {
-        super(outputLocale, resourceBundle, "_date", new TreeSet<>());
-        inputDateFormats = Stream.of(DateFormat.SHORT, DateFormat.MEDIUM, DateFormat.LONG, DateFormat.FULL)
+        super(outputLocale, resourceBundle, new TreeSet<>());
+        inputDateFormats = Stream.of(DateFormat.FULL, DateFormat.LONG, DateFormat.MEDIUM, DateFormat.SHORT)
                 .map(it -> DateFormat.getDateInstance(it, inputLocale))
                 .toList();
         outDateFormat = DateFormat.getDateInstance(DateFormat.DEFAULT, outputLocale);
