@@ -25,16 +25,17 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
     }
 
     private void threadAction(
-            final int threadNum,
-            final String prefix,
-            final int requests,
-            final SocketAddress address,
-            final AtomicReference<RuntimeException> exception,
-            final Thread mainThread
+        final int threadNum,
+        final String prefix,
+        final int requests,
+        final SocketAddress address,
+        final AtomicReference<RuntimeException> exception,
+        final Thread mainThread
     ) {
         try (final var datagramSocket = new DatagramSocket()) {
             final var context = new HelloClientThreadContext(threadNum, prefix, requests,
-                    datagramSocket.getReceiveBufferSize());
+                datagramSocket.getReceiveBufferSize()
+            );
             datagramSocket.setSoTimeout(TIMEOUT);
             while (!Thread.interrupted() && !context.isEnded()) {
                 context.makeRequest();
@@ -42,8 +43,10 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
                 final var packetToSend = new DatagramPacket(bytes.array(), bytes.limit(), address);
                 try {
                     datagramSocket.send(packetToSend);
-                    final var packetForReceive = new DatagramPacket(new byte[datagramSocket.getReceiveBufferSize()],
-                            datagramSocket.getReceiveBufferSize());
+                    final var packetForReceive = new DatagramPacket(
+                        new byte[datagramSocket.getReceiveBufferSize()],
+                        datagramSocket.getReceiveBufferSize()
+                    );
                     datagramSocket.receive(packetForReceive);
                     context.getAnswerBytes().clear();
                     context.getAnswerBytes().put(UDPUtils.dataToByteBuffer(packetForReceive).flip());
@@ -66,16 +69,19 @@ public class HelloUDPClient extends AbstractHelloUDPClient {
 
 
     @Override
-    public void run(final String host, final int port, final String prefix, final int threads, final int requests) {
+    public void run(
+        final String host, final int port, final String prefix, final int threads,
+        final int requests
+    ) {
         final SocketAddress address = prepareAddress(host, port);
         final AtomicReference<RuntimeException> exception = new AtomicReference<>(null);
         final Thread mainThread = Thread.currentThread();
         final var threadsList = IntStream.range(1, threads + 1)
-                .<Runnable>mapToObj(
-                        threadNum -> () -> threadAction(threadNum, prefix, requests, address, exception, mainThread))
-                .map(Thread::new)
-                .peek(Thread::start)
-                .toList();
+            .<Runnable>mapToObj(
+                threadNum -> () -> threadAction(threadNum, prefix, requests, address, exception, mainThread))
+            .map(Thread::new)
+            .peek(Thread::start)
+            .toList();
         boolean interrupted = false;
         for (final Thread thread : threadsList) {
             while (true) {

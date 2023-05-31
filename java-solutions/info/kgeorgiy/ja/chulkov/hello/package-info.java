@@ -1,7 +1,7 @@
 /**
  * Chulkov Alexey's homework solution of <a
- * href="https://www.kgeorgiy.info/courses/java-advanced/homeworks.html#homework-hello">Hello UDP</a>
- * homework of <a href="https://www.kgeorgiy.info/courses/java-advanced/">Java Advanced</a> course.
+ * href="https://www.kgeorgiy.info/courses/java-advanced/homeworks.html#homework-hello">Hello UDP</a> homework of <a
+ * href="https://www.kgeorgiy.info/courses/java-advanced/">Java Advanced</a> course.
  *
  * @author Chulkov Alexey (chulkovalex18@gmail.com)
  */

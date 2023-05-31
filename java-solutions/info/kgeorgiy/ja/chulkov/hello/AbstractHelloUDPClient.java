@@ -21,13 +21,13 @@ abstract class AbstractHelloUDPClient implements HelloClient {
 
     private static void printUsage() {
         System.err.println("""
-                    Usage: HelloClient host port prefix threads requests
-                    host -- the name or ip address of the computer running the server
-                    port -- port number to send requests to
-                    prefix -- request prefix
-                    threads -- number of parallel request threads
-                    requests -- number of requests per thread
-                """);
+                Usage: HelloClient host port prefix threads requests
+                host -- the name or ip address of the computer running the server
+                port -- port number to send requests to
+                prefix -- request prefix
+                threads -- number of parallel request threads
+                requests -- number of requests per thread
+            """);
     }
 
     /**

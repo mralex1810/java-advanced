@@ -53,7 +53,7 @@ public class IntegrationTextStatisticsTests {
 
     @Test
     public void bigTest() throws IOException {
-//        test("big", "en_US");
+        test("big", "en_US");
     }
     @Test
     public void arabicTest() throws IOException {

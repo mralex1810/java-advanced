@@ -1,19 +1,14 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
-import info.kgeorgiy.java.advanced.hello.HelloServer;
+import static info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils.parseNonNegativeInt;
 
+import info.kgeorgiy.java.advanced.hello.HelloServer;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-
-import static info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils.parseNonNegativeInt;
 
 
 /**
@@ -23,38 +18,24 @@ import static info.kgeorgiy.ja.chulkov.utils.ArgumentsUtils.parseNonNegativeInt;
  */
 abstract class AbstractHelloUDPServer implements HelloServer {
 
-    /**
-     * The maximum number of tasks allowed in the server.
-     */
-    public static final int MAX_TASKS = 128;
-
-    private static final byte[] helloBytes = "Hello, ".getBytes(StandardCharsets.UTF_8);
-
-    protected static Runnable generateTask(final ByteBuffer buffer) {
-        return () -> {
-            // :NOTE: no-copy
-            buffer.limit(buffer.position() + helloBytes.length);
-            System.arraycopy(buffer.array(), 0, buffer.array(), helloBytes.length, buffer.limit() - helloBytes.length);
-            System.arraycopy(helloBytes, 0, buffer.array(), 0, helloBytes.length);
-            buffer.rewind();
-        };
-    }
-
-
+    private static final byte[] HELLO_BYTES = "Hello, ".getBytes(StandardCharsets.UTF_8);
+    protected static final int BUFFER_OFFSET = HELLO_BYTES.length;
     /**
      * The executor service used to execute tasks.
      */
     protected ExecutorService taskExecutorService;
-
+    /**
+     * The state of the server.
+     */
+    protected State state = State.NOT_STARTED;
     /**
      * The getter thread responsible for receiving requests.
      */
     private Thread getterThread;
 
-    /**
-     * The state of the server.
-     */
-    private State state = State.NOT_STARTED;
+    protected static void prepareNewByteBytes(final byte[] buffer) {
+        System.arraycopy(HELLO_BYTES, 0, buffer, 0, HELLO_BYTES.length);
+    }
 
     static void mainHelp(final String[] args, final Supplier<HelloServer> helloServerSupplier) {
         Objects.requireNonNull(args);
@@ -79,10 +60,16 @@ abstract class AbstractHelloUDPServer implements HelloServer {
 
     private static void printUsage() {
         System.err.println("""
-                    Usage: HelloUDPServer port threads
-                    port -- port number on which requests will be received
-                    threads -- number of worker threads that will process requests
-                """);
+                Usage: HelloUDPServer port threads
+                port -- port number on which requests will be received
+                threads -- number of worker threads that will process requests
+            """);
+    }
+
+    protected void processException(final Throwable e) {
+        if (state != State.CLOSED) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -91,19 +78,15 @@ abstract class AbstractHelloUDPServer implements HelloServer {
             throw new IllegalStateException("Server is already started");
         }
         state = State.RUNNING;
-        taskExecutorService = new ThreadPoolExecutor(
-                threads, threads,
-                0L, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<>(threads),
-                new ThreadPoolExecutor.CallerRunsPolicy()
-        );
+
         prepare(port, threads);
         getterThread = new Thread(() -> {
             while (state == State.RUNNING && !Thread.interrupted()) {
                 try {
                     getterIteration();
                 } catch (final IOException | InterruptedException e) {
-                    throw new RuntimeException(e);
+                    processException(e);
+                    return;
                 }
             }
         });
@@ -141,8 +124,6 @@ abstract class AbstractHelloUDPServer implements HelloServer {
      * Represents the state of the server.
      */
     protected enum State {
-        NOT_STARTED,
-        RUNNING,
-        CLOSED
+        NOT_STARTED, RUNNING, CLOSED
     }
 }

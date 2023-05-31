@@ -3,7 +3,6 @@ package info.kgeorgiy.ja.chulkov.hello;
 
 import info.kgeorgiy.ja.chulkov.utils.UDPUtils;
 import info.kgeorgiy.java.advanced.hello.HelloClient;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.SocketAddress;
@@ -28,11 +27,11 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
     }
 
     private static void doReadOperation(
-            final DatagramChannel channel,
-            final HelloClientThreadContext context,
-            final SelectionKey key
+        final DatagramChannel channel,
+        final HelloClientThreadContext context,
+        final SelectionKey key
     )
-            throws IOException {
+        throws IOException {
         context.getAnswerBytes().clear();
         channel.receive(context.getAnswerBytes());
         if (context.validateAnswer()) {
@@ -46,23 +45,30 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
     }
 
     private static Selector prepareSelector(
-            final String prefix,
-            final int threads,
-            final int requests,
-            final SocketAddress address
+        final String prefix,
+        final int threads,
+        final int requests,
+        final SocketAddress address
     ) throws IOException {
         final Selector selector = Selector.open();
         try {
             // :NOTE: 1..n
-            for (int thread = 1; thread <= threads; thread++) {
+            for (int thread = 0; thread < threads; thread++) {
                 final var datagramChannel = DatagramChannel.open();
                 // :NOTE: leak
-                datagramChannel.configureBlocking(false);
-                datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
-                datagramChannel.connect(address);
-                datagramChannel.register(selector, SelectionKey.OP_WRITE,
-                        new HelloClientThreadContext(thread, prefix, requests,
-                                datagramChannel.socket().getReceiveBufferSize()));
+                try {
+                    datagramChannel.configureBlocking(false);
+                    datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
+                    datagramChannel.connect(address);
+                    datagramChannel.register(selector, SelectionKey.OP_WRITE,
+                        new HelloClientThreadContext(thread + 1, prefix, requests,
+                            datagramChannel.socket().getReceiveBufferSize()
+                        )
+                    );
+                } catch (final IOException e) {
+                    datagramChannel.close();
+                    throw e;
+                }
             }
         } catch (final IOException e) {
             UDPUtils.closeSelectorWithChannels(selector);
@@ -91,11 +97,11 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
 
     @Override
     public void run(
-            final String host,
-            final int port,
-            final String prefix,
-            final int threads,
-            final int requests
+        final String host,
+        final int port,
+        final String prefix,
+        final int threads,
+        final int requests
     ) {
         final SocketAddress address = prepareAddress(host, port);
         try {

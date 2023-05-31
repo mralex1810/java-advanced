@@ -2,7 +2,6 @@ package info.kgeorgiy.ja.chulkov.hello;
 
 import info.kgeorgiy.ja.chulkov.utils.UDPUtils;
 import info.kgeorgiy.java.advanced.hello.HelloServer;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
@@ -14,6 +13,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Implementation of {@link HelloServer} with main method and nonblocking operations
@@ -44,7 +46,8 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             // :NOTE: readble && writable
             if (key.isWritable()) {
                 doWriteOperation(key, channel);
-            } else if (key.isReadable()) {
+            }
+            if (key.isReadable()) {
                 doReadOperation(key, channel);
             }
         } catch (final Exception e) {
@@ -54,68 +57,73 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
     @Override
     protected void prepare(final int port, final int threads) {
+        taskExecutorService = new ThreadPoolExecutor(threads, threads,
+            0L, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(threads)
+        );
+        toSend = new ArrayDeque<>(threads);
+        toReceive = new ArrayDeque<>(threads);
         try {
             selector = Selector.open();
             final var datagramChannel = DatagramChannel.open();
-            datagramChannel.configureBlocking(false);
-            datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
-            datagramChannel.bind(new InetSocketAddress(port));
-            try {
-                datagramChannel.register(selector, SelectionKey.OP_READ);
-            } catch (final IOException e) {
-                datagramChannel.close();
-                throw e;
-            }
+            configureDatagramChannel(port, datagramChannel);
 
             final SelectionKey key = selector.keys().stream().findAny().orElseThrow();
-            toSend = new ArrayDeque<>(threads);
-            toReceive = new ArrayDeque<>(threads);
             for (int i = 0; i < threads; i++) {
-                toReceive.add(new Packet(datagramChannel.socket().getReceiveBufferSize()));
+                toReceive.add(new Packet(datagramChannel.socket().getReceiveBufferSize(), key));
             }
             // :NOTE: initTask?
-            toReceive.forEach(it -> it.initTask(key, toSend));
         } catch (final IOException e) {
             closeSelectorAndChannels();
             throw new UncheckedIOException(e);
         }
-
     }
 
-    private void doWriteOperation(final SelectionKey key,
-            final DatagramChannel channel) {
+    private void configureDatagramChannel(final int port, final DatagramChannel datagramChannel) throws IOException {
+        try {
+            datagramChannel.configureBlocking(false);
+            datagramChannel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
+            datagramChannel.bind(new InetSocketAddress(port));
+            datagramChannel.register(selector, SelectionKey.OP_READ);
+        } catch (final IOException e) {
+            datagramChannel.close();
+            throw e;
+        }
+    }
+
+    private void doWriteOperation(final SelectionKey key, final DatagramChannel channel) {
         final Packet answer;
         synchronized (toSend) { // :NOTE: synchronized
-            answer = toSend.remove();
-            if (toSend.isEmpty()) {
+            answer = toSend.poll();
+            if (answer == null) {
                 key.interestOpsAnd(~SelectionKey.OP_WRITE);
+                return;
             }
         }
         try {
             channel.send(answer.getBuffer(), answer.getAddress());
         } catch (final IOException e) {
-            e.printStackTrace(); // :NOTE: unificate
+            processException(e); // :NOTE: unificate
         }
         toReceive.add(answer);
         key.interestOpsOr(SelectionKey.OP_READ);
     }
 
     // :NOTE: formatting
-    private void doReadOperation(final SelectionKey key,
-            final DatagramChannel channel) throws IOException {
+    private void doReadOperation(final SelectionKey key, final DatagramChannel channel) throws IOException {
         final Packet packet = toReceive.poll();
         if (packet == null) {
             key.interestOpsAnd(~SelectionKey.OP_READ);
             return;
         }
-        packet.setAddress(channel.receive(packet.getBuffer().clear()));
+        packet.setAddress(channel.receive(packet.getBuffer().clear().position(BUFFER_OFFSET)));
         taskExecutorService.execute(packet.getTask());
     }
 
     @Override
     public void close() {
-        closeSelectorAndChannels();
         super.close();
+        closeSelectorAndChannels();
     }
 
     private void closeSelectorAndChannels() {
@@ -126,16 +134,16 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
         }
     }
 
-    private static class Packet {
+    private class Packet {
 
         private final ByteBuffer buffer;
-        private final Runnable bufferModifier;
         private SocketAddress address;
         private Runnable task;
 
-        public Packet(final int bufferSize) {
+        public Packet(final int bufferSize, final SelectionKey key) {
             buffer = ByteBuffer.allocate(bufferSize);
-            this.bufferModifier = generateTask(buffer);
+            prepareNewByteBytes(buffer.array());
+            initTask(key);
         }
 
         public ByteBuffer getBuffer() {
@@ -150,17 +158,17 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             this.address = inetAddress;
         }
 
-        public void initTask(final SelectionKey key, final Queue<Packet> toSend) {
+        public void initTask(final SelectionKey key) {
             task = () -> {
                 try {
-                    bufferModifier.run();
+                    buffer.flip();
                     synchronized (toSend) {
                         toSend.add(this);
                         key.interestOpsOr(SelectionKey.OP_WRITE);
                     }
                     key.selector().wakeup();
                 } catch (final RuntimeException e) {
-                    System.err.println("Error on executing task " + e.getMessage());
+                    processException(e);
                 }
             };
         }

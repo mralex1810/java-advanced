@@ -1,5 +1,6 @@
 package info.kgeorgiy.ja.chulkov.hello;
 
+import info.kgeorgiy.ja.chulkov.utils.CharPredicate;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
@@ -80,8 +81,7 @@ class HelloClientThreadContext {
      * @param requests   The total number of requests to be sent.
      * @param bufferSize The size of the request/response buffer.
      */
-    public HelloClientThreadContext(final int threadId, final String prefix, final int requests,
-            final int bufferSize) {
+    public HelloClientThreadContext(final int threadId, final String prefix, final int requests, final int bufferSize) {
         this.threadId = threadId;
         this.prefixBytes = prefix.getBytes(StandardCharsets.UTF_8);
         this.requests = requests;
@@ -117,17 +117,18 @@ class HelloClientThreadContext {
         int size = 0;
         if (src == 0) {
             out.put((byte) Character.forDigit(0, RADIX));
+            return;
+        }
+        int srcCopy = src;
+        while (srcCopy != 0) {
+            srcCopy /= RADIX;
             size++;
         }
+        out.limit(Math.max(out.limit(), start + size));
+        out.position(start + size);
         while (src != 0) {
-            out.put((byte) Character.forDigit(src % RADIX, RADIX));
+            out.put(start + --size, (byte) Character.forDigit(src % RADIX, RADIX));
             src /= RADIX;
-            size++;
-        }
-        for (int i = 0; i < size / 2; i++) {
-            final byte tmp = out.get(start + i);
-            out.put(start + i, out.get(out.position() - i - 1));
-            out.put(out.position() - i - 1, tmp);
         }
     }
 
@@ -185,36 +186,46 @@ class HelloClientThreadContext {
      */
     public boolean validateAnswer() {
         syncBytesToChars(answerBytes, answerChars);
-        int numbers = 0;
         // :NOTE: simplify
-        for (int i = 0; i < answerChars.length(); i++) {
-            if (Character.isDigit(answerChars.charAt(i))) {
-                final int numberBeginIndex = i;
+        if (checkFail(getNextInt() != threadId, "First number isn't thread num")) {
+            return false;
+        }
+        if (checkFail(getNextInt() != request, "Second number isn't request")) {
+            return false;
+        }
+        return !checkFail(getNextInt() != -1, "Not two numbers in string");
+    }
 
-                while (i < answerChars.length() && Character.isDigit(answerChars.charAt(i))) {
-                    i++;
-                }
-                final int res;
-                try {
-                    res = Integer.parseInt(answerChars, numberBeginIndex, i, 10);
-                } catch (final NumberFormatException e) {
-                    System.err.println(e.getMessage());
-                    return false;
-                }
-                if (numbers == 0) {
-                    if (checkFail(res != threadId, "First number isn't thread num")) {
-                        return false;
-                    }
-                }
-                if (numbers == 1) {
-                    if (checkFail(res != request, "Second number isn't request")) {
-                        return false;
-                    }
-                }
-                numbers++;
+    private int getNextInt() {
+        skipChars(it -> !Character.isDigit(it));
+        final int start = answerChars.position();
+        final int length = skipChars(Character::isDigit);
+        if (length != 0) {
+            try {
+                answerChars.position(start);
+                final int res = Integer.parseInt(answerChars, 0, length, RADIX);
+                answerChars.position(start + length);
+                return res;
+            } catch (final NumberFormatException e) {
+                System.err.println(e.getMessage());
             }
         }
-        return !checkFail(numbers != 2, "Not two numbers in string");
+        return -1;
+    }
+
+    private int skipChars(final CharPredicate predicate) {
+        if (answerChars.remaining() == 0) {
+            return 0;
+        }
+        int length = 0;
+        while (predicate.test(answerChars.get())) {
+            length++;
+            if (answerChars.remaining() == 0) {
+                return length;
+            }
+        }
+        answerChars.position(answerChars.position() - 1);
+        return length;
     }
 
     /**
@@ -222,6 +233,7 @@ class HelloClientThreadContext {
      */
     public void printRequestAndAnswer() {
         syncBytesToChars(requestBytes, requestChars);
+        answerChars.flip();
         System.out.append(requestChars);
         System.out.print(SPACE);
         System.out.append(answerChars);
