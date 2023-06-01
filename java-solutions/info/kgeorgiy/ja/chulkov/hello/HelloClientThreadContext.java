@@ -196,6 +196,13 @@ class HelloClientThreadContext {
         return !checkFail(getNextInt() != -1, "Not two numbers in string");
     }
 
+    /**
+     * Helper method to parse the next integer from the answerChars buffer. It skips any non-digit characters and tries
+     * to parse the consecutive digits as an integer. If a valid integer is found, it returns the parsed value,
+     * otherwise returns -1.
+     *
+     * @return The next parsed integer from the answerChars buffer, or -1 if no valid integer is found.
+     */
     private int getNextInt() {
         skipChars(it -> !Character.isDigit(it));
         final int start = answerChars.position();
@@ -213,6 +220,13 @@ class HelloClientThreadContext {
         return -1;
     }
 
+    /**
+     * Helper method to skip characters in the answerChars buffer based on the provided predicate. It continues skipping
+     * characters as long as the predicate test is true.
+     *
+     * @param predicate The predicate function to test each character.
+     * @return The number of characters skipped based on the provided predicate.
+     */
     private int skipChars(final CharPredicate predicate) {
         if (answerChars.remaining() == 0) {
             return 0;
