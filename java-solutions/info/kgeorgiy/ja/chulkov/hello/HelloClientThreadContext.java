@@ -187,13 +187,13 @@ class HelloClientThreadContext {
     public boolean validateAnswer() {
         syncBytesToChars(answerBytes, answerChars);
         // :NOTE: simplify
-        if (checkFail(getNextInt() != threadId, "First number isn't thread num")) {
+        if (checkFail(getNextIntFromAns() != threadId, "First number isn't thread num")) {
             return false;
         }
-        if (checkFail(getNextInt() != request, "Second number isn't request")) {
+        if (checkFail(getNextIntFromAns() != request, "Second number isn't request")) {
             return false;
         }
-        return !checkFail(getNextInt() != -1, "Not two numbers in string");
+        return !checkFail(getNextIntFromAns() != -1, "Not two numbers in string");
     }
 
     /**
@@ -203,10 +203,10 @@ class HelloClientThreadContext {
      *
      * @return The next parsed integer from the answerChars buffer, or -1 if no valid integer is found.
      */
-    private int getNextInt() {
-        skipChars(it -> !Character.isDigit(it));
+    private int getNextIntFromAns() {
+        skipCharsInAns(it -> !Character.isDigit(it));
         final int start = answerChars.position();
-        final int length = skipChars(Character::isDigit);
+        final int length = skipCharsInAns(Character::isDigit);
         if (length != 0) {
             try {
                 answerChars.position(start);
@@ -227,7 +227,7 @@ class HelloClientThreadContext {
      * @param predicate The predicate function to test each character.
      * @return The number of characters skipped based on the provided predicate.
      */
-    private int skipChars(final CharPredicate predicate) {
+    private int skipCharsInAns(final CharPredicate predicate) {
         if (answerChars.remaining() == 0) {
             return 0;
         }
