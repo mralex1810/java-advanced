@@ -30,8 +30,7 @@ public class HelloUDPNonblockingClient extends AbstractHelloUDPClient {
         final DatagramChannel channel,
         final HelloClientThreadContext context,
         final SelectionKey key
-    )
-        throws IOException {
+    ) throws IOException {
         context.getAnswerBytes().clear();
         channel.receive(context.getAnswerBytes());
         if (context.validateAnswer()) {

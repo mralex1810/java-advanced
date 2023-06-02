@@ -43,7 +43,6 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
     private void processKey(final SelectionKey key) {
         try {
             final DatagramChannel channel = (DatagramChannel) key.channel();
-            // :NOTE: readble && writable
             if (key.isWritable()) {
                 doWriteOperation(key, channel);
             }
@@ -72,7 +71,6 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
             for (int i = 0; i < threads; i++) {
                 toReceive.add(new Packet(datagramChannel.socket().getReceiveBufferSize(), key));
             }
-            // :NOTE: initTask?
         } catch (final IOException e) {
             closeSelectorAndChannels();
             throw new UncheckedIOException(e);
@@ -138,12 +136,25 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
         private final ByteBuffer buffer;
         private SocketAddress address;
-        private Runnable task;
+        private final Runnable task;
 
         public Packet(final int bufferSize, final SelectionKey key) {
             buffer = ByteBuffer.allocate(bufferSize);
             prepareNewByteBytes(buffer.array());
-            initTask(key);
+            task = () -> process(key);
+        }
+
+        private void process(final SelectionKey key) {
+            try {
+                buffer.flip();
+                synchronized (toSend) {
+                    toSend.add(this);
+                    key.interestOpsOr(SelectionKey.OP_WRITE); // :NOTE: external management
+                }
+                key.selector().wakeup();
+            } catch (final RuntimeException e) {
+                processException(e);
+            }
         }
 
         public ByteBuffer getBuffer() {
@@ -156,21 +167,6 @@ public class HelloUDPNonblockingServer extends AbstractHelloUDPServer {
 
         public void setAddress(final SocketAddress inetAddress) {
             this.address = inetAddress;
-        }
-
-        public void initTask(final SelectionKey key) {
-            task = () -> {
-                try {
-                    buffer.flip();
-                    synchronized (toSend) {
-                        toSend.add(this);
-                        key.interestOpsOr(SelectionKey.OP_WRITE);
-                    }
-                    key.selector().wakeup();
-                } catch (final RuntimeException e) {
-                    processException(e);
-                }
-            };
         }
 
         public Runnable getTask() {
